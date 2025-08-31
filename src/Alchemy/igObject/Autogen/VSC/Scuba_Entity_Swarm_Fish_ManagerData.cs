@@ -1,0 +1,14 @@
+namespace Alchemy
+{
+    // VSC object extracted from: Scuba_Entity_Swarm_Fish_Manager.igz
+
+    [ObjectAttr(64, metaType: typeof(CVscComponentData))]
+    public class Scuba_Entity_Swarm_Fish_ManagerData : CVscComponentData
+    {
+        [FieldAttr(40)] public igHandleMetaField _Entity = new();
+        [FieldAttr(48)] public float _Float_0x30;
+        [FieldAttr(52)] public float _Float_0x34;
+        [FieldAttr(56)] public float _Float_0x38;
+        [FieldAttr(60)] public int _Int;
+    }
+}

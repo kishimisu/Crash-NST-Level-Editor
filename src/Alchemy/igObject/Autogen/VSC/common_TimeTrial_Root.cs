@@ -1,0 +1,107 @@
+namespace Alchemy
+{
+    // VSC object extracted from: common_TimeTrial_Root.igz
+
+    [ObjectAttr(712, metaType: typeof(igGuiVscBehavior))]
+    public class common_TimeTrial_Root : igGuiVscBehavior
+    {
+        [FieldAttr(40)] public igObject? _InternalStore_updateNodeUpdater = new();
+        [FieldAttr(48)] public igObject? _InternalStore__counter = new();
+        [FieldAttr(56)] public bool _Bool;
+        [FieldAttr(64)] public igObject? _InternalStore__timer = new();
+        [FieldAttr(72)] public igHandleMetaField _Gui_Placeable_0x48 = new();
+        [FieldAttr(80)] public int _Int_0x50;
+        [FieldAttr(84)] public int _Int_0x54;
+        [FieldAttr(88)] public int _Int_0x58;
+        [FieldAttr(92)] public float _Float_0x5c;
+        [FieldAttr(96)] public igHandleMetaField _Gui_Placeable_0x60 = new();
+        [FieldAttr(104)] public igHandleMetaField _Gui_Placeable_0x68 = new();
+        [FieldAttr(112)] public igHandleMetaField _Gui_Placeable_0x70 = new();
+        [FieldAttr(120)] public igHandleMetaField _Localized_String_0x78 = new();
+        [FieldAttr(128)] public igHandleMetaField _Localized_String_0x80 = new();
+        [FieldAttr(136)] public igHandleMetaField _Gui_Placeable_0x88 = new();
+        [FieldAttr(144)] public igHandleMetaField _Gui_Placeable_0x90 = new();
+        [FieldAttr(152)] public igHandleMetaField _Gui_Placeable_0x98 = new();
+        [FieldAttr(160)] public igHandleMetaField _Localized_String_0xa0 = new();
+        [FieldAttr(168)] public string? _String_0xa8 = null;
+        [FieldAttr(176)] public igHandleMetaField _Gui_Animation_Tag_0xb0 = new();
+        [FieldAttr(184)] public igHandleMetaField _Gui_Animation_Tag_0xb8 = new();
+        [FieldAttr(192)] public igHandleMetaField _Gui_Animation_Tag_0xc0 = new();
+        [FieldAttr(200)] public igHandleMetaField _Gui_Animation_Tag_0xc8 = new();
+        [FieldAttr(208)] public igHandleMetaField _Gui_Animation_Tag_0xd0 = new();
+        [FieldAttr(216)] public igObject? _InternalStore_listener = new();
+        [FieldAttr(224)] public igHandleMetaField _Gui_Animation_Tag_0xe0 = new();
+        [FieldAttr(232)] public igHandleMetaField _Gui_Placeable_0xe8 = new();
+        [FieldAttr(240)] public igHandleMetaField _InternalStore_project = new();
+        [FieldAttr(248)] public igHandleMetaField _Gui_Placeable_0xf8 = new();
+        [FieldAttr(256)] public float _Float_0x100;
+        [FieldAttr(260)] public float _Float_0x104;
+        [FieldAttr(264)] public int _Int_0x108;
+        [FieldAttr(272)] public igHandleMetaField _Gui_Animation_Tag_0x110 = new();
+        [FieldAttr(280)] public igHandleMetaField _Localized_String_0x118 = new();
+        [FieldAttr(288)] public igHandleMetaField _Gui_Animation_Tag_0x120 = new();
+        [FieldAttr(296)] public igHandleMetaField _Gui_Animation_Tag_0x128 = new();
+        [FieldAttr(304)] public int _InternalStore__internalCounter;
+        [FieldAttr(312)] public igObject? _Localized_String_0x138 = new();
+        [FieldAttr(320)] public igHandleMetaField _Localized_String_List = new();
+        [FieldAttr(328)] public igHandleMetaField _Gui_Animation_Tag_0x148 = new();
+        [FieldAttr(336)] public igHandleMetaField _Gui_Animation_Tag_0x150 = new();
+        [FieldAttr(344)] public igHandleMetaField _Gui_Animation_Tag_0x158 = new();
+        [FieldAttr(352)] public float _Float_0x160;
+        [FieldAttr(360)] public igHandleMetaField _Zone_Info = new();
+        [FieldAttr(368)] public float _Float_0x170;
+        [FieldAttr(372)] public CTimeTrialNodes.ETimeTrialRelic _Time_Trial_Nodes_E_Time_Trial_Relic;
+        [FieldAttr(376)] public igObject? _InternalStore__gate = new();
+        [FieldAttr(384)] public igHandleMetaField _Open_Keyboard_Params = new();
+        [FieldAttr(392)] public int _Int_0x188;
+        [FieldAttr(396)] public int _Int_0x18c;
+        [FieldAttr(400)] public int _Int_0x190;
+        [FieldAttr(408)] public igHandleMetaField _Gui_Placeable_0x198 = new();
+        [FieldAttr(416)] public igHandleMetaField _Gui_Placeable_0x1a0 = new();
+        [FieldAttr(424)] public igHandleMetaField _Gui_Placeable_0x1a8 = new();
+        [FieldAttr(432)] public int _Int_0x1b0;
+        [FieldAttr(436)] public EZoneCollectibleType _E_Zone_Collectible_Type;
+        [FieldAttr(440)] public igHandleMetaField _Entity = new();
+        [FieldAttr(448)] public igHandleMetaField _Gui_Animation_Tag_0x1c0 = new();
+        [FieldAttr(456)] public igHandleMetaField _Gui_Animation_Tag_0x1c8 = new();
+        [FieldAttr(464)] public igHandleMetaField _Fade_Out_Preset_Data = new();
+        [FieldAttr(472)] public igHandleMetaField _Bitmap_Font = new();
+        [FieldAttr(480)] public string? _String_0x1e0 = null;
+        [FieldAttr(488)] public igHandleMetaField _Game_String_Variable_0x1e8 = new();
+        [FieldAttr(496)] public igHandleMetaField _Game_String_Variable_0x1f0 = new();
+        [FieldAttr(504)] public igHandleMetaField _Character_Info_Hash_Table = new();
+        [FieldAttr(512)] public string? _String_0x200 = null;
+        [FieldAttr(520)] public int _igIntMetaField2e7;
+        [FieldAttr(524)] public int _igIntMetaField2e8;
+        [FieldAttr(528)] public int _igIntMetaField2e9;
+        [FieldAttr(532)] public int _igIntMetaField2ea;
+        [FieldAttr(536)] public int _igIntMetaField2eb;
+        [FieldAttr(544)] public string? _igStringMetaField2ec = null;
+        [FieldAttr(552)] public string? _igStringMetaField2ed = null;
+        [FieldAttr(560)] public string? _igStringMetaField2ee = null;
+        [FieldAttr(568)] public int _igIntMetaField35c;
+        [FieldAttr(572)] public int _igIntMetaField35d;
+        [FieldAttr(576)] public int _igIntMetaField35e;
+        [FieldAttr(580)] public int _igIntMetaField35f;
+        [FieldAttr(584)] public int _igIntMetaField360;
+        [FieldAttr(592)] public string? _igStringMetaField361 = null;
+        [FieldAttr(600)] public string? _igStringMetaField362 = null;
+        [FieldAttr(608)] public string? _igStringMetaField363 = null;
+        [FieldAttr(616)] public int _igIntMetaField3d1;
+        [FieldAttr(620)] public int _igIntMetaField3d2;
+        [FieldAttr(624)] public int _igIntMetaField3d3;
+        [FieldAttr(628)] public int _igIntMetaField3d4;
+        [FieldAttr(632)] public int _igIntMetaField3d5;
+        [FieldAttr(640)] public string? _igStringMetaField3d6 = null;
+        [FieldAttr(648)] public string? _igStringMetaField3d7 = null;
+        [FieldAttr(656)] public string? _igStringMetaField3d8 = null;
+        [FieldAttr(664)] public int _igIntMetaField446;
+        [FieldAttr(668)] public int _igIntMetaField447;
+        [FieldAttr(672)] public int _igIntMetaField448;
+        [FieldAttr(676)] public int _igIntMetaField449;
+        [FieldAttr(680)] public int _igIntMetaField44a;
+        [FieldAttr(688)] public string? _igStringMetaField44b = null;
+        [FieldAttr(696)] public string? _igStringMetaField44c = null;
+        [FieldAttr(704)] public string? _igStringMetaField44d = null;
+    }
+}
