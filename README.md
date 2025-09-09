@@ -21,7 +21,7 @@ A mod manager, archive explorer and level editor for Crash Bandicoot: N.Sane Tri
 
 ## Installation
 
-You can either download the prebuilt windows-x64 executable from the Release page, or build the application locally from the source code:
+You can either download the prebuilt windows-x64 executable from the [Releases page](https://github.com/kishimisu/Crash-NST-Level-Editor/releases), or build the application locally from the source code:
 
 ```
 git clone https://github.com/kishimisu/Crash-NST-Level-Editor.git nst
