@@ -1,0 +1,33 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net9.0-windows</TargetFramework>
+    <RootNamespace>NST</RootNamespace>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <ItemGroup>
+      <PackageReference Include="Silk.NET" Version="2.22.0" />
+      <PackageReference Include="Silk.NET.OpenGLES" Version="2.22.0" />
+      <PackageReference Include="Silk.NET.OpenGLES.Extensions.ImGui" Version="2.22.0" />
+      <PackageReference Include="ImGui.NET" Version="1.91.0.1" />
+
+      <PackageReference Include="SevenZip" Version="19.0.0" />
+      <PackageReference Include="SixLabors.ImageSharp" Version="3.1.11" />
+      <PackageReference Include="BCnEncoder.Net.ImageSharp" Version="1.1.1" />
+      <PackageReference Include="SkiaSharp" Version="2.88.8" />
+      <PackageReference Include="NAudio" Version="2.2.1" />
+
+      <Compile Remove="lib\**\*.cs" />
+      <ProjectReference Include="lib\THREE\THREE.csproj" />
+      <ProjectReference Include="lib\THREE.Silk\THREE.Silk.csproj" />
+
+      <EmbeddedResource Include="assets\namespace_infos.metadata" />
+      <EmbeddedResource Include="assets\icomoon.ttf" />
+  </ItemGroup>
+
+</Project>

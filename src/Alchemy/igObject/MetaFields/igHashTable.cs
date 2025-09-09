@@ -13,17 +13,16 @@ namespace Alchemy
         [FieldAttr(52)] public bool _autoRehash = true;
         [FieldAttr(56)] public float _loadFactor = 0.5f;
 
-        private Dictionary<K, V> _dict = new();
+        public Dictionary<K, V> Dict { get; } = new();
+        public bool RebuildDict { get; set; } = false;
 
         public V this[K key]
         {
-            get => _dict[key];
-            set => _dict[key] = value;
+            get => Dict[key];
+            set => Dict[key] = value;
         }
-        public int Count => _dict.Count;
-        public List<K> Keys => _dict.Keys.ToList();
-        public List<V> Values => _dict.Values.ToList();
-        public Dictionary<K, V> GetDict() => _dict;
+        public List<K> Keys => Dict.Keys.ToList();
+        public List<V> Values => Dict.Values.ToList();
 
         public override void Parse(IgzReader reader)
         {
@@ -45,11 +44,42 @@ namespace Alchemy
                 if (key is igEnumMetaField em && (uint)em._value == 0xFAFAFAFA) continue;
                 if (key is DotNetDataMetaField dm && dm._elementType == 1073741825) continue;
 
-                _dict.Add(key, values[i]);
+                Dict.Add(key, values[i]);
             }
         }
 
-        public K? GetInvalidKey()
+        public override void Write(IgzWriter writer)
+        {
+            if (RebuildDict && typeof(K) == typeof(u64))
+            {
+                Console.WriteLine($"[igHashTable] Rebuilding key type: {typeof(K)}");
+                
+                int capacity = int.Max(_keys.Count, Dict.Count * 2);
+                
+                _keys.Clear();
+                _values.Clear();
+                _hashItemCount = Dict.Count;
+
+                for (int i = 0; i < capacity; i++)
+                {
+                    _keys.Add(GetInvalidKey());
+                    _values.Add(default);
+                }
+
+                foreach ((K key, V value) in Dict)
+                {
+                    uint hash = GetKeyHash(key) % (uint)capacity;
+                    int index = FindEmptySlot(key, capacity);
+
+                    _keys[index] = key;
+                    _values[index] = value;
+                }
+            }
+
+            base.Write(writer);
+        }
+
+        private static K? GetInvalidKey()
         {
             object? flag = default;
             
@@ -61,10 +91,39 @@ namespace Alchemy
             return (K?)flag;
         }
 
-        public override void Write(IgzWriter writer)
+        private static uint GetKeyHash(K key)
         {
-            // TODO: rebuild hashtable from _dict
-            base.Write(writer);
+            if (typeof(K) == typeof(string)) 
+                return NamespaceUtils.ComputeHash(Convert.ToString(key)!);
+            
+            if (typeof(K) == typeof(u64))
+                return HashLong((ulong)(object)key);
+
+            throw new Exception($"Unsupported key type: {typeof(K)}");
+        }
+
+        private static uint HashLong(ulong integer)
+		{
+			ulong hash = integer * 0x40000 + ~integer;
+			hash = (hash >> 0x1f ^ hash) * 0x15;
+			hash = (hash >> 0xb ^ hash) * 0x41;
+			return (uint)(hash >> 0x16) ^ (uint)hash;
+		}
+
+        private int FindEmptySlot(K key, int count)
+        {
+            uint hash = GetKeyHash(key);
+            int slot = (int)(hash % count);
+
+            for (int i = 0; i < count; i++)
+            {
+                if (_keys[slot] == null || _keys[slot]!.Equals(GetInvalidKey()))
+                    return slot;
+
+                slot = (slot + 1) % count;
+            }
+
+            throw new Exception($"Failed to find empty slot for key {key}");
         }
     }
 }

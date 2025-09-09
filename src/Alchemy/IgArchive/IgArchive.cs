@@ -286,6 +286,16 @@ namespace Alchemy
         /// <returns>The first .igz file that matches the namespace name</returns>
         public IgArchiveFile? FindIgzFile(NamedReference reference) => FindFile(reference.namespaceName + ".igz");
 
+        public IgArchiveFile? FindCollisionFile(string extension = ".igz")
+        {
+            return _files.Find(f => f.GetPath().Contains("StaticCollision") && f.GetPath().EndsWith(extension));
+        }
+
+        public IgArchiveFile? FindPackageFile()
+        {
+            return _files.Find(f => f.GetPath().EndsWith("_pkg.igz"));
+        }
+
         /// <summary>
         /// Find an igObject in the archive
         /// </summary>

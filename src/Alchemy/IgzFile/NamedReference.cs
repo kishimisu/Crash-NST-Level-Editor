@@ -9,6 +9,7 @@ namespace Alchemy
     {
         public uint objectHash;
         public uint fileHash;
+        public HashedReference(uint fileHash, uint objectHash) { this.fileHash = fileHash; this.objectHash = objectHash; }
         public override string ToString() => $"{fileHash}::{objectHash}";
     }
 

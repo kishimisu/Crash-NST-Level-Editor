@@ -141,6 +141,7 @@ namespace Alchemy
             else
             {
                 objectList = new igObjectList();
+                objectList.SetMemoryPool(defaultMemoryPool);
                 objectList._data.SetMemoryPool(defaultMemoryPool);
                 objectList._data.SetDataMemoryPool(defaultMemoryPool);
             }
@@ -161,6 +162,7 @@ namespace Alchemy
                 nameList = new igNameList();
                 nameList._count = namedObjects.Count;
                 nameList._capacity = namedObjects.Count;
+                nameList.SetMemoryPool(defaultMemoryPool);
                 nameList._data.SetMemoryPool(defaultMemoryPool);
                 nameList._data.SetDataMemoryPool(defaultMemoryPool);
             }
@@ -186,7 +188,7 @@ namespace Alchemy
             if (nameListNSPC != null) objects.Add(nameListNSPC);
 
             // Write all objects
-            UpdateReferenceCount(objects);
+            UpdateReferenceCount(FindAllObjectsRecursive(objects));
             objectList.Write(this);
             nameList?.Write(this);
             nameListNSPC?.Write(this);

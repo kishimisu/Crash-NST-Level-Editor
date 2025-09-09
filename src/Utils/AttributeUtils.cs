@@ -116,7 +116,7 @@ namespace Alchemy
             {
                 CachedFieldAttr data = fields.First(f => f.GetFieldType().IsAssignableTo(typeof(Alchemy.igEntityData)));
                 fields.Remove(data);
-                fields.Insert(0, data);
+                fields.Insert(2, data);
 
                 if (type.IsAssignableTo(typeof(Alchemy.CActor)))
                 {

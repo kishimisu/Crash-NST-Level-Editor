@@ -203,6 +203,8 @@ namespace Alchemy
                 field.SetValue(clone, value);
             }
 
+            clone._memoryPool = _memoryPool;
+
             return clone;
         }
     }

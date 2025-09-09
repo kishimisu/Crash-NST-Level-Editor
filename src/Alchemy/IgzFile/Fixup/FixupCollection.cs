@@ -134,10 +134,8 @@ namespace Alchemy
 
             foreach (HashedReference item in EXID)
             {
-                // string namespaceName = NamespaceUtils.FindNameForHash(item.fileHash);
-                // string objectName = NamespaceUtils.FindNameForHash(item.objectHash);
-                string namespaceName = item.fileHash.ToString();
-                string objectName = item.objectHash.ToString();
+                string namespaceName = NamespaceUtils.FindNameForHash(item.fileHash);
+                string objectName = NamespaceUtils.FindNameForHash(item.objectHash);
                 
                 NamedReference reference = new NamedReference(namespaceName, objectName, true);
                 exidReferences.Add(reference);

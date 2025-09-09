@@ -38,6 +38,7 @@ namespace Alchemy
         public List<T> ToList() => _elements.ToList();
         public T[] ToArray() => _elements.ToArray();
         public void Set(List<T> elements) => _elements = elements;
+        public void Sort(Comparison<T> comparison) => _elements.Sort(comparison);
         public IEnumerator<T> GetEnumerator() => _elements.GetEnumerator();
         public List<T> GetElements() => _elements;
         
