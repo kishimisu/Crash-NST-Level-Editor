@@ -44,6 +44,21 @@ namespace NST
         }
 
         /// <summary>
+        /// Render text centered horizontally and vertically inside the current window or child
+        /// </summary>
+        public static void CenteredText(string text)
+        {
+            Vector2 windowSize = ImGui.GetWindowSize();
+            Vector2 textSize = ImGui.CalcTextSize(text);
+
+            float textX = (windowSize.X - textSize.X) * 0.5f;
+            float textY = (windowSize.Y - textSize.Y) * 0.5f;
+
+            ImGui.SetCursorPos(new Vector2(textX, textY));
+            ImGui.Text(text);
+        }
+
+        /// <summary>
         /// Truncate text to fit in a given width, adding "..."
         /// </summary>
         public static string TruncateTextToFit(string text, float maxWidth)

@@ -160,6 +160,11 @@ namespace NST
                 {
                     node.Render(Renderer, this);
                 }
+
+                if (_rootNodes.Count == 0)
+                {
+                    ImGuiUtils.CenteredText("Drag & drop files from other archives here!");
+                }
             }
             ImGui.EndChild();
 

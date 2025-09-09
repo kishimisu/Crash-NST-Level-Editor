@@ -20,7 +20,7 @@ namespace NST
         private bool _isUpdated = false;
         private bool _showAudioPlayer = false; // Used for .snd files
 
-        public string GetWindowName() => Archive.GetName() + "##" + GetHashCode();
+        public string GetWindowName() => (string.IsNullOrEmpty(Archive.GetName()) ? "New Archive" : Archive.GetName()) + "##" + GetHashCode();
         public int FindCollisionShapeIndex(HashedReference reference) => _collisionData.ContainsKey(reference) ? _collisionData[reference] : -1;
 
         public IgArchiveRenderer(string archivePath)
@@ -66,9 +66,6 @@ namespace NST
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     
-                    ImGui.SameLine();
-                    ImGui.Text(FileManager.ToString());
-
                     // Render tree view
                     _treeView.Render();
 
@@ -350,7 +347,7 @@ namespace NST
         {
             string? path = Archive.GetPath();
 
-            if (saveAs)
+            if (saveAs || string.IsNullOrEmpty(path))
             {
                 path = FileExplorer.SaveFile("", FileExplorer.EXT_ARCHIVES, Archive.GetName());
                 if (path == null) return;
@@ -401,7 +398,13 @@ namespace NST
                 "navmesh", "igx_entities", "pkg"
             ];
 
-            IgArchiveFile packageFile = Archive.FindPackageFile()!;
+            IgArchiveFile? packageFile = Archive.FindPackageFile();
+
+            if (packageFile == null)
+            {
+                return;
+            }
+
             IgzFile packageIgz = packageFile.ToIgzFile();
 
             var chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>()!;

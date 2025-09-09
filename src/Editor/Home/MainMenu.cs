@@ -68,7 +68,7 @@ namespace NST
             float buttonsWidth = ImGui.CalcTextSize("New Archive Open Archive").X + ImGui.GetStyle().FramePadding.X * 2;
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + (ImGui.GetContentRegionAvail().X - buttonsWidth) * 0.5f);
 
-            if (ImGui.Button("New Archive")) App.OnClickNew();
+            if (ImGui.Button("New Mod")) App.OnClickNew();
             ImGui.SameLine();
             if (ImGui.Button("Open Archive")) App.OnClickOpen();
             

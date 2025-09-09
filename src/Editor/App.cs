@@ -224,7 +224,7 @@ namespace NST
 
         public static void OnClickNew()
         {
-            IgArchive archive = new IgArchive("New_Archive.pak");
+            IgArchive archive = new IgArchive("");
             _archives.Add(new IgArchiveRenderer(archive));
         }
 

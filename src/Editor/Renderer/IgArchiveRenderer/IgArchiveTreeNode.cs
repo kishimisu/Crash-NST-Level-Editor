@@ -165,15 +165,17 @@ namespace NST
         {
             bool isUpdated = File != null && tree.Renderer.FileManager.IsFileUpdated(File);
 
-            HighlightText(GetDisplayName(), tree.SearchQuery);
+            HighlightText(Name, tree.SearchQuery);
+
+            string displayName = Name;
 
             if (isUpdated)
             {
-                Name = "*" + Name;
+                displayName = "*" + displayName;
                 ImGui.PushStyleColor(ImGuiCol.Text, 0xff0099ff);
             }
 
-            ImGui.Text(Name);
+            ImGui.Text(displayName);
             
             if (isUpdated) ImGui.PopStyleColor();
         }

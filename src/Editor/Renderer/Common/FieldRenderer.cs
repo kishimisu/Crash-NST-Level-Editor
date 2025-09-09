@@ -419,7 +419,7 @@ namespace NST
             }
         }
 
-        private static void RenderHkMemory<T>(hkMemory<T> memory, FileRenderer renderer, string name)
+        private static void RenderHkMemory<T>(hkMemoryBase<T> memory, FileRenderer renderer, string name)
         {
             RenderMemory(memory.GetElements(), renderer, memory.GetType(), name);
         }
