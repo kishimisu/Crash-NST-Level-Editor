@@ -46,7 +46,7 @@ Manage and apply mods to the game, or revert it to its original state
 ![Mod Manager](assets/readme/mod_manager.png)
 
 - **Add mod(s)**: Adds one or more mods from the file explorer
-- **Apply mods**: Applies the selected mods to game
+- **Apply mods**: Applies the selected mods to the game
 - **Unmod game**: Reverts the game to its original state
 - **Launch game**: Launches the game at the selected level (the dropdown includes the main menu, bosses and debug levels)
 
@@ -137,8 +137,6 @@ There are three type of audio files:
 - For `CAudioArchive` files (locatd in `sounds/banks/`), each `CSound` object in the file is listed in the right panel, along with its associated `CSubSound` playable audio tracks. You can click on a track name to open the corresponding object and extract the audio.
 ![Texture preview](assets/readme/CAudioArchive.png)
 
-
-
 ## Level editor
 
 ***Coming soon!***
@@ -182,6 +180,8 @@ src/
 ├── Havok/       # Havok-related classes
 │ ├── HavokFile/ # .hkx files
 │ ├── hkObject/  # Havok objects
+│
+├── Editor/      # Editor application
 │
 ├── Utils/       # Common utilities
 │

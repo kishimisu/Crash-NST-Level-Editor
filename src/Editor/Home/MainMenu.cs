@@ -48,12 +48,35 @@ namespace NST
                 
                 RenderRecentFiles();
 
+                RenderGamePathNotSet();
+
                 ImGui.NextColumn();
 
                 _modManager.Render();
             }
 
             ImGui.End();
+        }
+
+        private void RenderGamePathNotSet()
+        {
+            if (LocalStorage.GamePath != null) return;
+
+            ImGuiUtils.VerticalSpacing(25);
+
+            float w = ImGui.GetContentRegionAvail().X * 0.5f;
+            float x = ImGui.GetCursorPosX() + (ImGui.GetContentRegionAvail().X - w) * 0.5f;
+
+            ImGui.SetCursorPosX(x);
+            ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(.2f, 0.5f, 0.7f, 1.0f));
+            if (ImGui.Button("Find game executable", new Vector2(w, 0))) LocalStorage.SetNewGamePath();
+            ImGui.PopStyleColor();
+
+            ImGuiUtils.VerticalSpacing(10);
+
+            ImGui.PushStyleColor(ImGuiCol.Text, new Vector4(1.0f, 0.6f, 0.3f, 1.0f));
+            ImGui.Text("Warning: the game path isn't set. Some features may not work.");
+            ImGui.PopStyleColor();
         }
         
         /// <summary>

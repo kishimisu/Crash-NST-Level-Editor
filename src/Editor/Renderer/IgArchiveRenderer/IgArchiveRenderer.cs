@@ -323,9 +323,7 @@ namespace NST
         {
             if (!_isUpdated) return;
 
-            string gamePath = LocalStorage.Get<string>("game_path", LocalStorage.DEFAULT_GAME_PATH);
-
-            if (Archive.GetPath().StartsWith(gamePath)) // Overwriting a game file
+            if (LocalStorage.GamePath != null && Archive.GetPath().StartsWith(LocalStorage.GamePath)) // Check if overwriting a game file
             {
                 ModalRenderer.ShowConfirmationModal(
                     "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.", 

@@ -60,6 +60,7 @@ namespace NST
                     if (ImGui.MenuItem("Open...", "Ctrl+O")) OnClickOpen();
                     if (ImGui.MenuItem("Main Menu")) _mainMenu.IsOpen = true;
                     if (ImGui.MenuItem("Demo Window")) _showDemo = !_showDemo;
+                    if (ImGui.MenuItem("Set Game Path...")) LocalStorage.SetNewGamePath();
                     if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                     ImGui.EndMenu();
                 }
@@ -136,10 +137,14 @@ namespace NST
                 Console.WriteLine($"WARNING: NamespaceInfos {name} has no archive set.");
                 return null;
             }
+            if (LocalStorage.GamePath == null)
+            {
+                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                return null;
+            }
 
             string pakName = infos.pak;
-            string gamePath = LocalStorage.Get<string>("game_path", LocalStorage.DEFAULT_GAME_PATH);
-            string pakPath = Path.Join(gamePath, "archives", pakName);
+            string pakPath = Path.Join(LocalStorage.GamePath, "archives", pakName);
 
             if (!File.Exists(pakPath))
             {
@@ -192,11 +197,14 @@ namespace NST
                 ModalRenderer.ShowMessageModal("Failed to open file", $"File not found for {reference}.");
                 return;
             }
+            if (LocalStorage.GamePath == null)
+            {
+                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                return;
+            }
 
             try {
-                string pakName = infos.pak!;
-                string gamePath = LocalStorage.Get<string>("game_path", LocalStorage.DEFAULT_GAME_PATH);
-                string pakPath = Path.Join(gamePath, "archives", pakName);
+                string pakPath = Path.Join(LocalStorage.GamePath, "archives", infos.pak);
 
                 IgArchiveRenderer archiveRenderer = OpenArchive(pakPath);
                 ImGui.SetWindowFocus(archiveRenderer.GetWindowName());

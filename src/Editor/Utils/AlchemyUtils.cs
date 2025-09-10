@@ -29,9 +29,7 @@ namespace NST
             string archivePath = NamespaceUtils.GetInfos(NamespaceUtils.ComputeHash(fileName))?.pak
                                  ?? throw new Exception($"Failed to find archive for {fileName}.");
 
-            string gamePath = LocalStorage.Get<string>("game_path", LocalStorage.DEFAULT_GAME_PATH);
-
-            IgArchive archive = IgArchive.Open(Path.Join(gamePath, "archives", archivePath));
+            IgArchive archive = IgArchive.Open(Path.Join(LocalStorage.GamePath, "archives", archivePath));
 
             Console.WriteLine($"Searching for {fileName} in archive {archivePath}...");
 
@@ -63,12 +61,10 @@ namespace NST
             }
 
             // Find the object in its original archive
-            string gamePath = LocalStorage.Get<string>("game_path", LocalStorage.DEFAULT_GAME_PATH);
-
             string archivePath = NamespaceUtils.GetInfos(NamespaceUtils.ComputeHash(reference.namespaceName))?.pak
                                  ?? throw new Exception($"Failed to find archive for {reference.namespaceName}.");
 
-            IgArchive archive = IgArchive.Open(Path.Join(gamePath, "archives", archivePath));
+            IgArchive archive = IgArchive.Open(Path.Join(LocalStorage.GamePath, "archives", archivePath));
 
             Console.WriteLine($"Searching for {reference} in archive {archivePath}...");
 

@@ -12,6 +12,8 @@ namespace NST
         private const int MAX_RECENT_FILES = 15; // Maximum number of recent files to store
 
         public static List<string> RecentFiles { get; private set; } = []; // List of recently opened files
+        
+        public static string? GamePath { get; private set; } = null; // Path to the game folder
 
         private static string storageFilePath = ""; // Path to the main local storage file
 
@@ -31,16 +33,20 @@ namespace NST
 
             storageFilePath = Path.Combine(appFolder, storageFileName);
 
-            if (Get<string>("game_path") == null)
+            GamePath = Get<string>("game_path");
+
+            // Check if the path to the game folder is valid
+            if (GamePath == null)
             {
                 if (Directory.Exists(DEFAULT_GAME_PATH))
                 {
-                    Set("game_path", DEFAULT_GAME_PATH);
+                    SetGamePath(DEFAULT_GAME_PATH);
                 }
-                else
-                {
-                    throw new Exception("Could not find game path"); // TODO
-                }
+            }
+            else if (!Directory.Exists(GamePath))
+            {
+                GamePath = null;
+                Remove("game_path");
             }
             
             RecentFiles = Get<List<string>>("recent_files") ?? [];
@@ -78,6 +84,39 @@ namespace NST
         }
 
         /// <summary>
+        /// Open the file explorer to set a new path to the game folder
+        /// </summary>
+        public static void SetNewGamePath()
+        {
+            List<string> paths = FileExplorer.OpenFiles(LocalStorage.DEFAULT_GAME_PATH, FileExplorer.EXT_EXECUTABLE, false);
+
+            if (paths.Count > 0)
+            {
+                string? folder = Path.GetDirectoryName(paths[0]);
+
+                if (folder != null)
+                {
+                    SetGamePath(folder);
+                }
+                else
+                {
+                    ModalRenderer.ShowMessageModal("An error occurred", "Could not set the game path.");
+                }
+            }
+        }
+
+        /// <summary>
+        /// Set the new path to the game folder
+        /// </summary>
+        private static void SetGamePath(string path)
+        {
+            GamePath = path;
+            Set("game_path", path);
+
+            Console.WriteLine($"Game folder set to {path}");
+        }
+
+        /// <summary>
         /// Get the path to a file in the local storage
         /// </summary>
         public static string GetStoragePath(string fileName)
@@ -94,7 +133,7 @@ namespace NST
         public static void Set(string key, object value)
         {
             var data = GetAll();
-            data[key] = JsonSerializer.Serialize(value);
+            data[key] = value is string str ? str : JsonSerializer.Serialize(value);
             File.WriteAllText(storageFilePath, JsonSerializer.Serialize(data));
         }
 
@@ -118,6 +157,16 @@ namespace NST
             if (typeof(T) == typeof(string)) return (T)(object)data[key];
 
             return JsonSerializer.Deserialize<T>(data[key]);
+        }
+
+        /// <summary>
+        /// Remove a value from the local storage
+        /// </summary>
+        public static void Remove(string key)
+        {
+            var data = GetAll();
+            data.Remove(key);
+            File.WriteAllText(storageFilePath, JsonSerializer.Serialize(data));
         }
 
         /// <summary>

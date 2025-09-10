@@ -11,7 +11,8 @@ namespace NST
         public static string EXT_ARCHIVES = "PAK archives (*.pak)|*.pak|" + EXT_ALL;
         public static string EXT_IMAGES = "Image Files|*.png;*.apng;*.jpg;*.jpeg;*.jfif;*.gif;*.bm;*.bmp;*.dip;*.ppm;*.pbm;*.pgm;*.tga;*.vda;*.icb;*.vst;*.tiff;*.tif;*.webp;*.qoi";
         public static string EXT_AUDIO = "Audio Files (*.mp3,*.ogg,*.wav)|*.mp3;*.ogg;*.wav|" + EXT_ALL;
-
+        public static string EXT_EXECUTABLE = "Executable Files (*.exe)|*.exe|" + EXT_ALL;
+        
         public static List<string> OpenFiles(string initialDirectory, string extensions, bool multiSelect)
         {
             using OpenFileDialog openFileDialog = new OpenFileDialog()

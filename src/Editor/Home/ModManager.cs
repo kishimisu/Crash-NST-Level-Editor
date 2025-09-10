@@ -162,7 +162,7 @@ namespace NST
             }
 
             // Check if game is modded
-            string? gamePath = LocalStorage.Get<string>("game_path");
+            string? gamePath = LocalStorage.GamePath;
 
             if (gamePath != null && File.Exists(Path.Join(gamePath, "archives", "update.pak")))
             {
@@ -195,9 +195,14 @@ namespace NST
                 }
             }
 
+            if (LocalStorage.GamePath == null)
+            {
+                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                return;
+            }
+
             // Create update.pak
-            string gamePath = LocalStorage.Get<string>("game_path") ?? throw new Exception("Game path not set!");
-            string updatePath = Path.Join(gamePath, "archives", "update.pak");
+            string updatePath = Path.Join(LocalStorage.GamePath, "archives", "update.pak");
 
             IgArchive update = new IgArchive(updatePath);
 
@@ -217,8 +222,13 @@ namespace NST
         /// </summary>
         private void OnClickUnmodGame()
         {
-            string gamePath = LocalStorage.Get<string>("game_path") ?? throw new Exception("Game path not set!");
-            string updatePath = Path.Join(gamePath, "archives", "update.pak");
+            if (LocalStorage.GamePath == null)
+            {
+                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                return;
+            }
+
+            string updatePath = Path.Join(LocalStorage.GamePath, "archives", "update.pak");
             
             if (File.Exists(updatePath))
             {
@@ -301,8 +311,13 @@ namespace NST
         /// </summary>
         private void OnClickLaunchGame()
         {
-            string gamePath = LocalStorage.Get<string>("game_path") ?? throw new Exception("Game path not set!");
-            string exePath = Path.Join(gamePath, "CrashBandicootNSaneTrilogy.exe");
+            if (LocalStorage.GamePath == null)
+            {
+                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                return;
+            }
+
+            string exePath = Path.Join(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe");
 
             string args = "";
 
