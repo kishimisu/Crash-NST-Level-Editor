@@ -11,7 +11,7 @@ namespace NST
         /// <summary>
         /// Renders an igMetaField
         /// </summary>
-        public static void Render(IgzRenderer renderer, igMetaField metaField, Type type, string name)
+        public static void Render(IgzRenderer renderer, igMetaField metaField, Type type, string name, bool renderNameAndType = true)
         {
             // igMemoryRef, igVector
             if (type.IsGenericType)
@@ -27,7 +27,9 @@ namespace NST
             // Custom render methods
             else if (RenderMethods.TryGetValue(type, out var renderMethod))
             {
-                FieldRenderer.RenderNameAndType(renderer, metaField.GetType(), name);
+                if (renderNameAndType) 
+                    FieldRenderer.RenderNameAndType(renderer, metaField.GetType(), name);
+
                 renderMethod(metaField, renderer, name);
             }
             // Generic render method
@@ -85,6 +87,7 @@ namespace NST
             { typeof(igRangedFloatMetaField), (obj, renderer, name) => Render((igRangedFloatMetaField)obj, renderer, name) },
             { typeof(igSizeTypeMetaField),    (obj, renderer, name) => Render((igSizeTypeMetaField)obj, renderer, name) },
             { typeof(igTimeMetaField),        (obj, renderer, name) => Render((igTimeMetaField)obj, renderer, name) },
+            { typeof(igEnumMetaField),        (obj, renderer, name) => Render((igEnumMetaField)obj, renderer, name) },
             { typeof(CConstraintMetaField),   (obj, renderer, name) => Render((CConstraintMetaField)obj, renderer, name) },
             { typeof(CEntityIDMetaField),     (obj, renderer, name) => Render((CEntityIDMetaField)obj, renderer, name) },
             { typeof(ChunkFileInfoMetaField), (obj, renderer, name) => Render((ChunkFileInfoMetaField)obj, renderer, name) },
@@ -228,6 +231,11 @@ namespace NST
         private static void Render(igTimeMetaField obj, FileRenderer renderer, string name)
         {
             FieldRenderer.CreateInput(renderer, obj._time, typeof(u32), name, (newVal) => obj._time = (u32)newVal);
+        }
+
+        private static void Render(igEnumMetaField obj, FileRenderer renderer, string name)
+        {
+            FieldRenderer.CreateInput(renderer, obj._value, typeof(int), name, (newVal) => obj._value = (int)newVal);
         }
 
         private static void CreateInt2Input(FileRenderer renderer, string name, ref uint x, ref uint y)

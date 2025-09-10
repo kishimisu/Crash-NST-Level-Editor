@@ -186,7 +186,7 @@ namespace NST
             if (recursion)
             {
                 ImGui.SameLine();
-                ImGui.Text("(Recursion)");
+                ImGui.Text("(Recursion) ");
             }
 
             ImGui.SameLine(0, 0);
@@ -291,6 +291,17 @@ namespace NST
             renderer.TreeView.RenderHistoryArrows();
             RenderObjectName(null, false);
 
+            // Hash table
+
+            if (Object.GetType().IsAssignableTo(typeof(igHashTable)))
+            {
+                ImGui.Spacing();
+                ImGui.Text("HashTable preview:");
+                ImGui.Spacing();
+                FieldRenderer.RenderHashTable(renderer, (dynamic)Object, Object.GetType().GetDisplayName());
+                ImGui.Spacing();
+            }
+
             // Previews
 
             MaterialPreview?.Render(renderer, this, false);
@@ -311,11 +322,6 @@ namespace NST
             // Object properties table
 
             ImGui.BeginChild("ObjectFields" + GetHashCode());
-
-            if (Object.GetType().IsAssignableTo(typeof(igHashTable)))
-            {
-                FieldRenderer.RenderHashTable(renderer, (dynamic)Object, Object.GetType().GetDisplayName());
-            }
             
             renderer.RenderObject(Object);
 

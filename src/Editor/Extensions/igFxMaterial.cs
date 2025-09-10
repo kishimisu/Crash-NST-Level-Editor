@@ -30,7 +30,7 @@ namespace NST
             }
 
             string diffusePath = (string)field.GetValue(igMaterial)!;
-            string formattedPath = diffusePath.Replace(":", "@").Replace("\\", "!").Replace(".", "`");
+            string formattedPath = diffusePath.Replace(":", "@").Replace("\\", "!").Replace("/", "!").Replace(".", "`");
 
             List<NamedReference>? diffuseFileNames = igMaterial._graphicsMaterial?._graphicsObjects?._objects
                 .Select(e =>
@@ -52,7 +52,7 @@ namespace NST
 
             if (diffuseFileNames == null || diffuseFileNames.Count == 0)
             {
-                Console.Error.WriteLine($"Warning: No igGraphicsTexture attribute found on type {igMaterial.GetType().Name} for path {diffusePath}.");
+                Console.Error.WriteLine($"Warning: No igGraphicsTexture attribute found on type {igMaterial.GetType().Name} for path {diffusePath} ({formattedPath}).");
                 return null;
             }
 
@@ -75,7 +75,7 @@ namespace NST
 
             if (field == null)
             {
-                Console.Error.WriteLine($"Warning: Color field not found on type {igMaterial.GetType().Name}.");
+                // Console.Error.WriteLine($"Warning: Color field not found on type {igMaterial.GetType().Name}.");
                 return new THREE.Vector4(1, 1, 1, 1);
             }
 

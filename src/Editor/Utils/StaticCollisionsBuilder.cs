@@ -49,14 +49,15 @@ namespace NST
         }
 
         /// <summary>
-        /// Rebuild static collisions for an archive
+        /// Rebuild static collisions for an archive, more specifically
+        /// the StaticCollision.igz and StaticCollision.hkx files.
         /// </summary>
-        /// <param name="archiveRenderer">The parent archive renderer</param>
+        /// <param name="archive">The archive to rebuild</param>
         /// <param name="updatedCollisionData">The list of updated collisions</param>
-        public static void RebuildCollisions(IgArchiveRenderer archiveRenderer, List<CollisionUpdateInfos> updatedCollisionData)
+        public static void RebuildCollisions(IgArchive archive, List<CollisionUpdateInfos> updatedCollisionData)
         {
-            IgArchiveFile? collisionIgzFile = archiveRenderer.Archive.FindCollisionFile(".igz");
-            IgArchiveFile? collisionHkxFile = archiveRenderer.Archive.FindCollisionFile(".hkx");
+            IgArchiveFile? collisionIgzFile = archive.FindCollisionFile(".igz");
+            IgArchiveFile? collisionHkxFile = archive.FindCollisionFile(".hkx");
 
             if (collisionIgzFile == null) {
                 Console.WriteLine("Could not rebuild collisions: Collision file not found.");

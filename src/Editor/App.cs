@@ -219,11 +219,7 @@ namespace NST
 
         public static void OnClickOpen()
         {
-            List<string> files = FileExplorer.OpenFiles(
-                @"C:\Program Files (x86)\Steam\steamapps\common\Crash Bandicoot - N Sane Trilogy\archives",
-                FileExplorer.EXT_ALCHEMY,
-                false
-            );
+            List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ALCHEMY, false);
 
             if (files.Count == 0) return;
 
@@ -238,11 +234,7 @@ namespace NST
 
         private static void OnClickImport()
         {
-            List<string> files = FileExplorer.OpenFiles(
-                @"C:\Program Files (x86)\Steam\steamapps\common\Crash Bandicoot - N Sane Trilogy\archives",
-                FileExplorer.EXT_ALCHEMY,
-                true
-            );
+            List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ALCHEMY, true);
 
             if (files.Count == 0) return;
 

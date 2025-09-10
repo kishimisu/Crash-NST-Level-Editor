@@ -314,7 +314,12 @@ namespace NST
         private static void CreateEnumInput(FileRenderer renderer, object value, Type type, string name, Action<object> onChange)
         {
             List<string> options = Enum.GetNames(type).ToList();
-            int selectedIndex = options.IndexOf(Enum.GetName(type, value)!);
+            string? optionName = Enum.GetName(type, value);
+            int selectedIndex = optionName == null ? 0 : options.IndexOf(optionName);
+
+            if (optionName == null) {
+                Console.WriteLine($"Warning: No enum associated with the value {value} for type {type} on field {name}");
+            }
 
             if (ImGui.BeginCombo("##selectInput" + name, options[selectedIndex]))
             {
@@ -379,7 +384,7 @@ namespace NST
 
             if (value != null)
             {
-                string text = renderer.FindNode(value).GetDisplayName();
+                string text = renderer.FindNode(value)?.GetDisplayName() ?? "<Not found>";
                 ImGui.Text(ImGuiUtils.TruncateTextToFit(text, maxTextWidth));
                 if (ImGui.IsItemHovered())
                 {
@@ -544,7 +549,6 @@ namespace NST
         {
             if (!ImGui.BeginTable("HashTable" + name, 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoSavedSettings))
             {
-                ImGui.Text("Failed to render HashTable");
                 return;
             }
 
@@ -576,7 +580,11 @@ namespace NST
 
                 if (key is igObject objectRefKey)
                 {
-                    CreateObjectRefInput(renderer, objectRefKey, typeof(K), "keys" + i);
+                    CreateObjectRefInputIgz(renderer, objectRefKey, typeof(K), "keys" + i);
+                }
+                else if (key is igMetaField metaFieldKey)
+                {
+                    MetaFieldRenderer.Render(renderer, metaFieldKey, typeof(K), "keys" + i, false);
                 }
                 else
                 {
@@ -601,7 +609,11 @@ namespace NST
 
                 if (value is igObject objectRef)
                 {
-                    CreateObjectRefInput(renderer, objectRef, typeof(V), "values" + i);
+                    CreateObjectRefInputIgz(renderer, objectRef, typeof(V), "values" + i);
+                }
+                else if (key is igMetaField metaFieldKey)
+                {
+                    MetaFieldRenderer.Render(renderer, metaFieldKey, typeof(V), "values" + i, false);
                 }
                 else
                 {

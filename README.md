@@ -58,14 +58,14 @@ View and edit files in archives (mods)
 
 Right-click on a file to open its context menu:
 - **Discard changes**: Revert any change made to the file
-- **Rename**: Rename the file
-- **Duplicate**: Duplicate the file
+- **Rename**: Change the file's name
+- **Duplicate**: Create a copy of the file
 - **Extract**: Uncompress and extract the file to the disk
 - **Delete**: Remove the file from the archive
 
 Shortcuts:
 - **Save (Ctrl+S)**: Save and overwrite the original archive
-- **Save as (Ctrl+Shift+S)**: Save the archive to a new file
+- **Save as... (Ctrl+Shift+S)**: Save the archive to a new file
 
 ## IGZ/Havok File Editor
 
@@ -130,11 +130,11 @@ For audio files, an audio player is available to listen to the track(s). It's al
 
 There are three type of audio files:
 
-- For `CSoundSamples` files (located in `sound_samples/`), an audio player is available in the right panel to play the sound.
-- For `.snd` files (loacted in `sound_streams/`), the audio is played directly as the file is just a raw audio stream.
+- For `CSoundSample` igz files (located in `sound_samples/`), an audio player is available in the right panel to play the sound.
 
+- For `.snd` files (located in `sound_streams/`), the audio is played directly as the file is just a raw audio stream.
 
-- For `CAudioArchive` files (locatd in `sounds/banks/`), each `CSound` object in the file is listed in the right panel, along with its associated `CSubSound` playable audio tracks. You can click on a track name to open the corresponding object and extract the audio.
+- For `CAudioArchive` igz files (located in `sounds/banks/`), each `CSound` object in the file is listed in the right panel, along with its associated `CSubSound` playable audio tracks. You can click on a track name to open the corresponding object and extract the audio.
 ![Texture preview](assets/readme/CAudioArchive.png)
 
 ## Level editor

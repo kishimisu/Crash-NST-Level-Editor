@@ -49,7 +49,7 @@ namespace NST
             ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanFullWidth)
         {
             // Leaf node (no children)
-            if (Children.Count == 0 && !recursion)
+            if (Children.Count == 0 || recursion)
             {
                 flags |= ImGuiTreeNodeFlags.Leaf;
             }

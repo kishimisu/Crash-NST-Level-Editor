@@ -370,7 +370,7 @@ namespace NST
             // Rebuild collisions if needed
             if (updatedCollisions.Count > 0)
             {
-                StaticCollisionsUtils.RebuildCollisions(this, updatedCollisions);
+                StaticCollisionsUtils.RebuildCollisions(Archive, updatedCollisions);
             }
 
             // Rebuild package file if needed

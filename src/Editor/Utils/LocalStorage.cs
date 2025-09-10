@@ -14,8 +14,9 @@ namespace NST
         public static List<string> RecentFiles { get; private set; } = []; // List of recently opened files
         
         public static string? GamePath { get; private set; } = null; // Path to the game folder
+        public static string ArchivePath => Path.Join(GamePath ?? DEFAULT_GAME_PATH, "archives"); // Path to the archives folder
 
-        private static string storageFilePath = ""; // Path to the main local storage file
+        private static string _storageFilePath = ""; // Path to the main local storage file
 
         /// <summary>
         /// Initialize the local storage.
@@ -31,7 +32,7 @@ namespace NST
                 Directory.CreateDirectory(appFolder);
             }
 
-            storageFilePath = Path.Combine(appFolder, storageFileName);
+            _storageFilePath = Path.Combine(appFolder, storageFileName);
 
             GamePath = Get<string>("game_path");
 
@@ -134,7 +135,7 @@ namespace NST
         {
             var data = GetAll();
             data[key] = value is string str ? str : JsonSerializer.Serialize(value);
-            File.WriteAllText(storageFilePath, JsonSerializer.Serialize(data));
+            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data));
         }
 
         /// <summary>
@@ -166,7 +167,7 @@ namespace NST
         {
             var data = GetAll();
             data.Remove(key);
-            File.WriteAllText(storageFilePath, JsonSerializer.Serialize(data));
+            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data));
         }
 
         /// <summary>
@@ -174,9 +175,9 @@ namespace NST
         /// </summary>
         private static Dictionary<string, string> GetAll()
         {
-            if (!File.Exists(storageFilePath)) return [];
+            if (!File.Exists(_storageFilePath)) return [];
 
-            string json = File.ReadAllText(storageFilePath);
+            string json = File.ReadAllText(_storageFilePath);
             return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
         }
     }
