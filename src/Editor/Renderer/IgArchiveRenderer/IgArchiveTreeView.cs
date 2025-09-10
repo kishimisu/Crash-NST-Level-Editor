@@ -58,8 +58,8 @@ namespace NST
                 if (!AllNodes.TryGetValue(nodeIdentifier, out _))
                 {
                     IgArchiveTreeNode node = (i < path.Length - 1)
-                        ? new (nodeIdentifier) // Folder node
-                        : new IgArchiveTreeNode(file.GetPath(), file); // Leaf node (file)
+                        ? new (nodeIdentifier, folderNode: true) // Folder node
+                        : new (file.GetPath(), file); // Leaf node (file)
                     
                     nodeIdentifier = node.NodePath;
 
@@ -155,6 +155,7 @@ namespace NST
             if (ImGui.BeginChild("igArchiveTreeView" + GetHashCode(), System.Numerics.Vector2.Zero, ImGuiChildFlags.None, ImGuiWindowFlags.HorizontalScrollbar))
             {
                 PreviousNode = null;
+                SelectNextNode = false;
 
                 foreach (IgArchiveTreeNode node in _rootNodes.ToList())
                 {

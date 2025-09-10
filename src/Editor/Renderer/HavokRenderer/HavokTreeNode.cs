@@ -31,56 +31,22 @@ namespace NST
         }
 
         /// <summary>
-        /// Called when this node becomes the currently focused node
-        /// </summary>
-        private void OnFocus()
-        {
-            if (NextFocus == NextFocusState.FocusAndKeyboard)
-                ImGui.SetKeyboardFocusHere();
-
-            NextFocus = NextFocusState.None;
-        }
-
-        /// <summary>
         /// Setup and render this node
         /// </summary>
         public void Render(HavokTreeView tree, List<HavokTreeNode> parentNodes, HavokTreeNode? parent = null, bool openOnSingleChild = true)
         {
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanFullWidth;
-
             bool recursion = parentNodes.Contains(this);
+            bool defaultOpen = (Children.Count == 1 && openOnSingleChild);
 
-            if (Children.Count == 0 && !recursion)
-            {
-                flags |= ImGuiTreeNodeFlags.Leaf;
-            }
-            else if (Children.Count == 1 && openOnSingleChild)
-            {
-                flags |= ImGuiTreeNodeFlags.DefaultOpen;
-            }
-            if (tree.SelectedNode == this)
-            {
-                flags |= ImGuiTreeNodeFlags.Selected;
+            NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
 
-                if (NextFocus != NextFocusState.None)
-                {
-                    OnFocus();
-                }
-            }
+            // Setup node
+            ImGuiTreeNodeFlags? flags = SetupNode(tree, recursion, defaultOpen);
 
-            // Handle search
-            if (tree.IsSearchActive() && !IsSearchResult)
-            {
-                return;
-            }
-            if (NextOpen != null)
-            {
-                ImGui.SetNextItemOpen((bool)NextOpen);
-                NextOpen = null;
-            }
+            if (flags == null) return;
 
             // Render item
-            IsOpen = RenderNode(tree, parentNodes, parent, flags, recursion);
+            RenderNode(tree, parentNodes, parent, flags.Value, recursion);
 
             tree.PreviousNode = this;
 
@@ -104,23 +70,17 @@ namespace NST
         /// <summary>
         /// Render the node
         /// </summary>
-        private bool RenderNode(HavokTreeView tree, List<HavokTreeNode> parentNodes, HavokTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
+        private void RenderNode(HavokTreeView tree, List<HavokTreeNode> parentNodes, HavokTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
         {
-            tree.CheckNextNode(this); // Handle keyboard navigation down
+            bool subselected = (tree.SelectedNode == this && NodePath != tree.SelectedNodePath);
 
-            bool isOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
+            if (subselected) ImGui.PushStyleColor(ImGuiCol.Header, new System.Numerics.Vector4(1, 1, 1, 0.15f));
 
-            if (ImGui.IsItemClicked())
-            {
-                tree.SetSelectedNode(this);
-            }
-            else if (ImGui.IsItemFocused())
-            {
-                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow)) tree.SetSelectedNode(tree.PreviousNode);
-                else if (ImGui.IsKeyPressed(ImGuiKey.DownArrow)) tree.SelectNextNode = true;
-                else if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow) && IsOpen) NextOpen = false;
-                else if (ImGui.IsKeyPressed(ImGuiKey.RightArrow) && !IsOpen) NextOpen = true;
-            }
+            IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
+
+            if (subselected) ImGui.PopStyleColor();
+
+            HandleNavigation(tree);
 
             if (recursion)
             {
@@ -130,9 +90,7 @@ namespace NST
 
             ImGui.SameLine(0, 0);
 
-            RenderObjectName(tree.IsSearchActive() ? null : parent);
-
-            return isOpen;
+            RenderObjectName(tree.IsSearchActive ? null : parent);
         }
 
         /// <summary>

@@ -10,12 +10,12 @@ namespace NST
     public class IgArchiveTreeNode : TreeNode
     {
         public IgArchiveFile? File { get; } = null; // Corresponding file, null for folders
-        public string NodePath { get; } = ""; // File or folder path
 
-        public IgArchiveTreeNode(string path, IgArchiveFile? file = null)
+        public IgArchiveTreeNode(string path, IgArchiveFile? file = null, bool folderNode = false)
         {
             File = file;
             NodePath = path;
+            IsFolder = folderNode;
 
             Name = path.EndsWith("/") 
                 ? Path.GetFileName(path.Substring(0, path.Length - 1))
@@ -30,56 +30,15 @@ namespace NST
         /// <param name="openOnSingleChild">Automatically opens the node if it has only one child</param>
         public void Render(IgArchiveRenderer renderer, IgArchiveTreeView tree, bool openOnSingleChild = false)
         {
-            tree.CheckNextNode(this); // Handle keyboard navigation down
+            bool defaultOpen = openOnSingleChild || NodePath.StartsWith("maps/");
+            
+            // Setup node
+            ImGuiTreeNodeFlags? flags = SetupNode(tree, false, defaultOpen, () => OnFocus(renderer), ImGuiTreeNodeFlags.SpanFullWidth);
 
-            // Setup flags
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.SpanFullWidth;
-
-            if (Children.Count == 0)
-            {
-                flags |= ImGuiTreeNodeFlags.Leaf;
-            }
-            else if (Children.Count == 1 && openOnSingleChild || NodePath.StartsWith("maps/"))
-            {
-                flags |= ImGuiTreeNodeFlags.DefaultOpen;
-            }
-            if (tree.SelectedNode == this)
-            {
-                flags |= ImGuiTreeNodeFlags.Selected;
-
-                // Handle next focus
-                if (NextFocus != NextFocusState.None)
-                {
-                    if (NextFocus == NextFocusState.FocusAndKeyboard)
-                        ImGui.SetKeyboardFocusHere();
-
-                    if (!ImGuiUtils.IsNodeVisible())
-                    {
-                        ImGui.SetScrollHereY();
-                    }
-
-                    if (File != null)
-                    {
-                        renderer.FocusNode(this);
-                    }
-
-                    NextFocus = NextFocusState.None;
-                }
-            }
-
-            // Handle search
-            if (tree.IsSearchActive() && !IsSearchResult)
-            {
-                return;
-            }
-            if (NextOpen != null)
-            {
-                ImGui.SetNextItemOpen((bool)NextOpen);
-                NextOpen = null;
-            }
+            if (flags == null) return;
 
             // Render item
-            IsOpen = RenderNode(tree, flags);
+            RenderNode(tree, flags.Value);
 
             tree.PreviousNode = this; // Used for keyboard navigation
             
@@ -101,10 +60,10 @@ namespace NST
         /// Render the node
         /// </summary>
         /// <returns>True if the node is currently open</returns>
-        private bool RenderNode(IgArchiveTreeView tree, ImGuiTreeNodeFlags flags)
+        private void RenderNode(IgArchiveTreeView tree, ImGuiTreeNodeFlags flags)
         {
             // Create the tree node with no name
-            bool isOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
+            IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
             
             // Handle tree node events
             HandleItemEvents(tree);
@@ -112,8 +71,6 @@ namespace NST
             // Render custom name
             ImGui.SameLine();
             RenderName(tree);
-
-            return isOpen;
         }
 
         /// <summary>
@@ -137,13 +94,7 @@ namespace NST
             }
 
             // Keyboard navigation
-            if (ImGui.IsItemFocused())
-            {
-                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow)) tree.SetSelectedNode(tree.PreviousNode);
-                else if (ImGui.IsKeyPressed(ImGuiKey.DownArrow)) tree.SelectNextNode = true;
-                else if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow) && IsOpen) NextOpen = false;
-                else if (ImGui.IsKeyPressed(ImGuiKey.RightArrow) && !IsOpen) NextOpen = true;
-            }
+            HandleNavigation(tree, false);
 
             if (File != null)
             {
@@ -154,6 +105,14 @@ namespace NST
             {
                 // Folders act as drag targets
                 tree.BeginDragDropTarget(this);
+            }
+        }
+
+        private void OnFocus(IgArchiveRenderer renderer)
+        {
+            if (File != null)
+            {
+                renderer.FocusNode(this, force: true);
             }
         }
 

@@ -229,10 +229,10 @@ namespace NST
         /// <summary>
         /// Focus a node in the tree view and open its corresponding file
         /// </summary>
-        public void FocusNode(IgArchiveTreeNode? node, NamedReference? reference = null, IgzRenderer? lastRenderer = null)
+        public void FocusNode(IgArchiveTreeNode? node, NamedReference? reference = null, IgzRenderer? lastRenderer = null, bool force = false)
         {
-            // if (_selectedFile == node?.GetFile()) {
-            if (_treeView.SelectedNode == node) {
+            if (_treeView.SelectedNode == node && !force)
+            {
                 return;
             }
 
@@ -243,10 +243,11 @@ namespace NST
                 return;
             }
 
-
             _treeView.SetSelectedNode(node, true);
 
             if (node.File == null) return;
+
+            node.NextFocus = NextFocusState.None;
 
             OpenFile(node.File, reference, lastRenderer);
         }

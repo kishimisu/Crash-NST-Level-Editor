@@ -85,6 +85,7 @@ namespace NST
             UpdateSearch();
 
             PreviousNode = null;
+            SelectNextNode = false;
 
             foreach (HavokTreeNode node in _rootNodes)
             {

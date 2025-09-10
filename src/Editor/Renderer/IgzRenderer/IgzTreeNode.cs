@@ -22,10 +22,18 @@ namespace NST
 
         public override string GetDisplayName() => GetDisplayName(true) ?? Name + GetHashCode();
 
+        /// <summary>
+        /// Object node constructor
+        /// </summary>
         public IgzTreeNode(igObject obj) => Object = obj;
+
+        /// <summary>
+        /// Folder node constructor
+        /// </summary>
         public IgzTreeNode(string name, List<IgzTreeNode>? children = null)
         {
             Name = name;
+            IsFolder = true;
             Children = children?.Cast<TreeNode>().ToList() ?? [];
         }
 
@@ -88,9 +96,6 @@ namespace NST
         /// </summary>
         private void OnFocus()
         {
-            if (NextFocus == NextFocusState.FocusAndKeyboard)
-                ImGui.SetKeyboardFocusHere();
-
             if (Object is CSubSound subSound)
             {
                 SubSoundPreview = new CSubSoundPreview(this);
@@ -101,8 +106,6 @@ namespace NST
                 _audioPreview = true;
                 AudioPlayerInstance.InitAudioPlayer(soundSample);
             }
-
-            NextFocus = NextFocusState.None;
         }
 
         /// <summary>
@@ -110,50 +113,24 @@ namespace NST
         /// </summary>
         public void Render(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent = null, bool openOnSingleChild = true)
         {
-            tree.CheckNextNode(this); // Handle keyboard navigation down
-
-            // Setup flags
-            ImGuiTreeNodeFlags flags = ImGuiTreeNodeFlags.OpenOnArrow | ImGuiTreeNodeFlags.OpenOnDoubleClick | ImGuiTreeNodeFlags.SpanFullWidth;
-            
             bool recursion = parentNodes.Contains(this);
+            bool defaultOpen = (Children.Count == 1 && openOnSingleChild);
 
-            if (Children.Count == 0 || recursion)
-            {
-                flags |= ImGuiTreeNodeFlags.Leaf;
-            }
-            else if (Children.Count == 1 && openOnSingleChild)
-            {
-                flags |= ImGuiTreeNodeFlags.DefaultOpen;
-            }
-            if (tree.SelectedNode == this)
-            {
-                flags |= ImGuiTreeNodeFlags.Selected;
+            NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
 
-                if (NextFocus != NextFocusState.None)
-                {
-                    OnFocus();
-                }
-            }
+            // Setup node
+            ImGuiTreeNodeFlags? flags = SetupNode(tree, recursion, defaultOpen, OnFocus);
 
-            // Handle search
-            if (tree.IsSearchActive() && !IsSearchResult)
-            {
-                return;
-            }
-            if (NextOpen != null)
-            {
-                ImGui.SetNextItemOpen((bool)NextOpen);
-                NextOpen = null;
-            }
-            
+            if (flags == null)  return;
+
             // Render item
             if (Object == null)
             {
-                IsOpen = RenderFolderNode(tree, flags);
+                RenderFolderNode(tree, flags.Value);
             }
             else
             {
-                IsOpen = RenderObjectNode(tree, parentNodes, parent, flags, recursion);
+                RenderObjectNode(tree, parentNodes, parent, flags.Value, recursion);
             }
 
             tree.PreviousNode = this;
@@ -178,39 +155,33 @@ namespace NST
         /// <summary>
         /// Renders this node as an object node
         /// </summary>
-        private bool RenderObjectNode(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
+        private void RenderObjectNode(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
         {
             if (Object == null)
             {
-                return RenderFolderNode(tree, flags);
+                RenderFolderNode(tree, flags);
+                return;
             }
 
             bool multiReferences = Parents.Count > 1 || (Parents.Count == 1 && RootNode);
+            bool subselected = (tree.SelectedNode == this && NodePath != tree.SelectedNodePath);
 
             if (multiReferences)
             {
                 if (Children.Count == 0) flags |= ImGuiTreeNodeFlags.Bullet;
                 ImGui.PushStyleColor(ImGuiCol.Text, 0xff0099ff);
             }
-            
-            bool isOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
-
-            if (multiReferences) 
+            if (subselected)
             {
-                ImGui.PopStyleColor();
+                ImGui.PushStyleColor(ImGuiCol.Header, new System.Numerics.Vector4(1, 1, 1, 0.15f));
             }
 
-            if (ImGui.IsItemClicked())
-            {
-                tree.SetSelectedNode(this);
-            }
-            else if (ImGui.IsItemFocused())
-            {
-                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow)) tree.SetSelectedNode(tree.PreviousNode);
-                else if (ImGui.IsKeyPressed(ImGuiKey.DownArrow)) tree.SelectNextNode = true;
-                else if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow) && IsOpen) NextOpen = false;
-                else if (ImGui.IsKeyPressed(ImGuiKey.RightArrow) && !IsOpen) NextOpen = true;
-            }
+            IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
+
+            if (multiReferences) ImGui.PopStyleColor();
+            if (subselected) ImGui.PopStyleColor();
+
+            HandleNavigation(tree);
 
             if (recursion)
             {
@@ -222,36 +193,26 @@ namespace NST
 
             HighlightText(GetDisplayName()!, tree.SearchQuery);
 
-            RenderObjectName(tree.IsSearchActive() ? null : parent);
-
-            return isOpen;
+            RenderObjectName(tree.IsSearchActive ? null : parent);
         }
 
         /// <summary>
         /// Renders this node as a folder node
         /// </summary>
-        private bool RenderFolderNode(IgzTreeView tree, ImGuiTreeNodeFlags flags)
+        private void RenderFolderNode(IgzTreeView tree, ImGuiTreeNodeFlags flags)
         {
             string folderTypeStr = Name.Split(' ')[0];
             Type? folderType = Type.GetType("Alchemy." + folderTypeStr);
             uint typeColor = folderType?.GetUniqueColor() ?? 0xffffffff;
 
-            bool expanded = ImGui.TreeNodeEx("##" + Name, flags);
+            IsOpen = ImGui.TreeNodeEx("##" + Name, flags);
+
+            HandleNavigation(tree);
 
             ImGui.SameLine(0, 0);
             ImGui.PushStyleColor(ImGuiCol.Text, typeColor);
             ImGui.Text(Name);
             ImGui.PopStyleColor();
-            
-            if (ImGui.IsItemFocused()) // TODO: This code is duplicated 3 times
-            {
-                if (ImGui.IsKeyPressed(ImGuiKey.UpArrow)) tree.SetSelectedNode(tree.PreviousNode);
-                else if (ImGui.IsKeyPressed(ImGuiKey.DownArrow)) tree.SelectNextNode = true;
-                else if (ImGui.IsKeyPressed(ImGuiKey.LeftArrow) && IsOpen) NextOpen = false;
-                else if (ImGui.IsKeyPressed(ImGuiKey.RightArrow) && !IsOpen) NextOpen = true;
-            }
-
-            return expanded;
         }
 
         /// <summary>

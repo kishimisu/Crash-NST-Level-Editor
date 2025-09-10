@@ -112,7 +112,11 @@ namespace NST
                 {
                     child.RootNode = true;
                 }
-                node.NextOpen = (rootNodes.Count <= 5 && node.Children.Count < 20);
+                
+                if (rootNodes.Count <= 5 && node.Children.Count < 20)
+                {
+                    node.NextOpen = NextOpenState.ForceOpen;
+                }
             }
 
             return rootNodes;
@@ -245,6 +249,7 @@ namespace NST
             UpdateSearch();
 
             PreviousNode = null;
+            SelectNextNode = false;
 
             foreach (IgzTreeNode node in _rootNodes)
             {

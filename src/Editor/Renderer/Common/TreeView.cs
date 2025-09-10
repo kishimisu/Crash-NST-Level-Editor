@@ -4,7 +4,11 @@ namespace NST
 {
     public interface ITreeView
     {
+        public TreeNode? PreviousNode { get; }
         public TreeNode? SelectedNode { get; }
+        public string SelectedNodePath { get; }
+        public bool IsSearchActive { get; }
+        public bool SelectNextNode { get; set; }
 
         public void Render();
         public void RenderObjectView(FileRenderer renderer);
@@ -21,11 +25,12 @@ namespace NST
         // Nodes
         public Dictionary<string, T> AllNodes { get; protected set; } = []; // All nodes (objects + folders)
         protected List<T> _rootNodes = []; // Root object nodes
-        public T? SelectedNode { get; private set; } = null; // Currently selected node
+        public T? SelectedNode { get; private set; } = null; // Currently selected node (can appear multiple times in the tree)
+        public string SelectedNodePath { get; set; } = ""; // Unique path to the currently selected node
 
         // Search
         public string SearchQuery = ""; // Current search query
-        public bool IsSearchActive() => SearchQuery != "";
+        public bool IsSearchActive => SearchQuery != "";
 
         private bool _expandAll = false;
         protected Dictionary<T, bool> _expandedStates = [];
@@ -37,6 +42,7 @@ namespace NST
 
         // Interface
         TreeNode? ITreeView.SelectedNode => SelectedNode;
+        TreeNode? ITreeView.PreviousNode => PreviousNode;
         void ITreeView.SetSelectedNode(TreeNode? node, bool expandParents, bool keyboardFocus) => SetSelectedNode((T?)node, expandParents, keyboardFocus);
 
         /// <summary>
@@ -58,6 +64,7 @@ namespace NST
         public void SetSelectedNode(T? node, bool expandParents = false, bool keyboardFocus = true)
         {
             SelectedNode = node;
+            SelectedNodePath = node?.NodePath ?? "";
 
             if (node == null) {
                 return;
@@ -70,18 +77,9 @@ namespace NST
                 ExpandParents(node);
             }
 
-            _nodeHistory.Add(node);
-        }
-
-        /// <summary>
-        /// Selects the next node in the tree after a "down" key press
-        /// </summary>
-        public void CheckNextNode(T node)
-        {
-            if (SelectNextNode)
+            if (!node.IsFolder)
             {
-                SetSelectedNode(node);
-                SelectNextNode = false;
+                _nodeHistory.Add(node);
             }
         }
 
@@ -90,29 +88,33 @@ namespace NST
         /// </summary>
         protected void UpdateSearch()
         {
-            if (_expandedStates.Count == 0 && IsSearchActive())
+            // Search started
+            if (_expandedStates.Count == 0 && IsSearchActive)
             {
                 foreach (T node in AllNodes.Values)
                 {
                     _expandedStates.Add(node, node.IsOpen);
-                    node.NextOpen = true;
+                    node.NextOpen = NextOpenState.ForceOpen;
                 }
                 FilterNodes(_rootNodes, []);
             }
-            else if (_expandedStates.Count > 0 && !IsSearchActive())
+            // Search cleared
+            else if (_expandedStates.Count > 0 && !IsSearchActive)
             {
                 foreach (T node in AllNodes.Values)
                 {
                     if (_expandedStates.TryGetValue(node, out bool isOpen))
                     {
-                        node.NextOpen = isOpen;
+                        node.NextOpen = isOpen ? NextOpenState.ForceOpen : NextOpenState.ForceClose;
                     }
                 }
                 _expandedStates.Clear();
                 FilterNodes(_rootNodes, []);
-            }
 
-            if (IsSearchActive())
+                SetSelectedNode(SelectedNode, true);
+            }
+            // Search active
+            else if (IsSearchActive)
             {
                 FilterNodes(_rootNodes, []);
             }
@@ -131,7 +133,7 @@ namespace NST
                 exploredNodes.Add(node);
 
                 bool matchSearch = FilterNodes(node.Children.Cast<T>().ToList(), exploredNodes) || 
-                                   ( IsSearchActive()
+                                   ( IsSearchActive
                                         ? node.GetDisplayName()?.Contains(SearchQuery, StringComparison.OrdinalIgnoreCase ) == true
                                         : node == SelectedNode );
 
@@ -158,7 +160,7 @@ namespace NST
 
                 if (ExpandParents(toFind, node.Children.Cast<T>().ToList(), exploredNodes))
                 {
-                    node.NextOpen = true;
+                    node.NextOpen = NextOpenState.ForceOpen;
                     return true;
                 }
             }
@@ -175,7 +177,7 @@ namespace NST
             {
                 foreach (TreeNode node in _rootNodes)
                 {
-                    node.NextOpen = true;
+                    node.NextOpen = NextOpenState.ForceOpen;
                 }
                 return;
             }
@@ -184,7 +186,7 @@ namespace NST
 
             foreach (TreeNode node in AllNodes.Values)
             {
-                node.NextOpen = _expandAll;
+                node.NextOpen = _expandAll ? NextOpenState.ForceOpen : NextOpenState.ForceClose;
             }
         }
 
