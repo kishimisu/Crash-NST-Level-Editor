@@ -187,6 +187,7 @@ namespace Havok
 
     public enum EType : i8
     {
+        UNKNOWN = -1,
         INVALID = 0,
         TRIANGLE = 1,
         QUAD = 2,
