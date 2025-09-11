@@ -169,24 +169,28 @@ namespace NST
         }
 
         /// <summary>
-        /// Expands or collapses all nodes
+        /// Try to expand root nodes if not already expanded,
+        /// otherwise expand/collapse all nodes.
         /// </summary>
         private void OnClickExpandAll()
         {
+            // Expand root nodes
             if (!_expandAll && _rootNodes.Any(n => !n.IsOpen))
             {
                 foreach (TreeNode node in _rootNodes)
                 {
                     node.NextOpen = NextOpenState.ForceOpen;
                 }
-                return;
             }
-
-            _expandAll = !_expandAll;
-
-            foreach (TreeNode node in AllNodes.Values)
+            // Expand/collapse all nodes
+            else
             {
-                node.NextOpen = _expandAll ? NextOpenState.ForceOpen : NextOpenState.ForceClose;
+                _expandAll = !_expandAll;
+
+                foreach (TreeNode node in AllNodes.Values)
+                {
+                    node.NextOpen = _expandAll ? NextOpenState.ForceOpen : NextOpenState.ForceClose;
+                }
             }
         }
 

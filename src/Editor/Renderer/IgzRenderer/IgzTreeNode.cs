@@ -111,10 +111,9 @@ namespace NST
         /// <summary>
         /// Setup and render this node
         /// </summary>
-        public void Render(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent = null, bool openOnSingleChild = true)
+        public void Render(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent = null, bool defaultOpen = false)
         {
             bool recursion = parentNodes.Contains(this);
-            bool defaultOpen = (Children.Count == 1 && openOnSingleChild);
 
             NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
 
@@ -138,13 +137,13 @@ namespace NST
             // Render children
             if (IsOpen && !recursion)
             {
-                bool hasOnlyOneChild = Children.Count == 1;
+                bool openChildNode = Children.Count == 1;
 
                 parentNodes.Add(this);
                 
                 foreach (IgzTreeNode child in Children)
                 {
-                    child.Render(tree, parentNodes, this, hasOnlyOneChild);
+                    child.Render(tree, parentNodes, this, openChildNode);
                 }
 
                 parentNodes.Remove(this);

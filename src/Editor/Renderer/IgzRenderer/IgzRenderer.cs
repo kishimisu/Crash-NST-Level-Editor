@@ -43,10 +43,10 @@ namespace NST
                 Console.WriteLine($"WARNING: Failed to create preview manager: {e.Message}\n{e.StackTrace}");
             }
 
-            // Auto-focus the first object in the tree if it's the only one
-            if ((_previewManager == null || !_previewManager.IsActiveInObjectView()) && TreeView.ObjectNodes.Count == 1)
+            if (_previewManager == null || !_previewManager.IsActiveInObjectView())
             {
-                TreeView.SetSelectedNode(TreeView.ObjectNodes[0], true, false);
+                // Auto focus root node
+                TreeView.SelectRootObject();
             }
         }
 

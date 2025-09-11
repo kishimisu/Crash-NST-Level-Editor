@@ -33,10 +33,9 @@ namespace NST
         /// <summary>
         /// Setup and render this node
         /// </summary>
-        public void Render(HavokTreeView tree, List<HavokTreeNode> parentNodes, HavokTreeNode? parent = null, bool openOnSingleChild = true)
+        public void Render(HavokTreeView tree, List<HavokTreeNode> parentNodes, HavokTreeNode? parent = null, bool defaultOpen = true)
         {
             bool recursion = parentNodes.Contains(this);
-            bool defaultOpen = (Children.Count == 1 && openOnSingleChild);
 
             NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
 
@@ -53,13 +52,13 @@ namespace NST
             // Render children
             if (IsOpen && !recursion)
             {
-                bool hasOnlyOneChild = Children.Count == 1;
+                bool openChildNode = Children.Count == 1;
 
                 parentNodes.Add(this);
                 
                 foreach (HavokTreeNode child in Children)
                 {
-                    child.Render(tree, parentNodes, this, hasOnlyOneChild);
+                    child.Render(tree, parentNodes, this, openChildNode);
                 }
 
                 parentNodes.Remove(this);

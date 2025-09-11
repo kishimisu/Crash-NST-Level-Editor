@@ -63,7 +63,7 @@ namespace NST
                     if (ImGui.MenuItem("Main Menu")) _mainMenu.IsOpen = true;
                     if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
                     if (ImGui.MenuItem("Demo Window")) _showDemo = !_showDemo;
-                    if (ImGui.MenuItem("Run Tests")) Tests.TestEditor();
+                    // if (ImGui.MenuItem("Run Tests")) Tests.TestEditor();
                     if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                     ImGui.EndMenu();
                 }

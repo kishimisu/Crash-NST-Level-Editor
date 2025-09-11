@@ -113,7 +113,7 @@ namespace NST
                     child.RootNode = true;
                 }
                 
-                if (rootNodes.Count <= 5 && node.Children.Count < 20)
+                if (rootNodes.Count == 1 || (rootNodes.Count <= 4 && node.Children.Count < 20))
                 {
                     node.NextOpen = NextOpenState.ForceOpen;
                 }
@@ -212,6 +212,17 @@ namespace NST
                     typeCount[type] = typeCount.GetValueOrDefault(type) + 1;
                     node.TypeCount = typeCount[type];
                 }
+            }
+        }
+
+        /// <summary>
+        /// Select the first child node of the root folder
+        /// </summary>
+        public void SelectRootObject()
+        {
+            if (_rootNodes.Count == 1 && _rootNodes[0].Children.Count == 1)
+            {
+                SetSelectedNode((IgzTreeNode)_rootNodes[0].Children[0], false, false);
             }
         }
 

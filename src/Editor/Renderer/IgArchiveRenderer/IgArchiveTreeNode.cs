@@ -28,9 +28,9 @@ namespace NST
         /// <param name="renderer">The parent renderer</param>
         /// <param name="tree">The parent tree</param>
         /// <param name="openOnSingleChild">Automatically opens the node if it has only one child</param>
-        public void Render(IgArchiveRenderer renderer, IgArchiveTreeView tree, bool openOnSingleChild = false)
+        public void Render(IgArchiveRenderer renderer, IgArchiveTreeView tree, bool defaultOpen = false)
         {
-            bool defaultOpen = openOnSingleChild || NodePath.StartsWith("maps/");
+            defaultOpen = defaultOpen || NodePath.StartsWith("maps/");
             
             // Setup node
             ImGuiTreeNodeFlags? flags = SetupNode(tree, false, defaultOpen, () => OnFocus(renderer), ImGuiTreeNodeFlags.SpanFullWidth);
@@ -45,11 +45,11 @@ namespace NST
             // Render children
             if (IsOpen)
             {
-                bool hasOnlyOneChild = Children.Count == 1;
+                bool openChildNode = Children.Count == 1;
 
                 foreach (IgArchiveTreeNode child in Children.ToList())
                 {
-                    child.Render(renderer, tree, hasOnlyOneChild);
+                    child.Render(renderer, tree, openChildNode);
                 }
 
                 ImGui.TreePop();
