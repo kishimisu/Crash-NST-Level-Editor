@@ -85,7 +85,7 @@ namespace NST
         /// <summary>
         /// Render the tree view and object view
         /// </summary>
-        private void RenderContent(bool horizontalLayout)
+        public void RenderContent(bool horizontalLayout)
         {
             // Start table
             if (horizontalLayout)
@@ -117,7 +117,6 @@ namespace NST
                 if (!IsOpenAsWindow && ImGui.SmallButton("Open in new window"))
                 {
                     IsOpenAsWindow = true;
-                    ArchiveRenderer.FocusNode(null);
                 }
             }
             else

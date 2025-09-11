@@ -94,6 +94,7 @@ namespace NST
             _io = ImGui.GetIO();
             _io.MouseDrawCursor = true;
             _io.ConfigWindowsMoveFromTitleBarOnly = true;
+            _io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
             ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 12);
         }
@@ -180,6 +181,10 @@ namespace NST
             else if (key == Key.SuperLeft || key == Key.SuperRight)
             {
                 _io.AddKeyEvent(ImGuiKey.ModSuper, down);
+            }
+            else if (key == Key.Q) // Fix Ctrl+A not working on text inputs on azerty keyboards
+            {
+                _io.AddKeyEvent(ImGuiKey.A, down);
             }
         }
 

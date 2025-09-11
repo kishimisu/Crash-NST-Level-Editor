@@ -1,6 +1,7 @@
 using Alchemy;
 using ImGuiNET;
 using Silk.NET.Windowing;
+using System.Diagnostics;
 
 namespace NST
 {
@@ -58,21 +59,25 @@ namespace NST
                 {
                     if (ImGui.MenuItem("New...", "Ctrl+N")) OnClickNew();
                     if (ImGui.MenuItem("Open...", "Ctrl+O")) OnClickOpen();
+                    ImGui.Separator();
                     if (ImGui.MenuItem("Main Menu")) _mainMenu.IsOpen = true;
+                    if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
                     if (ImGui.MenuItem("Demo Window")) _showDemo = !_showDemo;
-                    if (ImGui.MenuItem("Set Game Path...")) LocalStorage.SetNewGamePath();
+                    if (ImGui.MenuItem("Run Tests")) Tests.TestEditor();
                     if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                     ImGui.EndMenu();
                 }
-                if (ImGui.BeginMenu("Edit"))
+                // if (ImGui.BeginMenu("Edit"))
+                // {
+                //     if (ImGui.MenuItem("Undo", "Ctrl+Z")) {}
+                //     if (ImGui.MenuItem("Redo", "Ctrl+Y")) {}
+                //     ImGui.EndMenu();
+                // }
+                if (ImGui.BeginMenu("About..."))
                 {
-                    if (ImGui.MenuItem("Undo", "Ctrl+Z")) {}
-                    if (ImGui.MenuItem("Redo", "Ctrl+Y")) {}
-                    ImGui.EndMenu();
-                }
-                if (ImGui.BeginMenu("Help"))
-                {
-                    if (ImGui.MenuItem("About")) {}
+                    if (ImGui.MenuItem("Open project page")) {
+                        OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
+                    }
                     ImGui.EndMenu();
                 }
                 ImGui.EndMainMenuBar();
@@ -250,6 +255,21 @@ namespace NST
             {
                 ModalRenderer.ShowMessageModal("Invalid operation", "You can only import from one .pak archive at a time.");
                 return;
+            }
+        }
+
+        private static void OpenURL(string url)
+        {
+            try {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = url,
+                    UseShellExecute = true
+                });
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Failed to open {url}: {e.Message}");
             }
         }
     }

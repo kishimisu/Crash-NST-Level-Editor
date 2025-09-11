@@ -111,7 +111,7 @@ namespace NST
                 _expandedStates.Clear();
                 FilterNodes(_rootNodes, []);
 
-                SetSelectedNode(SelectedNode, true);
+                SetSelectedNode(SelectedNode, true, false);
             }
             // Search active
             else if (IsSearchActive)

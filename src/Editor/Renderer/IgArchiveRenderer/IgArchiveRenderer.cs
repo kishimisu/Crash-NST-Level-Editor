@@ -95,19 +95,12 @@ namespace NST
             if (_selectedFile == null) return;
 
             FileRenderer? renderer = FileManager.GetRenderer(_selectedFile);
-            bool isWindow = false;
 
             if (renderer != null)
             {
-                if (!renderer.IsOpenAsWindow)
-                {
-                    // Show the current IgzRenderer on the right
-                    ImGui.TableNextColumn();
-                    renderer.Render();
-                    return;
-                }
-
-                isWindow = true;
+                ImGui.TableNextColumn();
+                renderer.RenderContent(true);
+                return;
             }
 
             string extension = Path.GetExtension(_selectedFile.GetName());
@@ -120,11 +113,6 @@ namespace NST
             if (_showAudioPlayer)
             {
                 AudioPlayerInstance.Render();
-            }
-            // files that are opened as windows
-            else if (isWindow)
-            {
-                ImGui.TextColored(new Vector4(1, 0.7f, 0, 1), "    [ Open in another window ]");
             }
             // unsupported files
             else
@@ -221,9 +209,9 @@ namespace NST
         /// <summary>
         /// Focus a file in the tree view and open its content
         /// </summary>
-        public void FocusFile(IgArchiveFile file)
+        public void FocusFile(IgArchiveFile file, bool force = false)
         {
-            FocusNode(_treeView.FindNode(file));
+            FocusNode(_treeView.FindNode(file), force: force);
         }
 
         /// <summary>
@@ -528,7 +516,7 @@ namespace NST
             // Re-focus the file
             if (_selectedFile == file)
             {
-                FocusFile(file);
+                FocusFile(file, true);
             }
         }
 

@@ -85,10 +85,12 @@ namespace NST
             if (recursion)
             {
                 ImGui.SameLine();
-                ImGui.Text("(Recursion)");
+                ImGui.Text("(Recursion) ");
             }
 
             ImGui.SameLine(0, 0);
+
+            HighlightText(GetDisplayName()!, tree.SearchQuery);
 
             RenderObjectName(tree.IsSearchActive ? null : parent);
         }
