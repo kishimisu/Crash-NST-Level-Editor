@@ -7,7 +7,7 @@ namespace Alchemy
 
         private NamedReference? _reference;
 
-        public void SetReference(NamedReference reference) => _reference = reference;
+        public void SetReference(NamedReference? reference) => _reference = reference;
         public NamedReference? GetReference() => _reference;
         public string? GetNamespaceName() => _reference?.namespaceName;
         public string? GetReferencedObjectName() => _reference?.objectName;

@@ -32,14 +32,34 @@ namespace NST
             TreeView.BuildNodes(havokFile.RootLevelContainer);
         }
 
+        public override void SetUpdated(object? obj = null)
+        {
+            obj ??= TreeView.SelectedNode?.Object;
+
+            // Update archive
+            base.SetUpdated(obj);
+
+            // Update tree view
+            if (obj is hkObject hkObj)
+            {
+                TreeView.SetNodeUpdated(hkObj);
+            }
+        }
+
+        public override void OnObjectRefChanged()
+        {
+            SetUpdated();
+            TreeView.RebuildNode(TreeView.SelectedNode);
+        }
+
         public override HavokTreeNode FindNode(object obj)
         {
             return TreeView.AllNodes.Values.First(e => e.Object == obj)!;
         }
         
-        public override List<string> FindDerivedObjectNames(Type type, object? current, out int currentIndex)
+        public override List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex)
         {
-            List<string> names = [];
+            List<TreeNode> nodes = [];
 
             currentIndex = 0;
             
@@ -49,13 +69,13 @@ namespace NST
                 {
                     if (node.Object == current)
                     {
-                        currentIndex = names.Count;
+                        currentIndex = nodes.Count;
                     }
-                    names.Add(node.GetDisplayName()!);
+                    nodes.Add(node);
                 }
             }
 
-            return names;
+            return nodes;
         }
     }
 }

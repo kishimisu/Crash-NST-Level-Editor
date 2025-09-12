@@ -28,11 +28,18 @@ namespace Alchemy
         {
             base.Parse(reader);
 
+            BuildDict();
+        }
+
+        public Dictionary<K, V> BuildDict(bool skipDuplicateKeys = false)
+        {
             FieldInfo keysField = GetType().GetField("_keys")!;
             FieldInfo valuesField = GetType().GetField("_values")!;
 
             igMemoryRef<K> keys = (igMemoryRef<K>)keysField.GetValue(this)!;
             igMemoryRef<V> values = (igMemoryRef<V>)valuesField.GetValue(this)!;
+
+            Dict.Clear();
 
             for (int i = 0; i < keys.Count; i++)
             {
@@ -44,8 +51,12 @@ namespace Alchemy
                 if (key is igEnumMetaField em && (uint)em._value == 0xFAFAFAFA) continue;
                 if (key is DotNetDataMetaField dm && dm._elementType == 1073741825) continue;
 
+                if (skipDuplicateKeys && Dict.ContainsKey(key)) continue;
+
                 Dict.Add(key, values[i]);
             }
+
+            return Dict;
         }
 
         public override void Write(IgzWriter writer)

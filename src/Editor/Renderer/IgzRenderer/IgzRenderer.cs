@@ -52,7 +52,7 @@ namespace NST
 
         public override void SetUpdated(object? obj = null)
         {
-            obj ??= FieldRenderer.ParentObject;
+            obj ??= TreeView.SelectedNode?.Object;
 
             // Update archive
             base.SetUpdated(obj);
@@ -64,17 +64,23 @@ namespace NST
             }
         }
 
+        public override void OnObjectRefChanged()
+        {
+            SetUpdated();
+            TreeView.RebuildNode(Igz, TreeView.SelectedNode);
+        }
+
         public override IgzTreeNode FindNode(object obj)
         {
             return TreeView.ObjectNodes.Find(e => e.Object == obj)!;
         }
 
-        public override List<string> FindDerivedObjectNames(Type type, object? current, out int currentIndex)
+        public override List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex)
         {
-            List<string> names = [];
+            List<TreeNode> nodes = [];
 
             currentIndex = 0;
-            
+
             foreach (IgzTreeNode node in TreeView.ObjectNodes)
             {
                 if (node.Object == null) continue;
@@ -83,13 +89,13 @@ namespace NST
                 {
                     if (node.Object == current)
                     {
-                        currentIndex = names.Count;
+                        currentIndex = nodes.Count;
                     }
-                    names.Add(node.GetDisplayName()!);
+                    nodes.Add(node);
                 }
             }
 
-            return names;
+            return nodes;
         }
     }
 }

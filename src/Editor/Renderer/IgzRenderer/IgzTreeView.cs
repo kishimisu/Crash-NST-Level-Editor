@@ -216,6 +216,52 @@ namespace NST
         }
 
         /// <summary>
+        /// Rebuild the children of a node and update 
+        /// the parents of the previous children.
+        /// </summary>
+        public void RebuildNode(IgzFile igz, IgzTreeNode? node)
+        {
+            if (node?.Object == null) return;
+
+            List<TreeNode> prevChildren = node.Children.ToList();
+
+            // Clear previous children
+            node.Children.Clear();
+
+            // Add new children
+            foreach (igObject child in node.Object.GetChildren(igz, ChildrenSearchParams.IncludeHandles))
+            {
+                IgzTreeNode? childNode = ObjectNodes.Find(e => e.Object == child);
+
+                if (childNode == null)
+                {
+                    Console.WriteLine($"Warning: No node found for {child} while rebuilding {node.Object}");
+                    continue;
+                }
+
+                node.Children.Add(childNode);
+            }
+
+            // Unparent previous children
+            foreach (IgzTreeNode prevChild in prevChildren)
+            {
+                if (!node.Children.Contains(prevChild))
+                {
+                    prevChild.Parents.Remove(node);
+                }
+            }
+
+            // Parent new children
+            foreach (IgzTreeNode child in node.Children)
+            {
+                if (!child.Parents.Contains(node))
+                {
+                    child.Parents.Add(node);
+                }
+            }
+        }
+
+        /// <summary>
         /// Select the first child node of the root folder
         /// </summary>
         public void SelectRootObject()

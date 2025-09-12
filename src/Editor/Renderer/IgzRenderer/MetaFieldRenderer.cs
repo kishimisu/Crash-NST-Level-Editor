@@ -93,12 +93,12 @@ namespace NST
             { typeof(ChunkFileInfoMetaField), (obj, renderer, name) => Render((ChunkFileInfoMetaField)obj, renderer, name) },
         };
 
-        private static void RenderMemory<T>(igMemoryRef<T> obj, FileRenderer renderer, string name)
+        private static void RenderMemory<T>(igMemoryRef<T?> obj, FileRenderer renderer, string name)
         {
             FieldRenderer.RenderMemory(obj.GetElements(), renderer, obj.GetType(), name);
         }
         
-        private static void RenderMemory<T>(igVectorMetaField<T> obj, FileRenderer renderer, string name)
+        private static void RenderMemory<T>(igVectorMetaField<T?> obj, FileRenderer renderer, string name)
         {
             FieldRenderer.RenderMemory(obj._data.GetElements(), renderer, obj.GetType(), name);
         }
@@ -106,6 +106,8 @@ namespace NST
         private static void Render(igHandleMetaField obj, IgzRenderer renderer, string name)
         {
             NamedReference? reference = obj.GetReference();
+
+            ImGui.PushID(name);
 
             // Null reference
             if (reference == null)
@@ -121,25 +123,33 @@ namespace NST
                     obj.SetReference(new NamedReference());
                 }
 
+                ImGui.PopID();
+
                 return;
             }
 
             // Namespace field
-            FieldRenderer.CreateInput(renderer, reference.namespaceName, typeof(string), name + "file", (newVal) => 
+            FieldRenderer.CreateStringInput(renderer, reference.namespaceName, name + "file", (newVal) => 
             {
-                reference.SetNamespace((string)newVal);
-                renderer.SetUpdated();
+                if (newVal == null) {
+                    obj.SetReference(null);
+                }
+                else {
+                    reference.SetNamespace((string)newVal);
+                }
+                renderer.OnObjectRefChanged();
             });
 
             float buttonWidth = ImGui.CalcTextSize(" Open ").X;
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - buttonWidth - ImGui.GetStyle().ItemSpacing.X * 2);
 
             // Object field
-            FieldRenderer.CreateInput(renderer, reference.objectName, typeof(string), name + "object", (newVal) => 
+            FieldRenderer.CreateStringInput(renderer, reference.objectName, name + "object", (newVal) => 
             {
+                if (newVal == null) return;
                 reference.SetObject((string)newVal);
-                renderer.SetUpdated();
-            });
+                renderer.OnObjectRefChanged();
+            }, false);
             
             // Open button
             ImGui.SameLine();
@@ -147,6 +157,8 @@ namespace NST
             {
                 App.FocusObject(reference, renderer);
             }
+
+            ImGui.PopID();
         }
 
         private static void Render(igRawRefMetaField obj, FileRenderer renderer, string name)
@@ -161,7 +173,7 @@ namespace NST
 
         private static void Render(CEntityIDMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateInput(renderer, obj._entityID, typeof(int), "_entityID", (newVal) => obj._entityID = (int)newVal);
+            FieldRenderer.CreateInput(renderer, obj._entityID, typeof(int), "_entityID", (newVal) => { obj._entityID = (int)newVal!; renderer.SetUpdated(); });
         }
 
         private static void Render(ChunkFileInfoMetaField obj, FileRenderer renderer, string name)
@@ -169,13 +181,13 @@ namespace NST
             float availableWidth = ImGui.GetContentRegionAvail().X - 10.0f;
 
             ImGui.PushItemWidth(availableWidth * 0.25f);
-            FieldRenderer.CreateInput(renderer, obj._type, typeof(string), name + "type", (newVal) => obj._type = (string)newVal);
+            FieldRenderer.CreateStringInput(renderer, obj._type, name + "type", (newVal) => { obj._type = (string?)newVal; renderer.SetUpdated(); });
             ImGui.PopItemWidth();
 
             ImGui.SameLine();
 
             ImGui.PushItemWidth(availableWidth * 0.75f);
-            FieldRenderer.CreateInput(renderer, obj._name, typeof(string), name + "name", (newVal) => obj._name = (string)newVal);
+            FieldRenderer.CreateStringInput(renderer, obj._name, name + "name", (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); });
             ImGui.PopItemWidth();
         }
 
@@ -210,7 +222,7 @@ namespace NST
 
         private static void Render(igNameMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateInput(renderer, obj._name, typeof(string), name, (newVal) => obj._name = (string)newVal);
+            FieldRenderer.CreateStringInput(renderer, obj._name, name, (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); });
         }
 
         private static void Render(igRandomMetaField obj, FileRenderer renderer, string name)
@@ -225,17 +237,17 @@ namespace NST
 
         private static void Render(igSizeTypeMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateInput(renderer, obj._size, typeof(u64), name, (newVal) => obj._size = (u64)newVal);
+            FieldRenderer.CreateInput(renderer, obj._size, typeof(u64), name, (newVal) => { obj._size = (u64)newVal!; renderer.SetUpdated(); });
         }
 
         private static void Render(igTimeMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateInput(renderer, obj._time, typeof(u32), name, (newVal) => obj._time = (u32)newVal);
+            FieldRenderer.CreateInput(renderer, obj._time, typeof(u32), name, (newVal) => { obj._time = (u32)newVal!; renderer.SetUpdated(); });
         }
 
         private static void Render(igEnumMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateInput(renderer, obj._value, typeof(int), name, (newVal) => obj._value = (int)newVal);
+            FieldRenderer.CreateInput(renderer, obj._value, typeof(int), name, (newVal) => { obj._value = (int)newVal!; renderer.SetUpdated(); });
         }
 
         private static void CreateInt2Input(FileRenderer renderer, string name, ref uint x, ref uint y)

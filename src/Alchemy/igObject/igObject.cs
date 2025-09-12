@@ -12,7 +12,7 @@ namespace Alchemy
         public override string? GetObjectName() => _objectName;
         public NamedReference? GetReference() => _reference;
         public void SetObjectName(string? name) => _objectName = name;
-        public void SetReference(NamedReference reference) => _reference = reference;
+        public void SetReference(NamedReference? reference) => _reference = reference;
 
         /// <summary>
         /// Check if this object is an external reference without actual data

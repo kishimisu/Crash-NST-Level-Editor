@@ -23,13 +23,14 @@ namespace NST
         public abstract TreeNode FindNode(object obj);
         
         /// <summary>
-        /// Finds all objects that are derived from the given type.
+        /// Finds all nodes containing objects that are derived from the given type.
         /// Used for rendering igObjectRef inputs as list
         /// </summary>
-        public abstract List<string> FindDerivedObjectNames(Type type, object? current, out int currentIndex);
+        public abstract List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex);
 
         public abstract byte[] SaveFile();
         public abstract void ReloadFile();
+        public abstract void OnObjectRefChanged();
 
         public bool IsOpenAsWindow = false; // True if undocked from its parent archive renderer
         public string GetWindowName() => ArchiveFile.GetName() + "##" + GetHashCode();
@@ -208,7 +209,6 @@ namespace NST
                 ImGui.TableHeadersRow();
                 ImGui.PushItemWidth(-1);
 
-                FieldRenderer.ParentObject = obj;
                 FieldRenderer.RenderFields(this, obj);
 
                 while (_popStylesOnNextRow > 0)

@@ -77,6 +77,36 @@ namespace NST
             AllNodes = nodes.Select(kvp => (kvp.Value.GetDisplayName(), kvp.Value)).ToDictionary();
         }
 
+        public void RebuildNode(HavokTreeNode? node)
+        {
+            if (node?.Object == null) return;
+
+            List<TreeNode> prevChildren = node.Children.ToList();
+
+            node.Children.Clear();
+
+            foreach (hkObject child in node.Object.GetChildren())
+            {
+                HavokTreeNode? childNode = AllNodes.Values.FirstOrDefault(e => e.Object == child);
+
+                if (childNode == null)
+                {
+                    Console.WriteLine($"Warning: No node found for {child} while rebuilding {node.Object}");
+                    continue;
+                }
+
+                node.Children.Add(childNode);
+            }
+        }
+
+        public void SetNodeUpdated(hkObject obj)
+        {
+            HavokTreeNode? node = AllNodes.Values.FirstOrDefault(n => n.Object == obj);
+
+            if (node != null) node.IsUpdated = true;
+            else Console.Error.WriteLine($"Warning: No node found for {obj}");
+        }
+
         public override void Render()
         {
             RenderExpandAll();

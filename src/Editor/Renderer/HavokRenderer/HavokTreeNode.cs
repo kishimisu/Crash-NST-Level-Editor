@@ -101,23 +101,33 @@ namespace NST
         {
             Type objectType = Object.GetType();
             string typeName = objectType.Name;
+            string objectName = Name;
+            bool hasName = !string.IsNullOrEmpty(Name);
 
-            if (!string.IsNullOrEmpty(Name))
+            if (hasName)
             {
                 typeName += ": ";
             }
             // Add type count if no name
             else if (TypeCount > 0) typeName += " " + TypeCount;
 
+            if (IsUpdated) {
+                if (hasName) objectName += "*";
+                else typeName += "*";
+            }
+
             // Render object type
-            ImGui.PushStyleColor(ImGuiCol.Text, objectType.GetUniqueColor());
+            uint typeColor = IsUpdated && !hasName ? 0xff0099ff : objectType.GetUniqueColor();
+            ImGui.PushStyleColor(ImGuiCol.Text, typeColor);
             ImGui.Text(typeName);
             ImGui.PopStyleColor();
             
             // Render object name
-            if (!string.IsNullOrEmpty(Name)) {
+            if (hasName) {
+                if (IsUpdated) ImGui.PushStyleColor(ImGuiCol.Text, 0xff0099ff);
                 ImGui.SameLine(0, 0);
-                ImGui.Text(Name);
+                ImGui.Text(objectName);
+                if (IsUpdated) ImGui.PopStyleColor();
             }
         }
 
@@ -141,7 +151,9 @@ namespace NST
             ImGui.EndChild();
 
             ImGui.BeginChild("ObjectFields" + GetHashCode());
+
             renderer.RenderObject(Object);
+            
             ImGui.EndChild();
         }
     }

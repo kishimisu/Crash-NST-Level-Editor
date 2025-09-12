@@ -13,11 +13,6 @@ namespace NST
     public static class FieldRenderer
     {
         /// <summary>
-        /// Parent of the current fields being rendered, used to register object updates
-        /// </summary>
-        public static object ParentObject { get; set; }
-
-        /// <summary>
         /// Render all fields of the given igObjectBase or hkObject instance
         /// </summary>
         public static void RenderFields(FileRenderer renderer, object obj)
@@ -33,10 +28,28 @@ namespace NST
 
                 object? value = field.GetValue(obj);
 
-                Action<object> onChange = (newVal) => 
+                Action<object?> onChange = (newVal) => 
                 {
-                    field.SetValue(obj, newVal);
-                    renderer.SetUpdated();
+                    if (fieldType.IsAssignableTo(typeof(igObject)))
+                    {
+                        // igObject field update
+                        IgzTreeNode? newNode = (IgzTreeNode?)newVal;
+                        field.SetValue(obj, newNode?.Object);
+                        renderer.OnObjectRefChanged();
+                    }
+                    else if (fieldType.IsAssignableTo(typeof(hkObject)))
+                    {
+                        // hkObject field update
+                        HavokTreeNode? newNode = (HavokTreeNode?)newVal;
+                        field.SetValue(obj, newNode?.Object);
+                        renderer.OnObjectRefChanged();
+                    }
+                    else
+                    {
+                        // Regular field update
+                        field.SetValue(obj, newVal);
+                        renderer.SetUpdated();
+                    }
                 };
 
                 RenderField(renderer, value, fieldType, name, onChange);
@@ -46,7 +59,7 @@ namespace NST
         /// <summary>
         /// Render a single field (name, type, editable value)
         /// </summary>
-        public static void RenderField(FileRenderer renderer, object? value, Type type, string name, Action<object> onChange)
+        private static void RenderField(FileRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
             if (renderer is IgzRenderer igzRenderer)
             {
@@ -58,7 +71,7 @@ namespace NST
             }
         }
 
-        private static void RenderIgzField(IgzRenderer renderer, object? value, Type type, string name, Action<object> onChange)
+        private static void RenderIgzField(IgzRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
             if (value is igMetaField metaField)
             {
@@ -78,7 +91,7 @@ namespace NST
             }
         }
 
-        private static void RenderHavokField(HavokRenderer renderer, object? value, Type type, string name, Action<object> onChange)
+        private static void RenderHavokField(HavokRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
             if (value is hkMemoryBase)
             {
@@ -143,7 +156,7 @@ namespace NST
         /// <summary>
         /// Render a field's editable value
         /// </summary>
-        public static void CreateInput(FileRenderer renderer, object? value, Type type, string name, Action<object> onChange)
+        public static void CreateInput(FileRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
             string label = "##" + name;
 
@@ -151,11 +164,11 @@ namespace NST
 
             if (type.IsAssignableTo(typeof(igObject)))
             {
-                CreateObjectRefInputIgz(renderer, (igObject?)value, type, name);
+                CreateObjectRefInputIgz(renderer, (igObject?)value, type, name, onChange);
             }
             else if (type.IsAssignableTo(typeof(hkObject)))
             {
-                CreateObjectRefInput(renderer, value, type, name);
+                CreateObjectRefInput(renderer, value, type, name, onChange);
             }
             else if (type == typeof(string))
             {
@@ -220,14 +233,49 @@ namespace NST
             }
         }
 
-        private static void CreateStringInput(FileRenderer renderer, string? value, string name, Action<object> onChange)
+        public static void CreateStringInput(FileRenderer renderer, string? value, string name, Action<object?> onChange, bool createClearButton = true)
         {
-            if (value == null) value = "";
-
-            if (ImGui.InputText("##" + name, ref value, 256, ImGuiInputTextFlags.AlwaysOverwrite))
+            ImGui.PushID(name);
+            
+            // Null string
+            if (value == null)
             {
-                onChange.Invoke(value);
+                float buttonWidth = ImGui.CalcTextSize("\uEA0A").X + ImGui.GetStyle().FramePadding.X * 2 + 2;
+
+                ImGui.Text("null");
+                ImGui.SameLine();
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - buttonWidth);
+
+                if (ImGui.Button("\uEA0A")) onChange.Invoke(""); // Add button
             }
+            // Non-nullable string
+            else if (!createClearButton)
+            {
+                if (ImGui.InputText("##" + name, ref value, 256, ImGuiInputTextFlags.AlwaysOverwrite))
+                {
+                    onChange.Invoke(value);
+                }
+            }
+            // Nullable string
+            else
+            {
+                float buttonWidth = createClearButton ? ImGui.CalcTextSize("x").X + ImGui.GetStyle().FramePadding.X * 2 + 2 : 0;
+                float inputWidth = ImGui.GetContentRegionAvail().X - buttonWidth - ImGui.GetStyle().FramePadding.X * 2 + 2;
+
+                ImGui.SetNextItemWidth(inputWidth);
+
+                if (ImGui.InputText("##" + name, ref value, 256, ImGuiInputTextFlags.AlwaysOverwrite))
+                {
+                    onChange.Invoke(value);
+                }
+
+                ImGui.SameLine();
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - buttonWidth);
+                
+                if (ImGui.Button("x")) onChange.Invoke(null);  // Clear button
+            }
+
+            ImGui.PopID();
         }
 
         private static void CreateBoolInput(FileRenderer renderer, bool value, string name, Action<object> onChange)
@@ -344,23 +392,24 @@ namespace NST
         /// <summary>
         /// Renders a dropdown input for an igObjectRefMetaField
         /// </summary>
-        private static void CreateObjectRefInputIgz(FileRenderer renderer, igObject? value, Type type, string label)
+        private static void CreateObjectRefInputIgz(FileRenderer renderer, igObject? value, Type type, string label, Action<object?> onChange)
         {
             // External reference (REXT, RNEX)
             if (value?.GetReference() is NamedReference reference)
             {
                 string displayName = $"{reference.namespaceName}::{reference.objectName}";
 
-                CreateInput(renderer, displayName, typeof(string), label + "file", (newVal) => 
+                CreateStringInput(renderer, displayName, label, (newVal) => 
                 {
+                    if (newVal == null) return;
                     reference.SetNames((string)newVal);
                     renderer.SetUpdated();
-                });
+                }, false);
             }
             // Regular object pointer (ROFS)
             else
             {
-                CreateObjectRefInput(renderer, value, type, label);
+                CreateObjectRefInput(renderer, value, type, label, onChange);
             }
         }
 
@@ -368,9 +417,10 @@ namespace NST
         /// Renders a dropdown input for an object reference.
         /// It contains the name of all objects that inherit from the given type in the file.
         /// </summary>
-        private static void CreateObjectRefInput(FileRenderer renderer, object? value, Type type, string name)
+        private static void CreateObjectRefInput(FileRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
-            List<string> options = renderer.FindDerivedObjectNames(type, value, out int selectedIndex);
+            List<TreeNode> derivedNodes = renderer.FindDerivedObjectNodes(type, value, out int selectedIndex);
+            List<string> options = derivedNodes.Select(node => node.GetDisplayName()).ToList();
             if (value != null) selectedIndex += 1;
             options.Insert(0, "null");
             options.Add($"(+) New {type.Name}...");
@@ -412,7 +462,7 @@ namespace NST
                     if (ImGui.Selectable(options[i], isSelected))
                     {
                         selectedIndex = i;
-                        renderer.SetUpdated();
+                        onChange.Invoke(i == 0 ? null : derivedNodes[i - 1]);
                     }
 
                     if (isSelected)
@@ -424,7 +474,7 @@ namespace NST
             }
         }
 
-        private static void RenderHkMemory<T>(hkMemoryBase<T> memory, FileRenderer renderer, string name)
+        private static void RenderHkMemory<T>(hkMemoryBase<T?> memory, FileRenderer renderer, string name)
         {
             RenderMemory(memory.GetElements(), renderer, memory.GetType(), name);
         }
@@ -432,7 +482,7 @@ namespace NST
         /// <summary>
         /// Renders a collapsible field that displays the contents of a list
         /// </summary>
-        public static void RenderMemory<T>(List<T> mem, FileRenderer renderer, Type type, string name)
+        public static void RenderMemory<T>(List<T?> mem, FileRenderer renderer, Type type, string name)
         {
             bool isExpanded = false;
             bool isEmpty = mem.Count == 0;
@@ -469,7 +519,31 @@ namespace NST
 
                 for (int i = 0; i < mem.Count; i++)
                 {
-                    RenderField(renderer, mem[i], typeof(T), $"{name}[{i}]", (value) => mem[i] = (T)value);
+                    RenderField(renderer, mem[i], typeof(T), $"{name}[{i}]", (value) => 
+                    {
+                        // On field update
+                        if (typeof(T).IsAssignableTo(typeof(igObject)))
+                        {
+                            IgzTreeNode? newNode = (IgzTreeNode?)value;
+
+                            mem[i] = (T?)(object?)newNode?.Object;
+
+                            renderer.OnObjectRefChanged();
+                        }
+                        else if (typeof(T).IsAssignableTo(typeof(hkObject)))
+                        {
+                            HavokTreeNode? newNode = (HavokTreeNode?)value;
+
+                            mem[i] = (T?)(object?)newNode?.Object;
+
+                            renderer.OnObjectRefChanged();
+                        }
+                        else
+                        {
+                            mem[i] = (T?)value;
+                            renderer.SetUpdated();
+                        }
+                    });
                 }
 
                 ImGui.Unindent(1);
@@ -477,7 +551,6 @@ namespace NST
             }
             else
             {
-                // if (mem.IsActive())
                 if (mem.Count > 0)
                 {
                     ImGui.Text($"(+) {mem.Count} elements");
@@ -524,7 +597,11 @@ namespace NST
 
                 for (int i = 0; i < array.Length; i++)
                 {
-                    RenderField(renderer, array.GetValue(i), elementType, $"{name}[{i}]", (value) => { array.SetValue(value, i); });
+                    RenderField(renderer, array.GetValue(i), elementType, $"{name}[{i}]", (value) => 
+                    { 
+                        array.SetValue(value, i);
+                        renderer.SetUpdated();
+                    });
                 }
 
                 ImGui.Unindent(1);
@@ -569,18 +646,34 @@ namespace NST
             RenderType(typeof(V));
             ImGui.SameLine(); ImGui.Text(")");
 
+            bool igObjectKey = typeof(K).IsAssignableTo(typeof(igObject));
+            bool igObjectValue = typeof(V).IsAssignableTo(typeof(igObject));
+
+            table.BuildDict(skipDuplicateKeys: true);
+
             for (int i = 0; i < table.Dict.Count; i++)
             {
+                K key = table.Keys.ElementAt(i);
+                V value = table.Values.ElementAt(i);
+
+                int hashtableIndex = table._keys.IndexOf(key);
+
                 ImGui.TableNextRow();
                 ImGui.TableNextColumn();
                 ImGui.SetNextItemWidth(-1);
 
-                K key = table.Keys.ElementAt(i);
-                MethodInfo? renderValueMethod = key.GetType().GetMethod("RenderValue");
-
-                if (key is igObject objectRefKey)
+                if (igObjectKey)
                 {
-                    CreateObjectRefInputIgz(renderer, objectRefKey, typeof(K), "keys" + i);
+                    CreateObjectRefInputIgz(renderer, (igObject)(object)key, typeof(K), "keys" + i, (newVal) => 
+                    {
+                        // igObjectRef key update
+                        IgzTreeNode? node = (IgzTreeNode?)newVal;
+
+                        table._keys[hashtableIndex] = (K?)(object?)node?.Object;
+                        table.RebuildDict = true;
+                        
+                        renderer.OnObjectRefChanged();
+                    });
                 }
                 else if (key is igMetaField metaFieldKey)
                 {
@@ -588,28 +681,30 @@ namespace NST
                 }
                 else
                 {
-                    if (renderValueMethod != null)
+                    CreateInput(renderer, table.Keys.ElementAt(i), typeof(K), "keys" + i, (newKey) =>
                     {
-                        renderValueMethod.Invoke(key, new object[] { renderer, "keys" + i });
-                    }
-                    else
-                    {
-                        CreateInput(renderer, table.Keys.ElementAt(i), typeof(K), "keys" + i, (newKey) =>
-                        {
-                            table.Dict.Remove(table.Keys.ElementAt(i));
-                            table[(K)newKey] = table.Values.ElementAt(i);
-                        });
-                    }
+                        // Key update
+                        table._keys[hashtableIndex] = (K?)newKey;
+                        table.RebuildDict = true;
+                        renderer.SetUpdated();
+                    });
                 }
 
                 ImGui.TableNextColumn();
                 ImGui.SetNextItemWidth(-1);
 
-                V value = table.Values.ElementAt(i);
-
-                if (value is igObject objectRef)
+                if (igObjectValue)
                 {
-                    CreateObjectRefInputIgz(renderer, objectRef, typeof(V), "values" + i);
+                    CreateObjectRefInputIgz(renderer, (igObject?)(object?)value, typeof(V), "values" + i, (newVal) => 
+                    {
+                        // igObjectRef value update
+                        IgzTreeNode? node = (IgzTreeNode?)newVal;
+
+                        table._values[hashtableIndex] = (V?)(object?)node?.Object;
+                        table.RebuildDict = true;
+
+                        renderer.OnObjectRefChanged();
+                    });
                 }
                 else if (key is igMetaField metaFieldKey)
                 {
@@ -617,22 +712,22 @@ namespace NST
                 }
                 else
                 {
-                    renderValueMethod = value?.GetType().GetMethod("RenderValue");
-                    if (renderValueMethod != null)
+                    CreateInput(renderer, table.Values.ElementAt(i), typeof(V), "values" + i, (newValue) =>
                     {
-                        renderValueMethod.Invoke(value, new object[] { renderer, "values" + i });
-                    }
-                    else
-                    {
-                        CreateInput(renderer, table.Values.ElementAt(i), typeof(V), "values" + i, (newValue) =>
-                        {
-                            table[table.Keys.ElementAt(i)] = (V)newValue;
-                        });
-                    }
+                        // Value update
+                        table._values[hashtableIndex] = (V?)newValue;
+                        table.RebuildDict = true;
+                        renderer.SetUpdated();
+                    });
                 }
             }
 
             ImGui.EndTable();
+
+            if (table.Dict.Count == 0)
+            {
+                ImGui.Text("(Hash table is empty)");
+            }
         }
     }
 }
