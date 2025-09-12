@@ -350,7 +350,7 @@ namespace NST
                     
                     if (ImGui.Selectable("##" + parent.GetDisplayName()))
                     {
-                        tree.SetSelectedNode(parent, true);
+                        tree.SetSelectedNode(parent);
                     }
 
                     ImGui.SameLine();

@@ -201,7 +201,7 @@ namespace NST
                 return false;
             }
 
-            FocusNode(node, reference, lastRenderer);
+            FocusNode(node, reference, lastRenderer, true);
 
             return true;
         }
@@ -231,7 +231,7 @@ namespace NST
                 return;
             }
 
-            _treeView.SetSelectedNode(node, true);
+            _treeView.SetSelectedNode(node);
 
             if (node.File == null) return;
 
@@ -250,7 +250,7 @@ namespace NST
         /// <param name="lastRenderer">(Optional) Can be used to create a back button to the previously opened IGZ file</param>
         private void OpenFile(IgArchiveFile file, NamedReference? reference = null, IgzRenderer? lastRenderer = null)
         {
-            if (_selectedFile != null)
+            if (_selectedFile != null && _selectedFile != file)
             {
                 FileManager.Remove(_selectedFile);
             }
@@ -272,31 +272,35 @@ namespace NST
 
             FileRenderer? renderer = FileManager.GetRenderer(file);
 
-            // Try to focus the previously opened renderer
-            if (renderer != null)
-            {
-                if (renderer.IsOpenAsWindow)
-                {
-                    ImGui.SetWindowFocus(renderer.GetWindowName());
-                }
-                else
-                {
-                    _selectedFile = renderer.ArchiveFile; // todo: check if can use 'file' instead
-                }
-            }
             // Create a new renderer
-            else
+            if (renderer == null)
             {
                 renderer = FileRenderer.Create(file, this);
                 
                 FileManager.Add(file, renderer);
             }
+            // Focus the previously opened renderer
+            else if (renderer.IsOpenAsWindow)
+            {
+                ImGui.SetWindowFocus(renderer.GetWindowName());
+            }
 
-            // Focus the referenced object
             if (reference != null && renderer is IgzRenderer igzRenderer)
             {
+                // Focus igz object node
                 igzRenderer.TreeView.SelectNode(reference);
-                igzRenderer.LastRenderer = lastRenderer;
+
+                // Setup back button
+                if (igzRenderer != lastRenderer && lastRenderer != null) 
+                {
+                    if (!FileManager.HasRenderer(lastRenderer)) 
+                    {
+                        FileManager.Add(lastRenderer.ArchiveFile, lastRenderer);
+                    }
+
+                    FileManager.KeepActive(lastRenderer.ArchiveFile);
+                    igzRenderer.LastRenderer = lastRenderer;
+                }
             }
             else if (renderer.TreeView.SelectedNode != null)
             {

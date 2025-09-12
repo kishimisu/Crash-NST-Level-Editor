@@ -171,12 +171,6 @@ namespace NST
         {
             IgArchiveRenderer? parentArchive = renderer?.ArchiveRenderer;
 
-            if (renderer != null)
-            {
-                // Keep the parent renderer active to handle back navigation
-                renderer.ArchiveRenderer.FileManager.KeepActive(renderer.ArchiveFile);
-            }
-
             // Try to find file in the parent archive if provided
             if (parentArchive?.FocusObject(reference, renderer) == true)
             {
@@ -235,27 +229,6 @@ namespace NST
         {
             IgArchive archive = new IgArchive("");
             _archives.Add(new IgArchiveRenderer(archive));
-        }
-
-        private static void OnClickImport()
-        {
-            List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ALCHEMY, true);
-
-            if (files.Count == 0) return;
-
-            int archiveCount = files.Count(f => Path.GetExtension(f) == ".pak");
-
-            if (archiveCount > 1)
-            {
-                ModalRenderer.ShowMessageModal("Invalid operation", "You can only import from one .pak archive at a time.");
-                return;
-            }
-
-            if (archiveCount > 0 && archiveCount != files.Count)
-            {
-                ModalRenderer.ShowMessageModal("Invalid operation", "You can only import from one .pak archive at a time.");
-                return;
-            }
         }
 
         private static void OpenURL(string url)

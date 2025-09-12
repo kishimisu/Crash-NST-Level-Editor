@@ -31,7 +31,7 @@ namespace NST
             ImGui.SetNextItemAllowOverlap();
             if (ImGui.Selectable("##CSubSound" + GetHashCode()))
             {
-                renderer.TreeView.SetSelectedNode(_subSound, true);
+                renderer.TreeView.SetSelectedNode(_subSound);
             }
             ImGui.SameLine();
 

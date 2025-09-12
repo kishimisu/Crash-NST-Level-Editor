@@ -303,7 +303,7 @@ namespace NST
             {
                 if (ImGui.Selectable("##OpenNode" + GetHashCode()))
                 {
-                    renderer.TreeView.SetSelectedNode(node, true); // Select parent node (drawcall / material)
+                    renderer.TreeView.SetSelectedNode(node); // Select parent node (drawcall / material)
                 }
                 ImGui.SameLine();
                 node.RenderObjectName();

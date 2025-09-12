@@ -441,7 +441,8 @@ namespace NST
                     ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                     if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
                     {
-                        renderer.TreeView.SetSelectedNode(renderer.FindNode(value), true);
+                        // Update Object Ref
+                        renderer.TreeView.SelectChildNode(renderer.FindNode(value));
                     }
                 }
             }
@@ -706,9 +707,9 @@ namespace NST
                         renderer.OnObjectRefChanged();
                     });
                 }
-                else if (key is igMetaField metaFieldKey)
+                else if (value is igMetaField metaFieldValue)
                 {
-                    MetaFieldRenderer.Render(renderer, metaFieldKey, typeof(V), "values" + i, false);
+                    MetaFieldRenderer.Render(renderer, metaFieldValue, typeof(V), "values" + i, false);
                 }
                 else
                 {

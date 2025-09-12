@@ -11,7 +11,7 @@ namespace NST
     public abstract class TreeNode
     {
         public string Name { get; set; } = ""; // Display name
-        public string NodePath { get; set; } = ""; // Unique node path
+        public string NodePath { get; set; } = ""; // Unique node path (the node can appear multiple times in the tree)
         public List<TreeNode> Children { get; protected set; } = []; // Child nodes
 
         // State
@@ -64,6 +64,11 @@ namespace NST
             if (tree.SelectedNode == this)
             {
                 flags |= ImGuiTreeNodeFlags.Selected;
+
+                if (tree.SelectedNodePath == "")
+                {
+                    tree.SelectedNodePath = NodePath;
+                }
 
                 if (NextFocus != NextFocusState.None && NodePath == tree.SelectedNodePath)
                 {

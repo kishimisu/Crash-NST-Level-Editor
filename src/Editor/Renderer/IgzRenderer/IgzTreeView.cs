@@ -279,7 +279,7 @@ namespace NST
         {
             IgzTreeNode? node = ObjectNodes.FirstOrDefault(n => n.Object?.GetObjectName() == reference.objectName);
 
-            if (node != null) SetSelectedNode(node, true);
+            if (node != null) SelectChildNode(node);
             else Console.Error.WriteLine($"Warning: No node found for {reference}");
         }
 

@@ -66,7 +66,7 @@ namespace NST
 
                 if (!ImGui.IsMouseHoveringRect(min, max))
                 {
-                    renderer.TreeView.SetSelectedNode(_sound, true);
+                    renderer.TreeView.SetSelectedNode(_sound);
                 }
             }
 

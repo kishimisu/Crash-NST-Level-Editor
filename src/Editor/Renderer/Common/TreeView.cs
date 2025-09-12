@@ -6,7 +6,7 @@ namespace NST
     {
         public TreeNode? PreviousNode { get; }
         public TreeNode? SelectedNode { get; }
-        public string SelectedNodePath { get; }
+        public string SelectedNodePath { get; set; }
         public bool IsSearchActive { get; }
         public bool SelectNextNode { get; set; }
 
@@ -14,7 +14,8 @@ namespace NST
         public void RenderObjectView(FileRenderer renderer);
 
         public bool ExpandParents(TreeNode toFind);
-        public void SetSelectedNode(TreeNode? node, bool expandParents = false, bool keyboardFocus = true);
+        public void SetSelectedNode(TreeNode? node, bool keyboardFocus = true, bool expandParents = false, bool clearNodePath = false);
+        public void SelectChildNode(TreeNode childNode);
     }
 
     /// <summary>
@@ -43,7 +44,7 @@ namespace NST
         // Interface
         TreeNode? ITreeView.SelectedNode => SelectedNode;
         TreeNode? ITreeView.PreviousNode => PreviousNode;
-        void ITreeView.SetSelectedNode(TreeNode? node, bool expandParents, bool keyboardFocus) => SetSelectedNode((T?)node, expandParents, keyboardFocus);
+        void ITreeView.SetSelectedNode(TreeNode? node, bool keyboardFocus, bool expandParents, bool clearNodePath) => SetSelectedNode((T?)node, keyboardFocus, expandParents, clearNodePath);
 
         /// <summary>
         /// Render the tree
@@ -59,12 +60,13 @@ namespace NST
         /// Sets the currently focused node and add it to the history.
         /// </summary>
         /// <param name="node">The node to select</param>
+        /// <param name="keyboardFocus">Whether to set the current keyboard focus to this node</param>
         /// <param name="expandParents">Whether to expand the parents of the selected node</param>
-        /// <param name="keyboardFocus"></param>
-        public void SetSelectedNode(T? node, bool expandParents = false, bool keyboardFocus = true)
+        /// <param name="clearNodePath">Clearing the node path will force to select the first appearance of the node in the tree</param>
+        public void SetSelectedNode(T? node, bool keyboardFocus = true, bool expandParents = true, bool clearNodePath = true)
         {
             SelectedNode = node;
-            SelectedNodePath = node?.NodePath ?? "";
+            SelectedNodePath = clearNodePath ? "" : node?.NodePath ?? "";
 
             if (node == null) {
                 return;
@@ -81,6 +83,27 @@ namespace NST
             {
                 _nodeHistory.Add(node);
             }
+        }
+
+        /// <summary>
+        /// Select a child node under the currently selected node
+        /// </summary>
+        public void SelectChildNode(TreeNode childNode)
+        {
+            // Make sure to select the correct child node 
+            // when it appears multiple times in the tree
+            childNode.NodePath = SelectedNodePath;
+            if (childNode.NodePath != "") {
+                childNode.NodePath += " > " + childNode.GetDisplayName();
+            }
+
+            // Expand the parent node
+            if (SelectedNode != null) {
+                SelectedNode.NextOpen = NextOpenState.ForceOpen;
+            }
+
+            // Select the child node
+            SetSelectedNode((T)childNode, clearNodePath: false);
         }
 
         /// <summary>
@@ -111,7 +134,7 @@ namespace NST
                 _expandedStates.Clear();
                 FilterNodes(_rootNodes, []);
 
-                SetSelectedNode(SelectedNode, true, false);
+                SetSelectedNode(SelectedNode, false);
             }
             // Search active
             else if (IsSearchActive)
@@ -241,7 +264,7 @@ namespace NST
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
-                    SetSelectedNode(_nodeHistory.GetPrevious(), true);
+                    SetSelectedNode(_nodeHistory.GetPrevious());
                 }
             }
             if (!_nodeHistory.HasPrevious()) ImGui.EndDisabled();
@@ -254,7 +277,7 @@ namespace NST
                 ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                 if (ImGui.IsMouseClicked(ImGuiMouseButton.Left))
                 {
-                    SetSelectedNode(_nodeHistory.GetNext(), true);
+                    SetSelectedNode(_nodeHistory.GetNext());
                 }
             }
             if (!_nodeHistory.HasNext()) ImGui.EndDisabled();

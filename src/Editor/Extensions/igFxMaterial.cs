@@ -11,7 +11,6 @@ namespace NST
         /// <summary>
         /// Find the path of the material's diffuse texture file
         /// </summary>
-        /// <returns></returns>
         public static NamedReference? FindDiffuseTexture(this igFxMaterial igMaterial)
         {
             if (igMaterial.GetType() == typeof(CWaterMaterial) || igMaterial.GetType() == typeof(CFlowWaterMaterial))
