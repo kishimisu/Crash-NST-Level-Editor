@@ -113,13 +113,16 @@ namespace Alchemy
         /// <returns>The raw data containing all dumped objects</returns>
         private byte[] BuildObjects(List<igObject> objects)
         {
-            objects = FindAllObjectsRecursive(objects, []);
-
             MemoryPool defaultMemoryPool = objects[0].GetMemoryPool();
-            List<igObject> namedObjects = objects.FindAll(e => e.GetObjectName() != null);
-            
+
+            var objectList = (igObjectList?)objects.FirstOrDefault(e => e.GetType() == typeof(igObjectList));
+            var nameList     = (igNameList?)objects.FirstOrDefault(e => e.GetType() == typeof(igNameList));
+            var nameListNSPC = (igNameList?)objects.Where(e => e.GetType() == typeof(igNameList)).Skip(1).FirstOrDefault();
+
+            List<igObject> allObjects = FindAllObjectsRecursive(objects, []);
+            List<igObject> namedObjects = objects.Where(e => e.GetObjectName() != null).ToList();
+
             // Update object list
-            igObjectList? objectList = (igObjectList?)objects.FirstOrDefault(e => e is igObjectList);
 
             if (objectList == null)
             {
@@ -127,43 +130,39 @@ namespace Alchemy
                 objectList.SetMemoryPool(defaultMemoryPool);
                 objectList._data.SetMemoryPool(defaultMemoryPool);
                 objectList._data.SetDataMemoryPool(defaultMemoryPool);
+                allObjects.Insert(0, objectList);
             }
             objectList._count = namedObjects.Count;
             objectList._capacity = namedObjects.Count;
 
+            objectList._data.Clear();
+            objectList._data.AddRange(namedObjects);
+            objectList._data.SetActive(namedObjects.Count > 0);
+            
             // Update name list
-            igNameList? nameList = null;
 
             if (namedObjects.Count > 0)
             {
-                nameList = (igNameList?)objects.FirstOrDefault(e => e is igNameList);
-
                 if (nameList == null)
                 {
                     nameList = new igNameList();
                     nameList.SetMemoryPool(defaultMemoryPool);
                     nameList._data.SetMemoryPool(defaultMemoryPool);
                     nameList._data.SetDataMemoryPool(defaultMemoryPool);
+                    allObjects.Add(nameList);
                 }
                 nameList._count = namedObjects.Count;
                 nameList._capacity = namedObjects.Count;
+
+                nameList._data.Clear();
+                nameList._data.AddRange(namedObjects.Select(e => new igNameMetaField(e.GetObjectName()!)).ToList());
+            }
+            else
+            {
+                nameList = null;
             }
 
-            // Rebuild lists
-            igMemoryRef<igObject> prevOrder = objectList._data;
-            namedObjects.Sort((a, b) => prevOrder.IndexOf(a).CompareTo(prevOrder.IndexOf(b)));
-
-            objectList._data.Clear();
-            objectList._data.AddRange(namedObjects);
-
-            nameList?._data.Clear();
-            nameList?._data.AddRange(namedObjects.Select(e => new igNameMetaField(e.GetObjectName()!)).ToList());
-
-            // Get NSPC name list
-            igNameList? nameListNSPC = (igNameList?)objects.Where(e => e is igNameList).Skip(1).FirstOrDefault();
-
-            // Update reference count for each object
-            UpdateReferenceCount(objects);
+            UpdateReferenceCount(allObjects);
 
             // Write all objects
             objectList.Write(this);

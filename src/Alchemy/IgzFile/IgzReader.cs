@@ -26,7 +26,35 @@ namespace Alchemy
 
         private int objectsStartOffset;
         
-        public List<igObject> GetObjects() => _objects.Values.ToList();
+        public List<igObject> GetObjects()
+        {
+            List<igObject> objects = _objects.Values.ToList();
+            if (objects.Count == 0) return objects;
+
+            igObjectList objectList = (igObjectList)_objects[GetGlobalOffset(_fixups.ROOT[0])];
+
+            objects.Sort((a, b) => objectList._data.IndexOf(a).CompareTo(objectList._data.IndexOf(b)));
+
+            objects.Remove(objectList);
+            objects.Insert(0, objectList);
+
+            if (_fixups.ONAM.Count > 0)
+            {
+                igNameList nameList = (igNameList)_objects[GetGlobalOffset(_fixups.ONAM[0])];
+                objects.Remove(nameList);
+                objects.Add(nameList);
+            }
+
+            if (_fixups.NSPC.Count > 0)
+            {
+                igNameList nspcList = (igNameList)_objects[GetGlobalOffset(_fixups.NSPC[0])];
+                objects.Remove(nspcList);
+                objects.Add(nspcList);
+            }
+
+            return objects;
+        }
+
         public FixupCollection GetFixupCollection() => _fixups;
 
         /// <summary>

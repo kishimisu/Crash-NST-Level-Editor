@@ -7,11 +7,11 @@ namespace Alchemy
     public class IgzFile
     {
         private string _path;
-        private List<igObject> _objects = [];
         private TDEP_Fixup _dependencies = [];
 
+        public List<igObject> Objects { get; set; } = [];
+
         public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(_path, includeExtension);
-        public List<igObject> GetObjects() => _objects;
         
         /// <summary>
         /// Creates a new IGZ file from a list of objects
@@ -19,7 +19,7 @@ namespace Alchemy
         public IgzFile(string path, List<igObject> objects)
         {
             _path = path;
-            _objects = objects;
+            Objects = objects;
         }
 
         /// <summary>
@@ -32,7 +32,7 @@ namespace Alchemy
             IgzReader reader = new IgzReader(new MemoryStream(data));
 
             _path = path;
-            _objects = reader.GetObjects();
+            Objects = reader.GetObjects();
             _dependencies = reader.GetFixupCollection().TDEP;
         }
 
@@ -49,7 +49,7 @@ namespace Alchemy
                 ReplaceHandlesNamespace(currentNamespace, newNamespace);
             }
 
-            return IgzWriter.BuildIGZ(_objects, _dependencies);
+            return IgzWriter.BuildIGZ(Objects, _dependencies);
         }
 
         /// <summary>
@@ -59,7 +59,7 @@ namespace Alchemy
         /// <param name="newNamespace">The new namespace</param>
         private void ReplaceHandlesNamespace(string currentNamespace, string newNamespace)
         {
-            foreach (igObject obj in _objects)
+            foreach (igObject obj in Objects)
             {
                 foreach (NamedReference handle in obj.GetHandles())
                 {
@@ -77,7 +77,7 @@ namespace Alchemy
         /// <returns>The object if found, null otherwise</returns>
         public T? FindObject<T>() where T : igObject
         {
-            return (T?)(object?)_objects.FirstOrDefault(o => o is T);
+            return (T?)(object?)Objects.FirstOrDefault(o => o is T);
         }
 
         /// <summary>
@@ -85,7 +85,7 @@ namespace Alchemy
         /// </summary>
         public List<T> FindObjects<T>()
         {
-            return _objects.Where(o => o is T).Cast<T>().ToList();
+            return Objects.Where(o => o is T).Cast<T>().ToList();
         }
 
         /// <summary>
@@ -103,7 +103,7 @@ namespace Alchemy
 
             string objectName = reference.objectName.ToLowerInvariant();
 
-            return _objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName);
+            return Objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName);
         }
 
         public T? FindObject<T>(NamedReference reference) where T : igObject
@@ -115,12 +115,12 @@ namespace Alchemy
         {
             objectName = objectName.ToLowerInvariant();
 
-            return _objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName) as T;
+            return Objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName) as T;
         }
 
         public T? FindObject<T>(uint nameHash) where T : igObject
         {
-            return _objects.FirstOrDefault(o => {
+            return Objects.FirstOrDefault(o => {
                 if (o is not T) return false;
                 if (o.GetObjectName() == null) return false;
                 return NamespaceUtils.ComputeHash(o.GetObjectName()!) == nameHash;

@@ -54,7 +54,7 @@ namespace NST
                 return node;
             };
 
-            List<igObject> objects = igz.GetObjects();
+            List<igObject> objects = igz.Objects;
 
             // Skip igObjectList & igNameList
             int start = objects.Count > 0 && objects[0] is igObjectList ? 1 : 0;
