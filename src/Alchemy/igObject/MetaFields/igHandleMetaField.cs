@@ -51,5 +51,24 @@ namespace Alchemy
 
             writer.Write(_handle, offset);
         }
+
+        public override igObjectBase Clone(bool deep = false)
+        {
+            igHandleMetaField clone = (igHandleMetaField)base.Clone(deep);
+
+            clone._reference = _reference?.Clone();
+
+            return clone;
+        }
+
+        public override void Copy(igObjectBase target)
+        {
+            base.Copy(target);
+            
+            if (target is igHandleMetaField handleMetaField)
+            {
+                handleMetaField._reference = _reference?.Clone();
+            }
+        }
     }
 }

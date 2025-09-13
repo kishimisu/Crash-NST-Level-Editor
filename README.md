@@ -37,7 +37,6 @@ Create new mods and open archives
 
 - **New Mod**: Creates a new empty archive
 - **Open Archive**: Opens an archive/mod from the file explorer
-- **Recent Files**: Lists the most recent archives opened
 
 ## Mod Manager
 
@@ -74,8 +73,9 @@ View and edit objects inside .igz and havok files. Objects are grouped by type a
 ![IGZ Editor](assets/readme/igz.png)
 
 Display mode:
-- **Root Objects**: Only display root/parent objects
-- **Named Objects**: Only display objects that have a name
+- **Root Objects**: Display root/parent objects
+- **Named Objects**: Display objects that have a name
+- **Updated Objects**: Display objects that are currently updated
 - **All Objects**: Display all objects
 
 ## Custom Previews

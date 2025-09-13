@@ -186,6 +186,10 @@ namespace Alchemy
             return references;
         }
 
+        /// <summary>
+        /// Create a clone of this object
+        /// </summary>
+        /// <param name="deep">Whether to clone all child objects as well</param>
         public virtual igObjectBase Clone(bool deep = false)
         {
             igObjectBase clone = (igObjectBase)MemberwiseClone();
@@ -206,6 +210,18 @@ namespace Alchemy
             clone._memoryPool = _memoryPool;
 
             return clone;
+        }
+
+        /// <summary>
+        /// Copy all fields from this object to another
+        /// </summary>
+        public virtual void Copy(igObjectBase target)
+        {
+            foreach (CachedFieldAttr field in GetFields())
+            {
+                object? value = field.GetValue(this);
+                field.SetValue(target, value);
+            }
         }
     }
 }

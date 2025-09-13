@@ -24,6 +24,7 @@ namespace Alchemy
         public bool isEXID = false; // EXNM/EXID
 
         public NamedReference() { }
+        public NamedReference Clone() => new NamedReference(namespaceName, objectName, isEXID);
 
         /// <summary>
         /// Creates an EXID NamedReference

@@ -10,8 +10,8 @@ namespace NST
     {
         public List<IgzTreeNode> ObjectNodes { get; private set; } = []; // igObject nodes
 
-        public enum ObjectHierarchyMode { Root = 0, Named = 1, All = 2, Entities = 3 };
-        private string[] _hierarchyOptions = new string[] { "Root Objects", "Named Objects", "All Objects" };
+        public enum ObjectHierarchyMode { Root = 0, Named = 1, Updated = 2, All = 3 };
+        private string[] _hierarchyOptions = new string[] { "Root Objects", "Named Objects", "Updated Objects", "All Objects" };
         private ObjectHierarchyMode _hierarchyMode = ObjectHierarchyMode.Root; // Tree display mode
 
         public IgzTreeNode? FindNode(igObject obj) => AllNodes.Values.FirstOrDefault(n => n.Object == obj);
@@ -92,17 +92,20 @@ namespace NST
             unexploredNodes = AddRootNodes(rootNode, nodes, exploredNodes, n => n.IsRootNode(exploredNodes, hierarchyMode), false);
             if (unexploredNodes.Count > 0) Console.WriteLine($"(1) Unexplored nodes: {unexploredNodes.Count}");
 
-            // (2) Fallback: find CEntities
-            unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => n.Object?.GetType() == typeof(CEntity) || n.Object?.GetType() == typeof(igVscIntCounterHelper));
-            if (unexploredNodes.Count > 0) Console.WriteLine($"(2) Unexplored nodes: {unexploredNodes.Count}");
+            if (hierarchyMode != ObjectHierarchyMode.Updated) 
+            {
+                // (2) Fallback: find CEntities
+                unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => n.Object?.GetType() == typeof(CEntity) || n.Object?.GetType() == typeof(igVscIntCounterHelper));
+                if (unexploredNodes.Count > 0) Console.WriteLine($"(2) Unexplored nodes: {unexploredNodes.Count}");
 
-            // (3) Fallback: find igEntities
-            unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => n.Object?.GetType().IsAssignableTo(typeof(igEntity)) == true);
-            if (unexploredNodes.Count > 0) Console.WriteLine($"(3) Unexplored nodes: {unexploredNodes.Count}");
+                // (3) Fallback: find igEntities
+                unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => n.Object?.GetType().IsAssignableTo(typeof(igEntity)) == true);
+                if (unexploredNodes.Count > 0) Console.WriteLine($"(3) Unexplored nodes: {unexploredNodes.Count}");
 
-            // (4) Fallback: find all nodes
-            unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => true);
-            if (unexploredNodes.Count > 0) throw new Exception($"Unexplored nodes: {unexploredNodes.Count}");
+                // (4) Fallback: find all nodes
+                unexploredNodes = AddRootNodes(rootNode, unexploredNodes, exploredNodes, n => true);
+                if (unexploredNodes.Count > 0) throw new Exception($"Unexplored nodes: {unexploredNodes.Count}");
+            }
 
             List<IgzTreeNode> rootNodes = GroupByType(rootNode);
 

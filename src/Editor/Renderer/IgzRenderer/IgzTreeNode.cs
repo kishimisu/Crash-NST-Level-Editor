@@ -73,11 +73,11 @@ namespace NST
                 case IgzTreeView.ObjectHierarchyMode.All:
                     return true;
 
+                case IgzTreeView.ObjectHierarchyMode.Updated:
+                    return IsUpdated;
+
                 case IgzTreeView.ObjectHierarchyMode.Named:
                     return Object?.GetObjectName() != null;
-
-                case IgzTreeView.ObjectHierarchyMode.Entities:
-                    return Object?.GetType().IsAssignableTo(typeof(igEntity)) == true;
 
                 case IgzTreeView.ObjectHierarchyMode.Root:
                     if (!exploredNodes.Contains(this))

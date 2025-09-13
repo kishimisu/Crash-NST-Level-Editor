@@ -28,7 +28,7 @@ namespace NST
             else if (RenderMethods.TryGetValue(type, out var renderMethod))
             {
                 if (renderNameAndType) 
-                    FieldRenderer.RenderNameAndType(renderer, metaField.GetType(), name);
+                    FieldRenderer.RenderNameAndType(renderer, metaField, metaField.GetType(), name);
 
                 renderMethod(metaField, renderer, name);
             }
@@ -47,6 +47,8 @@ namespace NST
             FieldRenderer.TableNextRow(renderer, true);
 
             bool isExpanded = ImGui.TreeNodeEx(name, ImGuiTreeNodeFlags.SpanAllColumns);
+
+            FieldRenderer.HandleCopyPaste(renderer, name + "##meta", metaField, type);
 
             ImGui.TableNextColumn();
             FieldRenderer.RenderType(type);
