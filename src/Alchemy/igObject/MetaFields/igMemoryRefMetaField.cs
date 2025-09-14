@@ -60,7 +60,7 @@ namespace Alchemy
             clone._ref = new();
             clone._dataMemoryPool = _dataMemoryPool;
 
-            if (!typeof(T).IsSubclassOf(typeof(igObjectBase)))
+            if (!deep || !typeof(T).IsSubclassOf(typeof(igObjectBase)))
             {
                 clone._elements = new List<T>(_elements);
                 return clone;

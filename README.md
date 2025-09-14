@@ -70,13 +70,33 @@ Shortcuts:
 
 View and edit objects inside .igz and havok files. Objects are grouped by type and displayed in a tree on the left. Clicking on an object will display its editable properties in the right panel.
 
-![IGZ Editor](assets/readme/igz.png)
-
 Display mode:
 - **Root Objects**: Display root/parent objects
 - **Named Objects**: Display objects that have a name
 - **Updated Objects**: Display objects that are currently updated
 - **All Objects**: Display all objects
+
+![IGZ Editor](assets/readme/object_edit.png)
+
+You can right-click on any object to open a context menu:
+- **Copy name**: Copy the object's name to the clipboard
+- **Copy object**: Copy the object to the clipboard
+- **Paste object**: Add a new object from the clipboard
+- **Paste object values**: Paste the object's values from the clipboard without creating a new object
+- **Rename**: Change the object's name
+- **Duplicate**: Create a new copy of the object
+- **Delete**: Remove the object from the file
+
+
+### Object properties
+
+![IGZ Editor](assets/readme/field_edit.png)
+
+- **Navigation arrows**: Go back/forward in the history of visited objects
+- **Object name**: Display the object name and type
+- **References**: Display a list of all objects that reference the current object. You can click on any of them to open it.
+- **(Hashtable)**: Display a list of key/value pairs for objects containing hashtables
+- **Properties**: Display a list of editable properties for the object. You can right-click to copy/paste complex types.
 
 ## Custom Previews
 

@@ -225,14 +225,13 @@ namespace NST
         /// <summary>
         /// Pop all accumulated styles
         /// </summary>
-        public void PopStyles()
+        public void PopStyles(int additional = 0)
         {
+            _popStylesOnNextRow += additional;
+
             if (_popStylesOnNextRow > 0)
             {
-                for (int i = 0; i < _popStylesOnNextRow; i++)
-                {
-                    ImGui.PopStyleColor();
-                }
+                ImGui.PopStyleColor(_popStylesOnNextRow);
                 _popStylesOnNextRow = 0;
             }
         }
