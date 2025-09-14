@@ -23,39 +23,9 @@ namespace Alchemy
         private FixupCollection _fixups;
         private List<ChunkInfo> _chunkInfos = [];
         private Dictionary<int, igObject> _objects = []; // Global offset -> igObject
-
         private int objectsStartOffset;
-        
-        public List<igObject> GetObjects()
-        {
-            List<igObject> objects = _objects.Values.ToList();
-            if (objects.Count == 0) return objects;
 
-            igObjectList objectList = (igObjectList)_objects[GetGlobalOffset(_fixups.ROOT[0])];
-
-            objects.Sort((a, b) => objectList._data.IndexOf(a).CompareTo(objectList._data.IndexOf(b)));
-
-            objects.Remove(objectList);
-            objects.Insert(0, objectList);
-
-            if (_fixups.ONAM.Count > 0)
-            {
-                igNameList nameList = (igNameList)_objects[GetGlobalOffset(_fixups.ONAM[0])];
-                objects.Remove(nameList);
-                objects.Add(nameList);
-            }
-
-            if (_fixups.NSPC.Count > 0)
-            {
-                igNameList nspcList = (igNameList)_objects[GetGlobalOffset(_fixups.NSPC[0])];
-                objects.Remove(nspcList);
-                objects.Add(nspcList);
-            }
-
-            return objects;
-        }
-
-        public FixupCollection GetFixupCollection() => _fixups;
+        public TDEP_Fixup GetDependencies() => _fixups.TDEP;
 
         /// <summary>
         /// Parse an IGZ file and instanciate all of its objects
@@ -150,6 +120,44 @@ namespace Alchemy
                     obj.SetObjectName(name);
                 }
             }
+        }
+        
+        /// <summary>
+        /// Returns a list of all objects in the file, 
+        /// sorted by order of appearance in the igObjectList
+        /// </summary>
+        /// <returns></returns>
+        public List<igObject> GetObjects()
+        {
+            List<igObject> objects = _objects.Values.ToList();
+            if (objects.Count == 0) return objects;
+
+            igObjectList objectList = (igObjectList)_objects[GetGlobalOffset(_fixups.ROOT[0])];
+
+            objects = objects.OrderBy(o =>
+            {
+                int index = objectList._data.IndexOf(o);
+                return index == -1 ? int.MaxValue : index;
+            }).ToList();
+
+            objects.Remove(objectList);
+            objects.Insert(0, objectList);
+
+            if (_fixups.ONAM.Count > 0)
+            {
+                igNameList nameList = (igNameList)_objects[GetGlobalOffset(_fixups.ONAM[0])];
+                objects.Remove(nameList);
+                objects.Add(nameList);
+            }
+
+            if (_fixups.NSPC.Count > 0)
+            {
+                igNameList nspcList = (igNameList)_objects[GetGlobalOffset(_fixups.NSPC[0])];
+                objects.Remove(nspcList);
+                objects.Add(nspcList);
+            }
+
+            return objects;
         }
 
         /// <summary>

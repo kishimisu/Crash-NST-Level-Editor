@@ -25,7 +25,7 @@ namespace NST
 
         public override THREE.Rectangle GetClientRectangle() => new THREE.Rectangle(0, 0, _width, _height);
 
-        public ThreeSceneRenderer(int width = 1280, int height = 720, bool useEffectComposer = false, bool alwaysRender = true)
+        public ThreeSceneRenderer(int width = 1280, int height = 720, bool useEffectComposer = true, bool alwaysRender = true)
         {
             _width = width;
             _height = height;

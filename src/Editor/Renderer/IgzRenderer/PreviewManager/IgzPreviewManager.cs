@@ -152,6 +152,8 @@ namespace NST
 
             string title = _modelPreview != null ? "Drawcall" : "Material";
 
+            ImGui.BeginGroup();
+
             if (ImGui.TreeNodeEx($"{title} Infos ({_materials.Count})", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen))
             {
                 int i = 0;
@@ -181,6 +183,13 @@ namespace NST
                 }
 
                 ImGui.TreePop();
+            }
+
+            ImGui.EndGroup();
+
+            if (_modelPreview != null && _renderer.TreeView.SelectedNode?.Object is not igModelDrawCallData && !ImGui.IsItemHovered())
+            {
+                _modelPreview.SetRenderDrawCall(-1); // Reset the drawcall override when the mouse leaves
             }
         }
 

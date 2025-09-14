@@ -11,6 +11,7 @@ namespace NST
         private NSTModel _model;
         private THREE.Object3D _object;
         private THREE.ShaderMaterial _debugMaterial;
+        private THREE.DirectionalLight _light;
 
         // Render options
         private bool _noCulling = false;
@@ -26,25 +27,24 @@ namespace NST
 
             // Compute model bounds
             THREE.Box3 boundingBox = new THREE.Box3().SetFromObject(_object);
-            float radius = boundingBox.GetSize().Length() * 1.25f;
             THREE.Vector3 center = boundingBox.GetCenter(new THREE.Vector3());
+            float radius = boundingBox.GetSize().Length();
 
             // Setup camera and controls
-            _camera.Far = radius * 8.0f;
+            _camera.Near = MathF.Max(1.0f, radius * 0.0004f);
+            _camera.Far = radius * 6.0f;
+            _camera.UpdateProjectionMatrix();
+
             _controls = new OrbitControls(this, _camera, radius);
 
-            // Add ambient light
-            _scene.Add(new THREE.AmbientLight(0x525255));
+            // Add lights
+            var ambientLight = new THREE.AmbientLight(0xffffff, 0.55f);
+            _light = new THREE.DirectionalLight(0xffffff, 0.65f);
+
+            _scene.Add(ambientLight);
+            _scene.Add(_light);
+
             _scene.Fog = null!;
-
-            // Add directional lights
-            var d1 = new THREE.DirectionalLight(new THREE.Color(0xf0f0ff), 1.1f);
-            d1.Position.Set(.1f, -.4f, 1f);
-            _scene.Add(d1);
-
-            var d2 = new THREE.DirectionalLight(new THREE.Color(0xfaf8ff), 0.2f);
-            d2.Position.Set(-.2f, .3f, -.9f);
-            _scene.Add(d2);
 
             // Add mesh to scene
             _object.Position = center.Negate();
@@ -91,7 +91,7 @@ namespace NST
         }
 
         /// <summary>
-        /// Render the scene & UI
+        /// Render the model preview
         /// </summary>
         public void Render(IgzRenderer renderer)
         {
@@ -111,10 +111,20 @@ namespace NST
 
             IgzTreeNode? selectedNode = renderer.TreeView.SelectedNode;
             
-            if (selectedNode?.Object is Alchemy.igModelDrawCallData && (selectedNode.TypeCount - 1) != _renderDrawCall)
+            if (selectedNode?.Object is Alchemy.igModelDrawCallData)
             {
                 SetRenderDrawCall(selectedNode.TypeCount - 1); // If the currently selected tree node is a draw call, force render that draw call
             }
+
+            RenderScene();
+        }
+
+        /// <summary>
+        /// Render the scene
+        /// </summary>
+        private void RenderScene()
+        {
+            _light.Position = _camera.Position.Negate();
 
             base.Render();
             base.DrawImage(0.6f);
@@ -127,20 +137,16 @@ namespace NST
         /// </summary>
         public void SetRenderDrawCall(int drawCallIndex)
         {
+            if (_renderDrawCall == drawCallIndex) return;
+
             THREE.Object3D mesh = _object.Children[0];
 
             _renderDrawCall = drawCallIndex;
 
             for (int i = 0; i < mesh.Children.Count; i++)
             {
-                if (_renderDrawCall == -1 || _renderDrawCall == i)
-                {
-                    mesh.Children[i].Visible = true;
-                }
-                else
-                {
-                    mesh.Children[i].Visible = false;
-                }
+                mesh.Children[i].Visible = (_renderDrawCall == i || _renderDrawCall == -1);
+                mesh.Children[i].Material.Visible = (_renderDrawCall == i || !_model.Meshes[i].Material.editorOnly);
             }
         }
 

@@ -34,7 +34,7 @@ namespace NST
         {
             WindowOptions options = WindowOptions.Default;
             options.Size = new Vector2D<int>(1600, 900);
-            options.Title = "Crash NST Editor v1.3";
+            options.Title = "Crash NST Editor v1.4";
             options.API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Compatability, ContextFlags.Default, new APIVersion(3, 3));
 
             options.VSync = false;

@@ -73,7 +73,7 @@ namespace NST
 
             if (e.Button == MouseButton.Left || e.Button == MouseButton.Right)
             {
-                int deltaX = _lastX - e.X;
+                int deltaX = e.X - _lastX;
                 int deltaY = e.Y - _lastY;
 
                 _yaw -= deltaX * SENSITIVITY;

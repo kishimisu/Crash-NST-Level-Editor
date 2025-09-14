@@ -137,13 +137,8 @@ namespace NST
             {
                 RenderTreeView();
                 ImGui.TableNextColumn();
-                RenderObjectView();
-
-                if (_previewManager?.GetModelPreview() is ModelPreview mp && !ImGui.IsItemHovered())
-                {
-                    mp.SetRenderDrawCall(-1); // In a model file, reset the drawcall override when the mouse leaves
-                }
                 
+                RenderObjectView();
                 ImGui.EndTable();
             }
             else

@@ -32,7 +32,7 @@ namespace Alchemy
 
             _path = path;
             Objects = reader.GetObjects();
-            Dependencies = reader.GetFixupCollection().TDEP;
+            Dependencies = reader.GetDependencies();
         }
 
         /// <summary>

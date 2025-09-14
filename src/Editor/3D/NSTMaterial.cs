@@ -228,7 +228,9 @@ namespace NST
             if (type == null) // Drawcall has no material
                 return new THREE.MeshBasicMaterial();
 
-            var material = new THREE.MeshPhongMaterial();
+            THREE.Material material = type.IsAssignableTo(typeof(CUnlitMaterial))
+                ? new THREE.MeshBasicMaterial()
+                : new THREE.MeshPhongMaterial();
 
             if (blending)
             {
@@ -273,11 +275,14 @@ namespace NST
 
             if (type == typeof(CFlowWaterMaterial) || type == typeof(CWaterMaterial))
             {
-                material.Color = new THREE.Color(color.X, color.Y, color.Z);
                 material.Opacity = 0.5f;
                 material.Transparent = true;
                 material.BlendSrc = THREE.Constants.SrcAlphaFactor;
                 material.BlendDst = THREE.Constants.OneMinusSrcAlphaFactor;
+            }
+            else if (type == typeof(CUnlitRimMaterial))
+            {
+                material.Opacity = 0.5f;
             }
 
             if (texture != null)
