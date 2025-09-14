@@ -52,9 +52,9 @@ namespace Alchemy
             writer.Write(_handle, offset);
         }
 
-        public override igObjectBase Clone(bool deep = false)
+        public override igObjectBase Clone(string? suffix = null, bool deep = false)
         {
-            igHandleMetaField clone = (igHandleMetaField)base.Clone(deep);
+            igHandleMetaField clone = (igHandleMetaField)base.Clone(suffix, deep);
 
             clone._reference = _reference?.Clone();
 

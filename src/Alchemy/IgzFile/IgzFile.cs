@@ -7,9 +7,8 @@ namespace Alchemy
     public class IgzFile
     {
         private string _path;
-        private TDEP_Fixup _dependencies = [];
-
         public List<igObject> Objects { get; set; } = [];
+        public TDEP_Fixup Dependencies { get; set; } = [];
 
         public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(_path, includeExtension);
         
@@ -33,7 +32,7 @@ namespace Alchemy
 
             _path = path;
             Objects = reader.GetObjects();
-            _dependencies = reader.GetFixupCollection().TDEP;
+            Dependencies = reader.GetFixupCollection().TDEP;
         }
 
         /// <summary>
@@ -49,7 +48,7 @@ namespace Alchemy
                 ReplaceHandlesNamespace(currentNamespace, newNamespace);
             }
 
-            return IgzWriter.BuildIGZ(Objects, _dependencies);
+            return IgzWriter.BuildIGZ(Objects, Dependencies);
         }
 
         /// <summary>
@@ -127,17 +126,21 @@ namespace Alchemy
             }) as T;
         }
 
-        public static T? Clone<T>(T obj, string? newName = null, bool deep = false) where T : igObject
+        public static T Clone<T>(T obj, string? suffix = null, bool deep = false) where T : igObject
         {
-            T? clone = obj.Clone(deep) as T;
-            if (clone == null) return null;
-
-            if (newName != null) {
-                clone.SetObjectName(newName);
-            }
-
-            return clone;
+            return (T)obj.Clone(suffix, deep);
         }
+
+        // public static T Clone<T>(T obj, string? newName = null, bool deep = false) where T : igObject
+        // {
+        //     T clone = (T)obj.Clone(deep);
+
+        //     if (newName != null) {
+        //         clone.SetObjectName(newName);
+        //     }
+
+        //     return clone;
+        // }
 
         // public static IgzFile CreateTexture(string imagePath, CompressionFormat compressionFormat = CompressionFormat.Bc1)
         // {

@@ -20,7 +20,7 @@ namespace NST
         /// <summary>
         /// Finds the tree node associated to the given object
         /// </summary>
-        public abstract TreeNode FindNode(object obj);
+        public abstract TreeNode? FindNode(object obj);
         
         /// <summary>
         /// Finds all nodes containing objects that are derived from the given type.

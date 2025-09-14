@@ -93,6 +93,22 @@ namespace Alchemy
         }
 
         /// <summary>
+        /// Recursively find all children of this object
+        /// </summary>
+        public List<igObject> GetChildrenRecursive(ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
+        {
+            List<igObject> children = [];
+
+            foreach (igObject child in GetChildren(searchParams))
+            {
+                children.Add(child);
+                children.AddRange(child.GetChildrenRecursive(searchParams));
+            }
+
+            return children;
+        }
+
+        /// <summary>
         /// Get all objects referenced by this object.
         /// Can also include objects that are referenced through handles in the same IGZ file
         /// </summary>
@@ -190,19 +206,17 @@ namespace Alchemy
         /// Create a clone of this object
         /// </summary>
         /// <param name="deep">Whether to clone all child objects as well</param>
-        public virtual igObjectBase Clone(bool deep = false)
+        public virtual igObjectBase Clone(string? suffix = null, bool deep = false)
         {
             igObjectBase clone = (igObjectBase)MemberwiseClone();
-
-            Console.WriteLine($"Clone ({(deep ? "deep" : "shallow")}): {this.GetType().Name + ": " + this.GetObjectName()}");
 
             foreach (CachedFieldAttr field in GetFields())
             {
                 object? value = field.GetValue(this);
 
                 if (value == null) continue;
-                if (value is igMetaField metaField) value = metaField.Clone(deep);
-                if (deep && value is igObjectBase igObj) value = igObj.Clone(deep);
+                if (value is igMetaField metaField) value = metaField.Clone(suffix, deep);
+                if (deep && value is igObjectBase igObj) value = igObj.Clone(suffix, deep);
 
                 field.SetValue(clone, value);
             }

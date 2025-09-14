@@ -100,12 +100,12 @@ namespace Alchemy
             writer.Write(value, offset);
         }
 
-        public override igObjectBase Clone(bool deep = false)
+        public override igObjectBase Clone(string? suffix = null, bool deep = false)
         {
-            igObject clone = (igObject)base.Clone(deep);
+            igObject clone = (igObject)base.Clone(suffix, deep);
 
-            if (_objectName != null) {
-                clone._objectName = _objectName + "_Clone";
+            if (_objectName != null && suffix != null) {
+                clone._objectName = _objectName + suffix;
             }
 
             return clone;

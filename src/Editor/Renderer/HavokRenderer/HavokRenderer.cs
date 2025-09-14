@@ -52,9 +52,9 @@ namespace NST
             TreeView.RebuildNode(TreeView.SelectedNode);
         }
 
-        public override HavokTreeNode FindNode(object obj)
+        public override HavokTreeNode? FindNode(object obj)
         {
-            return TreeView.AllNodes.Values.First(e => e.Object == obj)!;
+            return TreeView.AllNodes.First(e => e.Object == obj);
         }
         
         public override List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex)
@@ -63,7 +63,7 @@ namespace NST
 
             currentIndex = 0;
             
-            foreach (HavokTreeNode node in TreeView.AllNodes.Values)
+            foreach (HavokTreeNode node in TreeView.AllNodes)
             {
                 if (node.Object.GetType().IsAssignableTo(type))
                 {

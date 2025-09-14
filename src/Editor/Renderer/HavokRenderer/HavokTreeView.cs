@@ -74,7 +74,7 @@ namespace NST
                 }
             }
 
-            AllNodes = nodes.Select(kvp => (kvp.Value.GetDisplayName(), kvp.Value)).ToDictionary();
+            AllNodes = nodes.Values.ToList();
         }
 
         public void RebuildNode(HavokTreeNode? node)
@@ -87,7 +87,7 @@ namespace NST
 
             foreach (hkObject child in node.Object.GetChildren())
             {
-                HavokTreeNode? childNode = AllNodes.Values.FirstOrDefault(e => e.Object == child);
+                HavokTreeNode? childNode = AllNodes.FirstOrDefault(e => e.Object == child);
 
                 if (childNode == null)
                 {
@@ -101,7 +101,7 @@ namespace NST
 
         public void SetNodeUpdated(hkObject obj)
         {
-            HavokTreeNode? node = AllNodes.Values.FirstOrDefault(n => n.Object == obj);
+            HavokTreeNode? node = AllNodes.FirstOrDefault(n => n.Object == obj);
 
             if (node != null) node.IsUpdated = true;
             else Console.Error.WriteLine($"Warning: No node found for {obj}");

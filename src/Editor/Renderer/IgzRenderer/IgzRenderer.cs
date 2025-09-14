@@ -8,8 +8,10 @@ namespace NST
     public class IgzRenderer : FileRenderer
     {
         public IgzFile Igz { get; private set; } // Current file being rendered
+        public override IgzTreeView TreeView { get; } // igObject tree
 
-        public override IgzTreeView TreeView { get; } = new IgzTreeView(); // igObject tree
+        public static igObject? CopyObject { get; set; } = null; // Clipboard object
+        public static IgzRenderer? CopyRenderer { get; set; } = null; // Clipboard parent renderer
 
         public override byte[] SaveFile() => Igz.Save();
         public override void ReloadFile() => SetIgz(ArchiveFile.ToIgzFile());
@@ -18,6 +20,7 @@ namespace NST
         {
             ArchiveFile = archiveFile;
             ArchiveRenderer = archiveRenderer;
+            TreeView = new IgzTreeView(this);
             SetIgz(igz);
         }
 
@@ -67,12 +70,12 @@ namespace NST
         public override void OnObjectRefChanged()
         {
             SetUpdated();
-            TreeView.RebuildNode(Igz, TreeView.SelectedNode);
+            TreeView.RebuildNode(TreeView.SelectedNode);
         }
 
-        public override IgzTreeNode FindNode(object obj)
+        public override IgzTreeNode? FindNode(object obj)
         {
-            return TreeView.ObjectNodes.Find(e => e.Object == obj)!;
+            return TreeView.ObjectNodes.Find(e => e.Object == obj);
         }
 
         public override List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex)

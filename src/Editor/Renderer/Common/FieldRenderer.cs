@@ -13,8 +13,8 @@ namespace NST
     public static class FieldRenderer
     {
         // Used for copy/paste
-        public static object? CopyObject = null;
-        public static FileRenderer? CopyRenderer = null;
+        private static object? _copyObject = null;
+        private static FileRenderer? _copyRenderer = null;
 
         /// <summary>
         /// Render all fields of the given igObjectBase or hkObject instance
@@ -444,28 +444,32 @@ namespace NST
             float arrowWidth = 20;
             float maxTextWidth = availableWidth - arrowWidth - spacing;
 
+            // Display object name
             if (value != null)
             {
-                string text = renderer.FindNode(value)?.GetDisplayName() ?? "<Not found>";
-                ImGui.Text(ImGuiUtils.TruncateTextToFit(text, maxTextWidth));
-                if (ImGui.IsItemHovered())
+                TreeNode? node = renderer.FindNode(value);
+
+                if (node != null)
                 {
-                    ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
-                    if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+                    ImGui.Text(ImGuiUtils.TruncateTextToFit(node.GetDisplayName(), maxTextWidth));
+                    if (ImGui.IsItemHovered())
                     {
-                        // Update Object Ref
-                        renderer.TreeView.SelectChildNode(renderer.FindNode(value));
+                        ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
+                        if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
+                        {
+                            // Focus referenced object
+                            renderer.TreeView.SelectChildNode(node);
+                        }
                     }
                 }
+                else ImGui.Text("<Not found>");
             }
-            else
-            {
-                ImGui.Text("null");
-            }
+            else ImGui.Text("null");
 
             ImGui.SameLine();
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - arrowWidth);
 
+            // Display dropdown input
             if (ImGui.BeginCombo(name, options[selectedIndex], ImGuiComboFlags.NoPreview))
             {
                 for (int i = 0; i < options.Count; i++)
@@ -475,7 +479,34 @@ namespace NST
                     if (ImGui.Selectable(options[i], isSelected))
                     {
                         selectedIndex = i;
-                        onChange.Invoke(i == 0 ? null : derivedNodes[i - 1]);
+
+                        // Set object ref to null
+                        if (i == 0)
+                        {
+                            onChange.Invoke(null);
+                        }
+                        // Update object ref
+                        else if (i < options.Count - 1)
+                        {
+                            onChange.Invoke(derivedNodes[i - 1]);
+                        }
+                        // Create new object
+                        else
+                        {
+                            object obj = Activator.CreateInstance(type)!;
+
+                            if (renderer is IgzRenderer igzRenderer && obj is igObject igObj)
+                            {
+                                IgzTreeNode node = new IgzTreeNode(igObj);
+
+                                onChange.Invoke(node);
+
+                                igzRenderer.TreeView.Add(node, igObj);
+                                igzRenderer.TreeView.SelectChildNode(node);
+
+                                igObj.SetMemoryPool(igzRenderer.TreeView.ObjectNodes[0].Object!.GetMemoryPool());
+                            }
+                        }
                     }
 
                     if (isSelected)
@@ -772,42 +803,45 @@ namespace NST
 
             // Copy object
 
-            if (ImGui.Selectable($"Copy value"))
+            if (value != null && ImGui.Selectable($"Copy value"))
             {
                 if (isMetaField && value is igMetaField metaField)
                 {
-                    CopyObject = metaField.Clone();
+                    _copyObject = metaField.Clone();
                 }
                 else if (isIgObject && renderer is IgzRenderer igzRenderer)
                 {
-                    CopyObject = igzRenderer.FindNode(value);
+                    _copyObject = igzRenderer.FindNode(value);
                 }
                 else if (isHkObject && renderer is HavokRenderer havokRenderer)
                 {
-                    CopyObject = havokRenderer.FindNode(value);
+                    _copyObject = havokRenderer.FindNode(value);
                 }
 
-                CopyRenderer = renderer;
+                _copyRenderer = renderer;
             }
 
             // Check if the copied object can be pasted into this field
 
             bool canPaste = false;
 
-            if (CopyObject != null && CopyRenderer == renderer)
+            if (_copyObject != null)
             {
                 if (isMetaField)
                 {
-                    canPaste  = CopyObject is igMetaField mf && mf.GetType().IsAssignableTo(type);
-                    canPaste &= CopyObject is not igBitFieldMetaField || CopyObject.GetType() == value?.GetType();
+                    canPaste  = _copyObject is igMetaField mf && mf.GetType().IsAssignableTo(type);
+                    canPaste &= _copyObject is not igBitFieldMetaField || _copyObject.GetType() == value?.GetType();
                 }
-                else if (isIgObject)
+                else if (_copyRenderer == renderer)
                 {
-                    canPaste = CopyObject is IgzTreeNode node && node.Object!.GetType().IsAssignableTo(type);
-                }
-                else if (isHkObject)
-                {
-                    canPaste = CopyObject is HavokTreeNode node && node.Object!.GetType().IsAssignableTo(type);
+                    if (isIgObject)
+                    {
+                        canPaste = _copyObject is IgzTreeNode node && node.Object?.GetType().IsAssignableTo(type) == true;
+                    }
+                    else if (isHkObject)
+                    {
+                        canPaste = _copyObject is HavokTreeNode node && node.Object?.GetType().IsAssignableTo(type) == true;
+                    }
                 }
             }
 
@@ -815,15 +849,20 @@ namespace NST
             
             if (canPaste && ImGui.Selectable($"Paste value"))
             {
-                if (isMetaField && CopyObject is igMetaField source && value is igMetaField target)
+                if (isMetaField && _copyObject is igMetaField source && value is igMetaField target)
                 {
                     source.Copy(target);
                     renderer.SetUpdated();
                 }
                 else if (isIgObject || isHkObject)
                 {
-                    onChange?.Invoke(CopyObject);
+                    onChange?.Invoke(_copyObject);
                 }
+            }
+
+            if (value == null && !canPaste)
+            {
+                ImGui.Text("No available action");
             }
 
             ImGui.EndPopup();

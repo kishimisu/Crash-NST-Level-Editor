@@ -1,6 +1,7 @@
 using Alchemy;
 using ImGuiNET;
 using System.Numerics;
+using System.Text.RegularExpressions;
 
 namespace NST
 {
@@ -11,8 +12,9 @@ namespace NST
     {
         public igObject? Object { get; } = null; // Corresponding object, null for folders
 
-        public List<IgzTreeNode> Parents { get; } = []; // Parents of this node
+        public List<IgzTreeNode> Parents { get; } = []; // Parent object nodes
         public bool RootNode { get; set; } = false; // Is this node a root node?
+        public int InitialParentCount { get; set; } = 0;
 
         // Preview-related
         public NSTMaterial? MaterialPreview { get; set; } = null;
@@ -20,12 +22,16 @@ namespace NST
         public CSubSoundPreview? SubSoundPreview { get; set; } = null;
         private bool _audioPreview = false;
 
-        public override string GetDisplayName() => GetDisplayName(true) ?? Name + GetHashCode();
+        public override string GetDisplayName() => GetDisplayName(true) ?? Name + _uuid;
 
         /// <summary>
         /// Object node constructor
         /// </summary>
-        public IgzTreeNode(igObject obj) => Object = obj;
+        public IgzTreeNode(igObject obj)
+        {
+            Object = obj;
+            _uuid = ImGui.GetID(GetDisplayName());
+        }
 
         /// <summary>
         /// Folder node constructor
@@ -35,6 +41,7 @@ namespace NST
             Name = name;
             IsFolder = true;
             Children = children?.Cast<TreeNode>().ToList() ?? [];
+            _uuid = ImGui.GetID(GetDisplayName());
         }
 
         /// <summary>
@@ -141,7 +148,7 @@ namespace NST
 
                 parentNodes.Add(this);
                 
-                foreach (IgzTreeNode child in Children)
+                foreach (IgzTreeNode child in Children.ToList())
                 {
                     child.Render(tree, parentNodes, this, openChildNode);
                 }
@@ -175,10 +182,16 @@ namespace NST
                 ImGui.PushStyleColor(ImGuiCol.Header, new System.Numerics.Vector4(1, 1, 1, 0.15f));
             }
 
-            IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
+            IsOpen = ImGui.TreeNodeEx("###" + _uuid, flags);
 
             if (multiReferences) ImGui.PopStyleColor();
             if (subselected) ImGui.PopStyleColor();
+
+            if (ImGui.BeginPopupContextItem("IgzObjectPopup" + _uuid))
+            {
+                RenderContextMenu(tree);
+                ImGui.EndPopup();
+            }
 
             HandleNavigation(tree);
 
@@ -204,7 +217,7 @@ namespace NST
             Type? folderType = Type.GetType("Alchemy." + folderTypeStr);
             uint typeColor = folderType?.GetUniqueColor() ?? 0xffffffff;
 
-            IsOpen = ImGui.TreeNodeEx("##" + Name, flags);
+            IsOpen = ImGui.TreeNodeEx("###" + _uuid, flags);
 
             HandleNavigation(tree);
 
@@ -212,6 +225,12 @@ namespace NST
             ImGui.PushStyleColor(ImGuiCol.Text, typeColor);
             ImGui.Text(Name);
             ImGui.PopStyleColor();
+        }
+
+        public void UpdateFolderName()
+        {
+            if (!IsFolder) return;
+            Name = Regex.Replace(Name, @"\(\d+\)$", $"({Children.Count})");
         }
 
         /// <summary>
@@ -283,7 +302,7 @@ namespace NST
             IgzRenderer renderer = (IgzRenderer)fileRenderer;
             
             ImGui.SetNextWindowSizeConstraints(Vector2.Zero, new Vector2(-1, ImGui.GetContentRegionAvail().Y * 0.5f));
-            ImGui.BeginChild("ObjectHeader" + GetHashCode(), Vector2.Zero, ImGuiChildFlags.AutoResizeY, ImGuiWindowFlags.HorizontalScrollbar);
+            ImGui.BeginChild("ObjectHeader" + _uuid, Vector2.Zero, ImGuiChildFlags.AutoResizeY, ImGuiWindowFlags.HorizontalScrollbar);
 
             // Object name
 
@@ -320,7 +339,7 @@ namespace NST
 
             // Object properties table
 
-            ImGui.BeginChild("ObjectFields" + GetHashCode());
+            ImGui.BeginChild("ObjectFields" + _uuid);
             
             renderer.RenderObject(Object);
 
@@ -362,6 +381,104 @@ namespace NST
 
             ImGui.Separator();
             ImGui.Spacing();
+        }
+
+        /// <summary>
+        /// Context menu that appears when right-clicking an object node
+        /// </summary>
+        private void RenderContextMenu(IgzTreeView tree)
+        {
+            if (Object == null) return;
+
+            if (ImGui.Selectable("Copy name"))
+            {
+                ImGui.SetClipboardText(GetDisplayName());
+            }
+            if (ImGui.Selectable("Copy object"))
+            {
+                IgzRenderer.CopyObject = (igObject)Object.Clone();
+                IgzRenderer.CopyRenderer = tree.Renderer;
+            }
+            if (IgzRenderer.CopyObject != null && IgzRenderer.CopyRenderer != null)
+            {
+                ImGui.Separator();
+                
+                if (ImGui.Selectable($"Paste object ({IgzRenderer.CopyObject.GetType().Name})"))
+                {
+                    // Paste in the same file
+                    if(tree.Renderer == IgzRenderer.CopyRenderer)
+                    {
+                        igObject clone = (igObject)IgzRenderer.CopyObject.Clone("_Copy");
+                        tree.Add(clone);
+                    }
+                    // Paste in a different file
+                    else
+                    {
+                        igObject clone = (igObject)IgzRenderer.CopyObject.Clone(deep: true);
+                        tree.Add(clone);
+
+                        foreach (igObject child in clone.GetChildrenRecursive())
+                        {
+                            tree.Add(child);
+                        }
+
+                        foreach (var tdep in IgzRenderer.CopyRenderer.Igz.Dependencies)
+                        {
+                            if (!tree.Renderer.Igz.Dependencies.Contains(tdep))
+                            {
+                                tree.Renderer.Igz.Dependencies.Add(tdep);
+                            }
+                        }
+                    }
+                    // Todo: paste in a different archive (add dependencies to archive)
+                }
+
+                bool canPasteValues = Object.GetType().IsAssignableTo(IgzRenderer.CopyObject.GetType());
+
+                if (!canPasteValues) ImGui.BeginDisabled();
+
+                if (ImGui.Selectable("Paste object values"))
+                {
+                    IgzRenderer.CopyObject.Copy(Object);
+                    tree.RebuildNode(this);
+                }
+
+                if (!canPasteValues) ImGui.EndDisabled();
+            }
+
+            ImGui.Separator();
+
+            if (ImGui.Selectable("Rename"))
+            {
+                ModalRenderer.ShowRenameModal(Object.GetObjectName() ?? "", (newName) => 
+                {
+                    Object?.SetObjectName(newName);
+                    tree.Renderer.SetUpdated(Object);
+                });
+            }
+            if (ImGui.Selectable("Duplicate"))
+            {
+                igObject clone = IgzFile.Clone(Object, "_Copy");
+
+                IgzTreeNode newNode = tree.Add(clone);
+
+                tree.SetSelectedNode(newNode);
+            }
+            if (ImGui.Selectable("Delete"))
+            {
+                if (Parents.Count > 0)
+                {
+                    ModalRenderer.ShowMessageModal("This object could not be deleted", $"This object is referenced by {Parents.Count} other object(s).");
+                }
+                else
+                {
+                    ModalRenderer.ShowDeleteModal(Object?.GetObjectName() ?? "", () => 
+                    {
+                        tree.Remove(this);
+                        tree.SetSelectedNode(null);
+                    });
+                }
+            }
         }
 
         // private void _RenderExternalReferences(IgzRenderer renderer)

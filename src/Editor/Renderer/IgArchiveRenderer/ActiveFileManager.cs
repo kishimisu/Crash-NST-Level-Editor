@@ -64,8 +64,14 @@ namespace NST
             updated = false;
             removeOnDiscard = false;
 
+            updatedObjects.Clear();
+            updatedCollisions.Clear();
+
             if (renderer != null)
             {
+                renderer.TreeView.RemoveUnreferencedNodes();
+                renderer.TreeView.ClearUpdatedNodes();
+
                 // Apply changes to IGZ file
                 file.SetData(renderer.SaveFile());
             }

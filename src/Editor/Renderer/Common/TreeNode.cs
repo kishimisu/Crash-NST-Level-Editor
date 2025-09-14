@@ -23,6 +23,8 @@ namespace NST
         public NextOpenState NextOpen = NextOpenState.None;
         public NextFocusState NextFocus = NextFocusState.None;
 
+        protected uint _uuid;
+
         /// <summary>
         /// Returns the node's display name
         /// </summary>

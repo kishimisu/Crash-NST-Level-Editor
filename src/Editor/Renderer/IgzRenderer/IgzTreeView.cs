@@ -9,12 +9,15 @@ namespace NST
     public class IgzTreeView : TreeView<IgzTreeNode>
     {
         public List<IgzTreeNode> ObjectNodes { get; private set; } = []; // igObject nodes
+        public IgzRenderer Renderer { get; } // Parent renderer
 
         public enum ObjectHierarchyMode { Root = 0, Named = 1, Updated = 2, All = 3 };
         private string[] _hierarchyOptions = new string[] { "Root Objects", "Named Objects", "Updated Objects", "All Objects" };
         private ObjectHierarchyMode _hierarchyMode = ObjectHierarchyMode.Root; // Tree display mode
 
-        public IgzTreeNode? FindNode(igObject obj) => AllNodes.Values.FirstOrDefault(n => n.Object == obj);
+        public IgzTreeNode? FindNode(igObject obj) => AllNodes.FirstOrDefault(n => n.Object == obj);
+
+        public IgzTreeView(IgzRenderer renderer) => Renderer = renderer;
 
         /// <summary>
         /// Sets the current IGZ file and rebuilds the tree
@@ -34,7 +37,7 @@ namespace NST
         {
             _rootNodes = BuildRootNodes(ObjectNodes, _hierarchyMode);
 
-            AllNodes = _rootNodes.Union(ObjectNodes).ToDictionary(n => n.GetDisplayName(), n => n);
+            AllNodes = _rootNodes.Union(ObjectNodes).ToList();
         }
 
         /// <summary>
@@ -57,12 +60,19 @@ namespace NST
             List<igObject> objects = igz.Objects;
 
             // Skip igObjectList & igNameList
-            int start = objects.Count > 0 && objects[0] is igObjectList ? 1 : 0;
-            int end = objects.Count > 0 && objects[objects.Count - 1] is igNameList ? objects.Count - 1 : objects.Count;
+            bool excludeObjectAndNameList = true;
+            int start = excludeObjectAndNameList && objects.Count > 0 && objects[0].GetType() == typeof(igObjectList) ? 1 : 0;
 
-            for (int i = start; i < end; i++)
+            for (int i = start; i < objects.Count; i++)
             {
                 igObject obj = objects[i];
+
+                if (excludeObjectAndNameList && obj.GetType() == typeof(igNameList))
+                {
+                    excludeObjectAndNameList = false;
+                    continue;
+                }
+
                 IgzTreeNode node = AddNode(obj);
 
                 foreach (igObject child in obj.GetChildren(igz, ChildrenSearchParams.IncludeHandles))
@@ -70,6 +80,7 @@ namespace NST
                     IgzTreeNode? childNode = AddNode(child);
                     node.Children.Add(childNode);
                     childNode.Parents.Add(node);
+                    childNode.InitialParentCount++;
                 }
             }
 
@@ -222,7 +233,7 @@ namespace NST
         /// Rebuild the children of a node and update 
         /// the parents of the previous children.
         /// </summary>
-        public void RebuildNode(IgzFile igz, IgzTreeNode? node)
+        public void RebuildNode(IgzTreeNode? node)
         {
             if (node?.Object == null) return;
 
@@ -232,7 +243,7 @@ namespace NST
             node.Children.Clear();
 
             // Add new children
-            foreach (igObject child in node.Object.GetChildren(igz, ChildrenSearchParams.IncludeHandles))
+            foreach (igObject child in node.Object.GetChildren(Renderer.Igz, ChildrenSearchParams.IncludeHandles))
             {
                 IgzTreeNode? childNode = ObjectNodes.Find(e => e.Object == child);
 
@@ -298,6 +309,126 @@ namespace NST
         }
 
         /// <summary>
+        /// Add an object to the tree and to the igz file
+        /// </summary>
+        public IgzTreeNode Add(igObject obj)
+        {
+            // Add the object to the igz
+            Renderer.Igz.Objects.Add(obj);
+
+            // Create a new node for the object
+            IgzTreeNode newNode = new IgzTreeNode(obj);
+
+            // Add the node to the tree
+            return Add(newNode, obj);
+        }
+
+        public IgzTreeNode Add(IgzTreeNode newNode, igObject obj)
+        {
+            // Update parents
+            foreach (IgzTreeNode node in ObjectNodes)
+            {
+                if (node.Object!.GetChildren().Contains(obj) && !node.Children.Contains(newNode))
+                {
+                    node.Children.Add(newNode);
+                    newNode.Parents.Add(node);
+                    newNode.InitialParentCount++;
+                }
+            }
+            
+            AllNodes.Add(newNode);
+            ObjectNodes.Add(newNode);
+
+            if (newNode.Parents.Count == 0)
+            {
+                // Add the node to corresponding root folder
+                bool foundParent = false;
+                foreach (IgzTreeNode rootNode in _rootNodes.ToList())
+                {
+                    if (rootNode.Name.StartsWith(obj.GetType().Name))
+                    {
+                        rootNode.Children.Add(newNode);
+                        rootNode.UpdateFolderName();
+                        foundParent = true;
+                        break;
+                    }
+                }
+                // If no parent was found, create a new root folder
+                if (!foundParent)
+                {
+                    _rootNodes.Add(new IgzTreeNode($"{obj.GetType().Name} (1)", [ newNode ]));
+                }
+            }            
+            
+            // Update children
+            RebuildNode(newNode);
+
+            // Update the renderer
+            Renderer.SetUpdated(obj);
+
+            return newNode;
+        }
+
+        /// <summary>
+        /// Remove a node from the tree and igz
+        /// </summary>
+        public void Remove(IgzTreeNode toRemove, bool recursive = true, bool updateRenderer = true)
+        {
+            if (toRemove.Object == null) return;
+
+            // Remove object from igz
+            if (Renderer.Igz.Objects.Remove(toRemove.Object) && updateRenderer)
+            {
+                Renderer.SetUpdated(toRemove.Object);
+            }
+
+            // Remove node from tree
+            AllNodes.Remove(toRemove);
+            ObjectNodes.Remove(toRemove);
+
+            // Remove node from parents
+            foreach (IgzTreeNode rootNode in _rootNodes.ToList())
+            {
+                if (rootNode.Children.Remove(toRemove))
+                {
+                    if (rootNode.Children.Count == 0)
+                    {
+                        _rootNodes.Remove(rootNode);
+                    }
+                    else
+                    {
+                        rootNode.UpdateFolderName();
+                    }
+                }
+            }
+
+            // Remove unreferenced child nodes
+            if (recursive)
+            {
+                foreach (IgzTreeNode child in toRemove.Children.ToList())
+                {
+                    child.Parents.Remove(toRemove);
+
+                    if (child.Parents.Count == 0)
+                    {
+                        Remove(child, recursive);
+                    }
+                }
+            }
+        }
+
+        public override void RemoveUnreferencedNodes()
+        {
+            foreach (IgzTreeNode node in ObjectNodes.ToList())
+            {
+                if (node.Parents.Count == 0 && node.InitialParentCount > 0)
+                {
+                    Remove(node, updateRenderer: false);
+                }
+            }
+        }
+
+        /// <summary>
         /// Render the igz tree
         /// </summary>
         public override void Render()
@@ -311,7 +442,7 @@ namespace NST
             PreviousNode = null;
             SelectNextNode = false;
 
-            foreach (IgzTreeNode node in _rootNodes)
+            foreach (IgzTreeNode node in _rootNodes.ToList())
             {
                 node.Render(this, []);
             }

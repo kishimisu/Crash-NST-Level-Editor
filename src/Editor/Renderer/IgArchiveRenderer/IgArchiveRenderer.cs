@@ -16,24 +16,22 @@ namespace NST
         private IgArchiveFile? _selectedFile = null;
         private Dictionary<HashedReference, int> _collisionData = [];
 
+        private uint _uuid;
         private bool _isOpen = true;
         private bool _isUpdated = false;
         private bool _showAudioPlayer = false; // Used for .snd files
 
-        public string GetWindowName() => (string.IsNullOrEmpty(Archive.GetName()) ? "New Archive" : Archive.GetName()) + "##" + GetHashCode();
+        public string GetWindowName() => (string.IsNullOrEmpty(Archive.GetName()) ? "New Archive" : Archive.GetName()) + "###" + _uuid;
         public int FindCollisionShapeIndex(HashedReference reference) => _collisionData.ContainsKey(reference) ? _collisionData[reference] : -1;
 
-        public IgArchiveRenderer(string archivePath)
-        {
-            Archive = IgArchive.Open(archivePath);
-            _treeView = new IgArchiveTreeView(this);
-            _collisionData = StaticCollisionsUtils.GetCollisionData(Archive);
-        }
+        public IgArchiveRenderer(string archivePath) : this(IgArchive.Open(archivePath)) { }
+
         public IgArchiveRenderer(IgArchive archive)
         {
             Archive = archive;
             _treeView = new IgArchiveTreeView(this);
             _collisionData = StaticCollisionsUtils.GetCollisionData(Archive);
+            _uuid = ImGui.GetID(Archive.GetPath());
         }
 
         /// <summary>
@@ -76,7 +74,6 @@ namespace NST
                 }
 
                 // Shortcuts
-                if (ImGui.Shortcut(ImGuiKey.W)) _isOpen = false; // Close
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
             }

@@ -17,23 +17,25 @@ namespace NST
     /// </summary>
     public class ModalBase<TAction> : IModalBase where TAction : Delegate
     {
-        private string _identifier; // Modal unique identifier
-        protected string _name = ""; // Modal title
+        protected string _title; // Modal title
+        protected string _text = ""; // Modal message
         protected TAction? _callback; // Confirm callback
-        protected bool _isOpen; // Whether the modal is currently visible
+        protected bool _isOpen = false; // Whether the modal is currently visible
+        private bool _requestOpen = false;
 
         public bool IsOpen() => _isOpen;
 
-        public ModalBase(string identifier) => _identifier = identifier;
+        public ModalBase(string title) => _title = title;
 
         /// <summary>
         /// Show the modal
         /// </summary>
-        public void Open(string name, TAction? callback)
+        public void Open(string text, TAction? callback)
         {
-            _name = name;
+            _text = text;
             _callback = callback;
             _isOpen = true;
+            _requestOpen = true;
         }
 
         /// <summary>
@@ -56,7 +58,7 @@ namespace NST
         }
 
         /// <summary>
-        /// Get the size of each button based on the number of buttons
+        /// Get the size of each button based on the button count
         /// </summary>
         protected static Vector2 ComputeButtonSize(int count = 1)
         {
@@ -73,14 +75,13 @@ namespace NST
         /// <returns>Whether the modal is currently open</returns>
         public virtual bool Render()
         {
-            if (_isOpen)
+            if (_requestOpen)
             {
-                ImGui.OpenPopup(_identifier);
+                ImGui.OpenPopup(_title);
+                _requestOpen = false;
             }
 
-            ImGui.BeginPopupModal(_identifier, ImGuiWindowFlags.AlwaysAutoResize);
-
-            return _isOpen;
+            return ImGui.BeginPopupModal(_title, ImGuiWindowFlags.AlwaysAutoResize);
         }
     }
 
@@ -89,19 +90,17 @@ namespace NST
     /// </summary>
     public class MessageModal() : ModalBase<Action>("Message")
     {
-        private string _message = "";
-
         public void Open(string title, string message, Action? action)
         {
-            base.Open(title, action);
-            _message = message;
+            base.Open(message, action);
+            _title = title;
         }
 
         public override bool Render()
         {
             if (!base.Render()) return false;
 
-            ImGui.Text(_message);
+            ImGui.Text(_text);
 
             if (ImGui.Button("OK", ComputeButtonSize())) 
                 OnClickOK();
@@ -142,7 +141,7 @@ namespace NST
             if (!base.Render()) return false;
 
             ImGui.PushTextWrapPos(ImGui.GetFontSize() * 40);
-            ImGui.TextWrapped(_name);
+            ImGui.TextWrapped(_text);
             ImGui.PopTextWrapPos();
 
             ImGuiUtils.VerticalSpacing(10);
@@ -171,7 +170,7 @@ namespace NST
         {
             if (!base.Render()) return false;
 
-            ImGui.Text("Are you sure you want to delete " + _name + "?");
+            ImGui.Text("Are you sure you want to delete " + _text + "?");
             ImGui.Spacing();
 
             Vector2 buttonSize = ComputeButtonSize(2);
@@ -198,10 +197,10 @@ namespace NST
             ImGui.Text("Select a new file name:");
             ImGui.Spacing();
 
-            float textWidth = ImGui.CalcTextSize(_name).X + ImGui.GetStyle().FramePadding.X * 2;
+            float textWidth = ImGui.CalcTextSize(_text).X + ImGui.GetStyle().FramePadding.X * 2;
 
             ImGui.SetNextItemWidth(textWidth);
-            ImGui.InputText("##RenameInput", ref _name, 256);
+            ImGui.InputText("##RenameInput", ref _text, 256);
             ImGui.Spacing();
 
             Vector2 buttonSize = ComputeButtonSize(2);
@@ -209,7 +208,7 @@ namespace NST
             if (ImGui.Button("Cancel", buttonSize)) OnClickCancel();
             ImGui.SameLine();
 
-            if (ImGui.Button("OK", buttonSize)) OnClickOK(_name);
+            if (ImGui.Button("OK", buttonSize)) OnClickOK(_text);
             ImGui.EndPopup();
 
             return true;
@@ -221,18 +220,18 @@ namespace NST
     /// </summary>
     public class ModalRenderer
     {
-        private static MessageModal _messageModal = new MessageModal();
+        private static MessageModal _textModal = new MessageModal();
         private static ConfirmationModal _confirmationModal = new ConfirmationModal();
         private static DeleteModal _deleteModal = new DeleteModal();
         private static RenameModal _renameModal = new RenameModal();
-        private static List<IModalBase> _modals = [ _messageModal, _confirmationModal, _deleteModal, _renameModal ];
+        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal ];
 
         /// <summary>
         /// Show a message modal (OK button)
         /// </summary>
         public static void ShowMessageModal(string title, string message, Action? action = null)
         {
-            _messageModal.Open(title, message, action);
+            _textModal.Open(title, message, action);
         }
 
         /// <summary>

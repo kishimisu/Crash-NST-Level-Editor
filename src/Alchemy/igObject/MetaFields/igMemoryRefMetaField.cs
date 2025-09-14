@@ -52,7 +52,7 @@ namespace Alchemy
             _bitfield = (int)(_bitfield & 0xFF0FFFFF) | ((packedAlignment - 2 & 0xF) << 0x14);
         }
 
-        public override igObjectBase Clone(bool deep = false)
+        public override igObjectBase Clone(string? suffix = null, bool deep = false)
         {
             igMemoryRef<T> clone = new();
             clone._size = _size;
@@ -70,7 +70,7 @@ namespace Alchemy
             for (int i = 0; i < _elements.Count; i++)
             {
                 igObjectBase? element = _elements[i] as igObjectBase;
-                object cloneElement = element?.Clone(deep)!;
+                object cloneElement = element?.Clone(suffix, deep)!;
                 clone._elements.Add((T)cloneElement);
             }
             return clone;

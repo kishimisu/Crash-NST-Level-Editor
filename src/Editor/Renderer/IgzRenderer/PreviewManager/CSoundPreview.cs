@@ -14,7 +14,7 @@ namespace NST
 
         public CSoundPreview(IgzRenderer renderer, CSound sound)
         {
-            List<CSubSoundPreview>? subSounds = sound._subSoundList?._data.Select(e => new CSubSoundPreview(renderer.FindNode(e))).ToList();
+            List<CSubSoundPreview>? subSounds = sound._subSoundList?._data.Select(e => new CSubSoundPreview(renderer.FindNode(e)!)).ToList();
 
             if (subSounds != null)
             {
@@ -25,7 +25,7 @@ namespace NST
                 Console.Error.WriteLine($"Warning: subsound list not found for {sound._name}.");
             }
 
-            _sound = renderer.FindNode(sound);
+            _sound = renderer.FindNode(sound)!;
             _sound.SoundPreview = this;
         }
 

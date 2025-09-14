@@ -2,6 +2,9 @@ using ImGuiNET;
 
 namespace NST
 {
+    /// <summary>
+    /// Interface for tree views
+    /// </summary>
     public interface ITreeView
     {
         public TreeNode? PreviousNode { get; }
@@ -10,12 +13,42 @@ namespace NST
         public bool IsSearchActive { get; }
         public bool SelectNextNode { get; set; }
 
+        /// <summary>
+        /// Renders the tree
+        /// </summary>
         public void Render();
+        
+        /// <summary>
+        /// Renders the object view for the currently selected node
+        /// </summary>
+        /// <param name="renderer">Parent file renderer</param>
         public void RenderObjectView(FileRenderer renderer);
 
+        /// <summary>
+        /// Expands all parents of a node
+        /// </summary>
         public bool ExpandParents(TreeNode toFind);
+
+        /// <summary>
+        /// Sets the currently selected node
+        /// </summary>
         public void SetSelectedNode(TreeNode? node, bool keyboardFocus = true, bool expandParents = false, bool clearNodePath = false);
+
+        /// <summary>
+        /// Select a child node under the currently selected node
+        /// </summary>
         public void SelectChildNode(TreeNode childNode);
+
+        /// <summary>
+        /// Resets the `IsUpdated` flag for all nodes
+        /// </summary>
+        public void ClearUpdatedNodes();
+
+        /// <summary>
+        /// Removes all nodes that initially had parents but no longer do.
+        /// Called to clean up the file before saving it
+        /// </summary>
+        public void RemoveUnreferencedNodes();
     }
 
     /// <summary>
@@ -24,7 +57,7 @@ namespace NST
     public abstract class TreeView<T> : ITreeView where T : TreeNode
     {
         // Nodes
-        public Dictionary<string, T> AllNodes { get; protected set; } = []; // All nodes (objects + folders)
+        public List<T> AllNodes { get; protected set; } = []; // All nodes (objects + folders)
         protected List<T> _rootNodes = []; // Root object nodes
         public T? SelectedNode { get; private set; } = null; // Currently selected node (can appear multiple times in the tree)
         public string SelectedNodePath { get; set; } = ""; // Unique path to the currently selected node
@@ -33,6 +66,7 @@ namespace NST
         public string SearchQuery = ""; // Current search query
         public bool IsSearchActive => SearchQuery != "";
 
+        // Expansion
         private bool _expandAll = false;
         protected Dictionary<T, bool> _expandedStates = [];
 
@@ -46,10 +80,8 @@ namespace NST
         TreeNode? ITreeView.PreviousNode => PreviousNode;
         void ITreeView.SetSelectedNode(TreeNode? node, bool keyboardFocus, bool expandParents, bool clearNodePath) => SetSelectedNode((T?)node, keyboardFocus, expandParents, clearNodePath);
 
-        /// <summary>
-        /// Render the tree
-        /// </summary>
         public abstract void Render();
+        public virtual void RemoveUnreferencedNodes() { }
 
         /// <summary>
         /// Rebuild the tree
@@ -85,9 +117,6 @@ namespace NST
             }
         }
 
-        /// <summary>
-        /// Select a child node under the currently selected node
-        /// </summary>
         public void SelectChildNode(TreeNode childNode)
         {
             // Make sure to select the correct child node 
@@ -105,6 +134,14 @@ namespace NST
             // Select the child node
             SetSelectedNode((T)childNode, clearNodePath: false);
         }
+        
+        public void ClearUpdatedNodes()
+        {
+            foreach (T node in AllNodes)
+            {
+                node.IsUpdated = false;
+            }
+        }
 
         /// <summary>
         /// Updates the visible nodes based on the current search query
@@ -114,7 +151,7 @@ namespace NST
             // Search started
             if (_expandedStates.Count == 0 && IsSearchActive)
             {
-                foreach (T node in AllNodes.Values)
+                foreach (T node in AllNodes)
                 {
                     _expandedStates.Add(node, node.IsOpen);
                     node.NextOpen = NextOpenState.ForceOpen;
@@ -124,7 +161,7 @@ namespace NST
             // Search cleared
             else if (_expandedStates.Count > 0 && !IsSearchActive)
             {
-                foreach (T node in AllNodes.Values)
+                foreach (T node in AllNodes)
                 {
                     if (_expandedStates.TryGetValue(node, out bool isOpen))
                     {
@@ -167,9 +204,6 @@ namespace NST
             return anyMatch;
         }
 
-        /// <summary>
-        /// Expands the parents of a node
-        /// </summary>
         public bool ExpandParents(TreeNode toFind) => ExpandParents((T)toFind);
         public bool ExpandParents(T toFind) => ExpandParents(toFind, _rootNodes, new HashSet<T>());
         private bool ExpandParents(T toFind, List<T> nodes, HashSet<T> exploredNodes)
@@ -210,17 +244,13 @@ namespace NST
             {
                 _expandAll = !_expandAll;
 
-                foreach (TreeNode node in AllNodes.Values)
+                foreach (TreeNode node in AllNodes)
                 {
                     node.NextOpen = _expandAll ? NextOpenState.ForceOpen : NextOpenState.ForceClose;
                 }
             }
         }
 
-        /// <summary>
-        /// Renders the object view for the currently selected node
-        /// </summary>
-        /// <param name="renderer">Parent file renderer</param>
         public void RenderObjectView(FileRenderer renderer)
         {
             if (SelectedNode != null)

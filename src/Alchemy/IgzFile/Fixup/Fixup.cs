@@ -88,10 +88,21 @@ namespace Alchemy
 
     public class TDEP_Fixup : Fixup<TDEP_Fixup.TDEP_Item>
     {
-        public struct TDEP_Item
+        public struct TDEP_Item : IEquatable<TDEP_Item>
         {
             public string name;
             public string path;
+
+            public override readonly bool Equals(object? obj) =>
+                obj is TDEP_Item other && Equals(other);
+
+            public readonly bool Equals(TDEP_Item other) =>
+                string.Equals(name, other.name, StringComparison.Ordinal) &&
+                string.Equals(path, other.path, StringComparison.Ordinal);
+
+            public override readonly int GetHashCode() =>
+                HashCode.Combine(name, path);
+
             public override readonly string ToString() => $"{path}::{name}";
         }
 

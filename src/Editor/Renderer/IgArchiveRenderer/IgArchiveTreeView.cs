@@ -55,9 +55,11 @@ namespace NST
                 string segment = path[i];
                 nodeIdentifier += segment + "/";
 
-                if (!AllNodes.TryGetValue(nodeIdentifier, out _))
+                IgArchiveTreeNode? node = AllNodes.FirstOrDefault(n => n.NodePath == nodeIdentifier);
+
+                if (node == null)
                 {
-                    IgArchiveTreeNode node = (i < path.Length - 1)
+                    node = (i < path.Length - 1)
                         ? new (nodeIdentifier, folderNode: true) // Folder node
                         : new (file.GetPath(), file); // Leaf node (file)
                     
@@ -68,7 +70,7 @@ namespace NST
                     else
                         _rootNodes.Add(node);
 
-                    AllNodes[nodeIdentifier] = node;
+                    AllNodes.Add(node);
 
                     if (sort)
                     {
@@ -76,7 +78,7 @@ namespace NST
                     }
                 }
 
-                prev = AllNodes[nodeIdentifier];
+                prev = node;
             }
 
             if (sort)
@@ -98,10 +100,10 @@ namespace NST
                 const int max_parent_depth = 20; // guard infinite loops
                 for (int i = 0; i < max_parent_depth; i++)
                 {
-                    AllNodes.Remove(node.NodePath);
+                    AllNodes.Remove(node);
                     _rootNodes.Remove(node);
 
-                    IgArchiveTreeNode? parent = AllNodes.Values.FirstOrDefault(e => e.Children.Contains(node));
+                    IgArchiveTreeNode? parent = AllNodes.FirstOrDefault(e => e.Children.Contains(node));
 
                     parent?.Children.Remove(node);
                     node = parent;
@@ -130,7 +132,7 @@ namespace NST
         /// </summary>
         public IgArchiveTreeNode? FindNode(IgArchiveFile file)
         {
-            return AllNodes.Values.FirstOrDefault(e => e.File == file);
+            return AllNodes.FirstOrDefault(e => e.File == file);
         }
 
         /// <summary>
@@ -139,7 +141,7 @@ namespace NST
         public IgArchiveTreeNode? FindNode(NamedReference reference)
         {
             string namespaceLower = reference.namespaceName.ToLowerInvariant();
-            return AllNodes.Values.FirstOrDefault(e => e.File?.GetName(false).ToLowerInvariant() == namespaceLower);
+            return AllNodes.FirstOrDefault(e => e.File?.GetName(false).ToLowerInvariant() == namespaceLower);
         }
 
         /// <summary>
