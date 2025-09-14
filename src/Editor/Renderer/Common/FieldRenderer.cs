@@ -284,7 +284,7 @@ namespace NST
                 ImGui.SameLine();
                 ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - buttonWidth);
                 
-                if (ImGui.Button("x")) onChange.Invoke(null);  // Clear button
+                if (ImGui.Button("x")) onChange.Invoke(null); // Clear button
             }
 
             ImGui.PopID();
@@ -526,10 +526,12 @@ namespace NST
         /// <summary>
         /// Renders a collapsible field that displays the contents of a list
         /// </summary>
-        public static void RenderMemory<T>(List<T?> mem, FileRenderer renderer, Type type, string name)
+        public static void RenderMemory<T>(IList<T?> mem, FileRenderer renderer, Type type, string name)
         {
             bool isExpanded = false;
             bool isEmpty = mem.Count == 0;
+
+            ImGui.PushID(name);
 
             // Display name
 
@@ -561,6 +563,8 @@ namespace NST
 
                 // Display elements
 
+                float deleteButtonWidth = ImGui.CalcTextSize("x").X + ImGui.GetStyle().FramePadding.X * 2;
+
                 for (int i = 0; i < mem.Count; i++)
                 {
                     RenderField(renderer, mem[i], typeof(T), $"{name}[{i}]", (value) => 
@@ -588,6 +592,34 @@ namespace NST
                             renderer.SetUpdated();
                         }
                     });
+
+                    // Display delete button
+                    ImGui.TableSetColumnIndex(0);
+                    ImGui.SameLine();
+                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - deleteButtonWidth);
+                    if (ImGui.Button("x##" + i))
+                    {
+                        mem.RemoveAt(i);
+                    }
+                }
+                
+                // Display add button
+                ImGui.TableNextRow();
+                ImGui.TableSetColumnIndex(2);
+
+                renderer.PopStyles(2);
+                isEmpty = true;
+
+                if (ImGui.Button("Add element", new Vector2(-1, 0)))
+                {
+                    if (type.IsAssignableTo(typeof(igMetaField)))
+                    {
+                        mem.Add((T?)Activator.CreateInstance(typeof(T)));
+                    }
+                    else
+                    {
+                        mem.Add(default);
+                    }
                 }
 
                 ImGui.Unindent(1);
@@ -599,26 +631,47 @@ namespace NST
                 {
                     ImGui.Text($"(+) {mem.Count} elements");
 
+                    // Display export button
                     if (typeof(T) == typeof(u8))
                     {
                         ImGui.SameLine();
                         if (ImGui.SmallButton("Export raw"))
                         {
                             string? path = FileExplorer.SaveFile("", FileExplorer.EXT_ALL, name + ".bin");
-                            if (path == null) return;
-
-                            File.WriteAllBytes(path, mem.Cast<u8>().ToArray());
+                            if (path != null)
+                            {
+                                File.WriteAllBytes(path, mem.Cast<u8>().ToArray());
+                            }
                         }
                     }
                 }
                 else
                 {
+                    float buttonWidth = ImGui.CalcTextSize("\uEA0A").X + ImGui.GetStyle().FramePadding.X * 2 + 2;
+                    
                     ImGui.Text($"Inactive");
+                    ImGui.SameLine();
+                    ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - buttonWidth);
+
+                    // Display "+" button
+                    if (ImGui.Button("\uEA0A"))
+                    {
+                        if (type.IsAssignableTo(typeof(igMetaField)))
+                        {
+                            mem.Add((T?)Activator.CreateInstance(typeof(T)));
+                        }
+                        else
+                        {
+                            mem.Add(default);
+                        }
+                    }
                 }
+
+                if (!isEmpty)
+                    renderer.PopStylesOnNextRow(2);
             }
 
-            if (!isEmpty)
-                renderer.PopStylesOnNextRow(2);
+            ImGui.PopID();
         }
 
         /// <summary>

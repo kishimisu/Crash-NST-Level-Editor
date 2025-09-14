@@ -43,6 +43,8 @@ namespace Alchemy
 
             for (int i = 0; i < keys.Count; i++)
             {
+                if (i >= values.Count) break;
+                
                 K key = keys[i];
 
                 if (key == null || key.Equals(GetInvalidKey())) continue;
