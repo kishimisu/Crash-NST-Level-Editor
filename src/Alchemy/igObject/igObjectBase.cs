@@ -1,14 +1,25 @@
 namespace Alchemy
 {
     /// <summary>
-    /// Search flags for GetChildren
+    /// Flags for igObject.GetChildren
     /// </summary>
     [Flags]
     public enum ChildrenSearchParams
     {
         Default = 0, // Search igObjectRefMetaFields
-        OnlyRefCounted = 1, // Only include objects that are ref counted
-        IncludeHandles = 2 // Include igHandleMetaFields
+        OnlyRefCounted = 1 << 0, // Only include objects that are ref counted
+        IncludeHandles = 1 << 1, // Include igHandleMetaFields
+    }
+    
+    /// <summary>
+    /// Flags for igObject.Clone
+    /// </summary>
+    [Flags]
+    public enum CloneMode
+    {
+        Shallow = 1 << 0, // Only clone the top-level object
+        Deep = 1 << 1, // Clone all objects recursively
+        SkipComponents = 1 << 2, // Reuse components that have multiple parents instead of cloning them
     }
     
     /// <summary>
@@ -16,12 +27,6 @@ namespace Alchemy
     /// </summary>
     public abstract class igObjectBase
     {
-        protected MemoryPool _memoryPool = MemoryPool.Default;
-
-        public virtual string? GetObjectName() => null;
-        public MemoryPool GetMemoryPool() => _memoryPool;
-        public void SetMemoryPool(MemoryPool memoryPool) => _memoryPool = memoryPool;
-
         protected List<CachedFieldAttr> GetFields() => AttributeUtils.GetAttributes(GetType()).GetFields();
 
         /// <summary>
@@ -77,7 +82,7 @@ namespace Alchemy
             List<CachedFieldAttr> fields = GetFields();
             List<igObject> children = [];
 
-            if ((searchParams & ChildrenSearchParams.OnlyRefCounted) != 0)
+            if (searchParams.HasFlag(ChildrenSearchParams.OnlyRefCounted))
             {
                 fields = fields.Where(field => field.RefCounted()).ToList();
             }
@@ -95,14 +100,37 @@ namespace Alchemy
         /// <summary>
         /// Recursively find all children of this object
         /// </summary>
-        public List<igObject> GetChildrenRecursive(ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
+        public List<igObject> GetChildrenRecursive(ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
         {
-            List<igObject> children = [];
+            visited ??= new HashSet<igObject>();
 
             foreach (igObject child in GetChildren(searchParams))
             {
+                if (visited.Add(child))
+                {
+                    child.GetChildrenRecursive(searchParams, visited);
+                }
+            }
+
+            return visited.ToList();
+        }
+
+        /// <summary>
+        /// Recursively find all children of this object, including handles
+        /// </summary>
+        public List<igObject> GetChildrenRecursive(IgzFile igz, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
+        {
+            if (visited == null) visited = new HashSet<igObject>();
+
+            List<igObject> children = [];
+
+            foreach (igObject child in GetChildren(igz, searchParams))
+            {
+                if (visited.Contains(child)) continue;
+                visited.Add(child);
+
                 children.Add(child);
-                children.AddRange(child.GetChildrenRecursive(searchParams));
+                children.AddRange(child.GetChildrenRecursive(igz, searchParams, visited));
             }
 
             return children;
@@ -182,6 +210,10 @@ namespace Alchemy
                 {
                     references.AddRange(metaField.GetHandles());
                 }
+                else if (value is igMetaObject metaObject && metaObject.Reference != null)
+                {
+                    references.Add(metaObject.Reference);
+                }
                 else if (field.IsArray())
                 {
                     Type? elementType = field.GetElementType();
@@ -203,11 +235,31 @@ namespace Alchemy
         }
 
         /// <summary>
+        /// Remove all references to a child object (igObject/igHandleMetaField)
+        /// </summary>
+        public virtual void RemoveChild(igObject child)
+        {
+            foreach (CachedFieldAttr field in GetFields())
+            {
+                object? value = field.GetValue(this);
+                if (value == null) continue;
+
+                if (value == child)
+                {
+                    field.SetValue(this, null);
+                }
+                else if (value is igMetaField metaField)
+                {
+                    metaField.RemoveChild(child);
+                }
+            }
+        }
+
+        /// <summary>
         /// Create a clone of this object
         /// </summary>
-        /// <param name="deep">Whether to clone all child objects as well</param>
-        public virtual igObjectBase Clone(string? suffix = null, bool deep = false)
-        {
+        public virtual igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
+        {            
             igObjectBase clone = (igObjectBase)MemberwiseClone();
 
             foreach (CachedFieldAttr field in GetFields())
@@ -215,15 +267,30 @@ namespace Alchemy
                 object? value = field.GetValue(this);
 
                 if (value == null) continue;
-                if (value is igMetaField metaField) value = metaField.Clone(suffix, deep);
-                if (deep && value is igObjectBase igObj) value = igObj.Clone(suffix, deep);
+                if (value is igObjectBase obj) value = obj.Clone(igz, dst, mode, clones);
 
                 field.SetValue(clone, value);
             }
 
-            clone._memoryPool = _memoryPool;
-
             return clone;
+        }
+
+        /// <summary>
+        /// Get all strings defined in this object (todo: include memories & lists)
+        /// </summary>
+        public List<string> GetStrings()
+        {
+            List<string> strings = [];
+
+            foreach (CachedFieldAttr field in GetFields())
+            {
+                object? value = field.GetValue(this);
+                if (value == null) continue;
+
+                if (value is string str) strings.Add(str);
+            }
+
+            return strings;
         }
 
         /// <summary>

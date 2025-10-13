@@ -44,5 +44,60 @@ namespace NST
 
             return group;
         }
+
+        /// <summary>
+        /// Create an optimized instanced mesh of this model
+        /// </summary>
+        /// <param name="matrices">The matrices for each instance</param>
+        public THREE.Group CreateInstancedMeshes(List<THREE.Matrix4> matrices, List<THREE.Color>? colors = null)
+        {
+            THREE.Group group = new THREE.Group();
+
+            for (int i = 0; i < Meshes.Count; i++)
+            {
+                group.Add(CreateInstancedMesh(Meshes[i], matrices, colors));
+            }
+
+            return group;
+        }
+
+        public static THREE.Group CreateInstancedCubes(List<THREE.Matrix4> matrices, List<THREE.Color> colors)
+        {
+            THREE.BufferGeometry geometry = new THREE.BoxBufferGeometry(20, 20, 20);
+            THREE.Material material = new THREE.MeshPhongMaterial();
+            THREE.InstancedMesh instancedMesh = new THREE.InstancedMesh(geometry, material, matrices.Count);
+
+            for (int i = 0; i < matrices.Count; i++)
+            {
+                instancedMesh.SetMatrixAt(i, matrices[i]);
+                instancedMesh.SetColorAt(i, colors[i]);
+            }
+
+            instancedMesh.FrustumCulled = false;
+
+            return new THREE.Group() { instancedMesh };
+        }
+
+        /// <summary>
+        /// Create an instanced mesh from a single mesh
+        /// </summary>
+        /// <param name="matrices">The matrices for each instance</param>
+        private THREE.InstancedMesh CreateInstancedMesh(NSTMesh mesh, List<THREE.Matrix4> matrices, List<THREE.Color>? colors = null)
+        {
+            THREE.BufferGeometry geometry = mesh.CreateBufferGeometry();
+            THREE.Material material = mesh.Material.CreateThreeMaterial();
+
+            THREE.InstancedMesh instancedMesh = new THREE.InstancedMesh(geometry, material, matrices.Count);
+
+            for (int i = 0; i < matrices.Count; i++)
+            {
+                instancedMesh.SetMatrixAt(i, matrices[i]);
+                if (colors != null) instancedMesh.SetColorAt(i, colors[i]);
+            }
+
+            instancedMesh.FrustumCulled = false;
+
+            return instancedMesh;
+        }
     }
 }

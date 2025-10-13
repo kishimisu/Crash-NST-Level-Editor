@@ -226,9 +226,9 @@ namespace NST
         public THREE.Material CreateThreeMaterial(int drawCallIndex = 0)
         {
             if (type == null) // Drawcall has no material
-                return new THREE.MeshBasicMaterial();
+                return new THREE.MeshPhongMaterial() { Shininess = 0 };
 
-            THREE.Material material = type.IsAssignableTo(typeof(CUnlitMaterial))
+            THREE.Material material = type.IsAssignableTo(typeof(CUnlitMaterial)) || type == typeof(CCloudParticleSortedMaterial)
                 ? new THREE.MeshBasicMaterial()
                 : new THREE.MeshPhongMaterial();
 
@@ -316,7 +316,7 @@ namespace NST
 
             if (node.Object is igModelDrawCallData drawCallData) // Model file
             {
-                NamedReference? reference = drawCallData._materialHandle.GetReference();
+                NamedReference? reference = drawCallData._materialHandle.Reference;
 
                 if (reference != null)
                 {

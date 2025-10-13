@@ -7,15 +7,13 @@ namespace Alchemy
         /// </summary>
         public Type GetMetaObjectType()
         {
-            NamedReference? reference = GetReference();
+            if (Reference == null) throw new Exception("igMetaObject has no reference!");
 
-            if (reference == null) throw new Exception("igMetaObject has no reference!");
-
-            string typeName = reference.objectName.Replace(".", "_");
+            string typeName = Reference.objectName.Replace(".", "_");
 
             return Type.GetType($"Alchemy.{typeName}")
-                ?? Type.GetType($"Alchemy.{reference.namespaceName}_{typeName}")
-                ?? throw new Exception($"Failed to find dynamic object of type {reference} ({typeName})");
+                ?? Type.GetType($"Alchemy.{Reference.namespaceName}_{typeName}")
+                ?? throw new Exception($"Failed to find dynamic object of type {Reference} ({typeName})");
         }
     }
 }

@@ -8,6 +8,14 @@ namespace NST
     /// </summary>
     public static class ImGuiUtils
     {
+        public static uint id = 0;
+
+        public static uint Uuid()
+        {
+            if (id == uint.MaxValue) id = 9999;
+            return id++;
+        }
+
         /// <summary>
         /// Add vertical spacing
         /// </summary>

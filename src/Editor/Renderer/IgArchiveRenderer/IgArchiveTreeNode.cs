@@ -20,6 +20,8 @@ namespace NST
             Name = path.EndsWith("/") 
                 ? Path.GetFileName(path.Substring(0, path.Length - 1))
                 : Path.GetFileName(path);
+
+            _uuid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -31,7 +33,7 @@ namespace NST
         public void Render(IgArchiveRenderer renderer, IgArchiveTreeView tree, bool defaultOpen = false)
         {
             defaultOpen = defaultOpen || NodePath.StartsWith("maps/");
-            
+
             // Setup node
             ImGuiTreeNodeFlags? flags = SetupNode(tree, false, defaultOpen, () => OnFocus(renderer), ImGuiTreeNodeFlags.SpanFullWidth);
 
@@ -62,9 +64,11 @@ namespace NST
         /// <returns>True if the node is currently open</returns>
         private void RenderNode(IgArchiveTreeView tree, ImGuiTreeNodeFlags flags)
         {
+            if (File == null) flags &= ~ImGuiTreeNodeFlags.Leaf;
+
             // Create the tree node with no name
             IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
-            
+
             // Handle tree node events
             HandleItemEvents(tree);
 
@@ -86,11 +90,16 @@ namespace NST
                     tree.Renderer.FocusNode(this);
                 }
                 // Right-click (context menu)
-                else if (ImGui.BeginPopupContextItem("ArchiveFileActions"))
+                else if (ImGui.BeginPopupContextItem("ArchiveFileActions" + _uuid))
                 {
                     tree.Renderer.RenderNodePopup(File);
                     ImGui.EndPopup();
                 }
+            }
+            else if (ImGui.BeginPopupContextItem("ArchiveFolderActions" + _uuid))
+            {
+                RenderContextMenu(tree);
+                ImGui.EndPopup();
             }
 
             // Keyboard navigation
@@ -128,6 +137,15 @@ namespace NST
 
             string displayName = Name;
 
+            if (File == null) displayName += "/";
+
+            bool excludeFromPkg = (File != null && !File.GetPath().StartsWith("packages/") && !tree.Renderer.IncludeInPackageFile(File));
+
+            if (excludeFromPkg)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, 0xff7f7f7f);
+            }
+
             if (isUpdated)
             {
                 displayName = "*" + displayName;
@@ -137,6 +155,48 @@ namespace NST
             ImGui.Text(displayName);
             
             if (isUpdated) ImGui.PopStyleColor();
+            if (excludeFromPkg) ImGui.PopStyleColor();
+        }
+
+        private void RenderContextMenu(IgArchiveTreeView tree)
+        {
+            if (ImGui.Selectable("New file..."))
+            {
+                ModalRenderer.ShowRenameModal("name.igz", (fileName) => 
+                {
+                    if (!fileName.Contains("."))
+                    {
+                        fileName += ".igz";
+                    }
+                    else if (!fileName.EndsWith(".igz") && !fileName.EndsWith(".lng"))
+                    {
+                        ModalRenderer.ShowMessageModal("Error", "Invalid extension: ." + fileName.Split('.')[1]);
+                        return;
+                    }
+                    
+                    string path = NodePath + fileName;
+
+                    IgzFile igz = new IgzFile(path);
+                    IgArchiveFile file = new IgArchiveFile(path);
+                    file.SetData(igz.Save());
+
+                    tree.Renderer.AddFile(file);
+                    tree.SetSelectedNode(tree.FindNode(file));
+                });
+            }
+            if (ImGui.Selectable("New folder..."))
+            {
+                ModalRenderer.ShowRenameModal(NodePath, (folderPath) => 
+                {
+                    if (!folderPath.EndsWith("/")) folderPath += "/";
+                    IgArchiveFile newFolder = new IgArchiveFile(folderPath);
+                    tree.AddFile(newFolder);
+                });
+            }
+            if (Children.Count == 0 && ImGui.Selectable("Delete folder"))
+            {
+                tree.RemoveFile(this);
+            }
         }
     }
 }

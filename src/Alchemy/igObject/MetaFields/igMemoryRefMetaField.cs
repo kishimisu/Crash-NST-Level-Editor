@@ -1,21 +1,24 @@
+using System.Collections;
+
 namespace Alchemy
 {
+    public interface IMemoryRef
+    {
+        public int Count { get; }
+    }
+
     public class igMemoryRef() : igMemoryRef<byte>() { }
 
     [ObjectAttr(16)]
-    public class igMemoryRef<T> : igRefMetaField
+    public class igMemoryRef<T> : igRefMetaField, IMemoryRef, IList<T>
     {
         [FieldAttr(0)] public int _size;
         [FieldAttr(4)] public int _bitfield = 0x01100000;
         [FieldAttr(8)] public igRawRefMetaField _ref = new();
         
+        public MemoryPool MemoryPool { get; set; } = MemoryPool.Default;
+
         protected List<T> _elements = [];
-        protected MemoryPool _dataMemoryPool = MemoryPool.Default;
-
-        public Type GetElementType() => typeof(T);
-
-        public MemoryPool GetDataMemoryPool() => _dataMemoryPool;
-        public void SetDataMemoryPool(MemoryPool memoryPool) => _dataMemoryPool = memoryPool;
 
         // List<T> interface
         public T this[int index]
@@ -24,24 +27,31 @@ namespace Alchemy
             set => _elements[index] = value;
         }
         public int Count => _elements.Count;
+        public bool IsReadOnly => false;
         public void Add(T element) => _elements.Add(element);
         public void AddRange(List<T> elements) => _elements.AddRange(elements);
         public bool Any(Func<T, bool> predicate) => _elements.Any(predicate);
         public List<K> Cast<K>() => _elements.Cast<K>().ToList();
         public void Clear() => _elements.Clear();
         public bool Contains(T element) => _elements.Contains(element);
-        public int IndexOf(T element) => _elements.IndexOf(element);
+        public void CopyTo(T[] array, int arrayIndex) => _elements.CopyTo(array, arrayIndex);
         public T? Find(Predicate<T> predicate) => _elements.Find(predicate);
         public List<T> FindAll(Predicate<T> predicate) => _elements.FindAll(predicate);
         public T? FirstOrDefault() => _elements.FirstOrDefault();
-        public IEnumerable<TOut> Select<TOut>(Func<T, TOut> selector) => _elements.Select(selector);
-        public List<T> ToList() => _elements.ToList();
-        public T[] ToArray() => _elements.ToArray();
-        public void Set(List<T> elements) => _elements = elements;
-        public void Sort(Comparison<T> comparison) => _elements.Sort(comparison);
         public IEnumerator<T> GetEnumerator() => _elements.GetEnumerator();
-        public List<T> GetElements() => _elements;
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
+        public int IndexOf(T element) => _elements.IndexOf(element);
+        public void Insert(int index, T element) => _elements.Insert(index, element);
+        public bool Remove(T element) => _elements.Remove(element);
+        public void RemoveAt(int index) => _elements.RemoveAt(index);
+        public IEnumerable<TOut> Select<TOut>(Func<T, TOut> selector) => _elements.Select(selector);
+        public void Sort(Comparison<T> comparison) => _elements.Sort(comparison);
+        public T[] ToArray() => _elements.ToArray();
+        public List<T> ToList() => _elements.ToList();
         
+        public void Set(List<T> elements) => _elements = elements;
+        public List<T> GetElements() => _elements;
+
         // Bitfield manipulation
         public bool IsActive() => ((_bitfield >> 0x18) & 1) != 0;
         public void SetActive(bool active) => _bitfield = (_bitfield & ~(1 << 0x18)) | ((active ? 1 : 0) << 0x18);
@@ -52,15 +62,15 @@ namespace Alchemy
             _bitfield = (int)(_bitfield & 0xFF0FFFFF) | ((packedAlignment - 2 & 0xF) << 0x14);
         }
 
-        public override igObjectBase Clone(string? suffix = null, bool deep = false)
+        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
         {
             igMemoryRef<T> clone = new();
             clone._size = _size;
             clone._bitfield = _bitfield;
             clone._ref = new();
-            clone._dataMemoryPool = _dataMemoryPool;
+            clone.MemoryPool = MemoryPool;
 
-            if (!deep || !typeof(T).IsSubclassOf(typeof(igObjectBase)))
+            if (!mode.HasFlag(CloneMode.Deep) || !typeof(T).IsSubclassOf(typeof(igObjectBase)))
             {
                 clone._elements = new List<T>(_elements);
                 return clone;
@@ -70,7 +80,7 @@ namespace Alchemy
             for (int i = 0; i < _elements.Count; i++)
             {
                 igObjectBase? element = _elements[i] as igObjectBase;
-                object cloneElement = element?.Clone(suffix, deep)!;
+                object cloneElement = element?.Clone(igz, dst, mode, clones)!;
                 clone._elements.Add((T)cloneElement);
             }
             return clone;
@@ -88,8 +98,7 @@ namespace Alchemy
             int typeSize = AttributeUtils.GetFieldSize(typeof(T));
             int count = _size / typeSize;
             
-            MemoryPool memoryPool = reader.GetMemoryPool((int)_ref._address);
-            SetDataMemoryPool(memoryPool);
+            MemoryPool = reader.GetMemoryPool((int)_ref._address);
 
             if (typeof(T) == typeof(byte))
             {
@@ -125,10 +134,10 @@ namespace Alchemy
             bool refCounted = writer.RefCounted();
 
             int typeSize = AttributeUtils.GetFieldSize(typeof(T));
-            int memoryStart = writer.SetMemory(_dataMemoryPool, GetMemoryAlignment());
+            int memoryStart = writer.SetMemory(MemoryPool, GetMemoryAlignment());
 
             _size = _elements.Count * typeSize;
-            _ref!._address = (u64)writer.EncodeOffset(memoryStart, _dataMemoryPool);
+            _ref!._address = (u64)writer.EncodeOffset(memoryStart, MemoryPool);
 
             writer.ReserveBytes(memoryStart + _size);
 
@@ -171,6 +180,35 @@ namespace Alchemy
             }
 
             return references;
+        }
+
+        public override void RemoveChild(igObject child)
+        {
+            if (typeof(T) == typeof(igHandleMetaField))
+            {
+                foreach (T element in _elements.ToList())
+                {
+                    igHandleMetaField? handle = element as igHandleMetaField;
+                    if (handle == null) continue;
+
+                    if (handle.Reference != null && handle.Reference.objectName == child.ObjectName)
+                    {
+                        _elements.Remove(element);
+                    }
+                }
+            }
+            else if (typeof(T).IsAssignableTo(typeof(igObject)))
+            {
+                foreach (T element in _elements.ToList())
+                {
+                    igObject? obj = element as igObject;
+
+                    if (obj == child)
+                    {
+                        _elements.Remove(element);
+                    }
+                }
+            }
         }
     }
 

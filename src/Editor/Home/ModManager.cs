@@ -170,7 +170,7 @@ namespace NST
             }
 
             // Load last selected level
-            _selectedLevel = LocalStorage.Get<int>("selected_level", 0);
+            _selectedLevel = LocalStorage.Get("selected_level", 0);
         }
 
         /// <summary>
@@ -419,8 +419,13 @@ namespace NST
         /// <summary>
         /// Render the level select dropdown
         /// </summary>
-        private void RenderLevelSelect()
+        public void RenderLevelSelect(float? alignRight = null)
         {
+            if (alignRight != null)
+            {
+                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - alignRight.Value);
+            }
+
             float buttonPaddingX = ImGui.GetContentRegionAvail().X * 0.1f;
             float buttonWidth = ImGui.CalcTextSize("Launch game").X + buttonPaddingX * 2;
 

@@ -88,7 +88,7 @@ namespace NST
                     table.Dict.Add(key, (i16)newShapeIndex);
                     rebuildHashMap = true;
 
-                    Console.WriteLine("Added new shape for " + updateInfos.entity.GetObjectName() + " at index " + newShapeIndex);
+                    Console.WriteLine("Added new shape for " + updateInfos.entity.ObjectName + " at index " + newShapeIndex);
                 }
                 else if (!collisionData.ContainsKey(updateInfos.reference))
                 {
@@ -99,14 +99,14 @@ namespace NST
                     table.Dict.Add(key, (i16)newShapeIndex);
                     rebuildHashMap = true;
 
-                    Console.WriteLine("Added collision for " + updateInfos.entity.GetObjectName() + " at index " + newShapeIndex + " (" + updateInfos.shapeIndex + ")");
+                    Console.WriteLine("Added collision for " + updateInfos.entity.ObjectName + " at index " + newShapeIndex + " (" + updateInfos.shapeIndex + ")");
                 }
                 else
                 {
                     // Update existing shape
                     UpdateHavokShape(updateInfos.entity, compoundShape, updateInfos.shapeIndex);
 
-                    Console.WriteLine("Updated collision for " + updateInfos.entity.GetObjectName() + " at index " + updateInfos.shapeIndex);
+                    Console.WriteLine("Updated collision for " + updateInfos.entity.ObjectName + " at index " + updateInfos.shapeIndex);
                 }
                 // TODO: handle removed shapes
             }

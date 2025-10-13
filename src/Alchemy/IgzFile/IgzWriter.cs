@@ -113,25 +113,28 @@ namespace Alchemy
         /// <returns>The raw data containing all dumped objects</returns>
         private byte[] BuildObjects(List<igObject> objects)
         {
-            MemoryPool defaultMemoryPool = objects[0].GetMemoryPool();
+            MemoryPool defaultMemoryPool = objects.Count == 0 ? MemoryPool.Default : objects[0].MemoryPool;
 
             var objectList = (igObjectList?)objects.FirstOrDefault(e => e.GetType() == typeof(igObjectList));
             var nameList     = (igNameList?)objects.FirstOrDefault(e => e.GetType() == typeof(igNameList));
             var nameListNSPC = (igNameList?)objects.Where(e => e.GetType() == typeof(igNameList)).Skip(1).FirstOrDefault();
 
+            if (objectList != null) objects.Remove(objectList);
+
             List<igObject> allObjects = FindAllObjectsRecursive(objects, []);
-            List<igObject> namedObjects = objects.Where(e => e.GetObjectName() != null).ToList();
+            if (allObjects.Count == objects.Count) allObjects = objects;
+
+            List<igObject> namedObjects = allObjects.Where(e => e.ObjectName != null).ToList();
 
             // Update object list
 
             if (objectList == null)
             {
                 objectList = new igObjectList();
-                objectList.SetMemoryPool(defaultMemoryPool);
-                objectList._data.SetMemoryPool(defaultMemoryPool);
-                objectList._data.SetDataMemoryPool(defaultMemoryPool);
-                allObjects.Insert(0, objectList);
+                objectList.MemoryPool = defaultMemoryPool;
+                objectList._data.MemoryPool = defaultMemoryPool;
             }
+            allObjects.Insert(0, objectList);
             objectList._count = namedObjects.Count;
             objectList._capacity = namedObjects.Count;
 
@@ -146,16 +149,15 @@ namespace Alchemy
                 if (nameList == null)
                 {
                     nameList = new igNameList();
-                    nameList.SetMemoryPool(defaultMemoryPool);
-                    nameList._data.SetMemoryPool(defaultMemoryPool);
-                    nameList._data.SetDataMemoryPool(defaultMemoryPool);
+                    nameList.MemoryPool = defaultMemoryPool;
+                    nameList._data.MemoryPool = defaultMemoryPool;
                     allObjects.Add(nameList);
                 }
                 nameList._count = namedObjects.Count;
                 nameList._capacity = namedObjects.Count;
 
                 nameList._data.Clear();
-                nameList._data.AddRange(namedObjects.Select(e => new igNameMetaField(e.GetObjectName()!)).ToList());
+                nameList._data.AddRange(namedObjects.Select(e => new igNameMetaField(e.ObjectName!)).ToList());
             }
             else
             {
@@ -172,10 +174,9 @@ namespace Alchemy
             // Build TMET, MTSZ and RVTB fixups
             foreach((igObject obj, int value) in _objectOffsets)
             {
-                MemoryPool memoryPool = obj.GetMemoryPool()!;
                 int offset = _objectOffsets[obj];
 
-                SetMemory(memoryPool);
+                SetMemory(obj.MemoryPool);
                 _currentWriter!.Seek(offset,  SeekOrigin.Begin);
                 
                 Type? metaObjectType = AttributeUtils.GetBaseMetaObjectType(obj);
@@ -183,7 +184,7 @@ namespace Alchemy
 
                 _currentWriter.Write((uint)AddTMET(objectType));
 
-                _fixups.RVTB.Add(EncodeOffset(value, memoryPool));
+                _fixups.RVTB.Add(EncodeOffset(value, obj.MemoryPool));
             }
 
             // Build ROOT, ONAM and NSPC fixups

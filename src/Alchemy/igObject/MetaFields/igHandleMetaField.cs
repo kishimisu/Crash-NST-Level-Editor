@@ -5,15 +5,9 @@ namespace Alchemy
     {
         [FieldAttr(0)] public u64 _handle;
 
-        private NamedReference? _reference;
+        public NamedReference? Reference { get; set; }
 
-        public void SetReference(NamedReference? reference) => _reference = reference;
-        public NamedReference? GetReference() => _reference;
-        public string? GetNamespaceName() => _reference?.namespaceName;
-        public string? GetReferencedObjectName() => _reference?.objectName;
-        public bool HasData() => _reference != null;
-
-        public override List<NamedReference> GetHandles() => _reference != null ? [ _reference ] : [];
+        public override List<NamedReference> GetHandles() => Reference != null ? [ Reference ] : [];
 
         public override void Parse(IgzReader reader)
         {
@@ -26,12 +20,12 @@ namespace Alchemy
             bool isHandle = (_handle & 0x80000000) != 0;
             int handleIndex = (int)_handle & 0x3FFFFFFF;
 
-            _reference = reader.GetObjectReference(handleIndex, isHandle);
+            Reference = reader.GetObjectReference(handleIndex, isHandle);
         }
 
         public override void Write(IgzWriter writer)
         {
-            if (_reference == null || _reference.IsNullOrEmpty())
+            if (Reference == null || Reference.IsNullOrEmpty())
             {
                 _handle = 0;
                 return;
@@ -40,23 +34,23 @@ namespace Alchemy
             int offset = writer.GetPosition();
             writer.AddRHND(offset);
 
-            if (!_reference.isEXID)
+            if (!Reference.isEXID)
             {
-                _handle = (u64)(writer.AddHandleReference(_reference) | 0x80000000);
+                _handle = (u64)(writer.AddHandleReference(Reference) | 0x80000000);
             }
             else
             {
-                _handle = (u64)writer.AddEXID(_reference);
+                _handle = (u64)writer.AddEXID(Reference);
             }
 
             writer.Write(_handle, offset);
         }
 
-        public override igObjectBase Clone(string? suffix = null, bool deep = false)
+        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
         {
-            igHandleMetaField clone = (igHandleMetaField)base.Clone(suffix, deep);
+            igHandleMetaField clone = (igHandleMetaField)base.Clone(igz, dst, mode, clones);
 
-            clone._reference = _reference?.Clone();
+            clone.Reference = Reference?.Clone();
 
             return clone;
         }
@@ -67,7 +61,15 @@ namespace Alchemy
             
             if (target is igHandleMetaField handleMetaField)
             {
-                handleMetaField._reference = _reference?.Clone();
+                handleMetaField.Reference = Reference?.Clone();
+            }
+        }
+
+        public override void RemoveChild(igObject child)
+        {
+            if (Reference != null && Reference.objectName == child.ObjectName)
+            {
+                Reference = null;
             }
         }
     }

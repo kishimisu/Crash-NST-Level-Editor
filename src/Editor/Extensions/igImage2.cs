@@ -35,7 +35,7 @@ namespace Alchemy
                 throw new Exception($"{image} has no texture data!");
             }
 
-            string format = image._format?.GetReference()?.objectName 
+            string format = image._format?.Reference?.objectName 
                             ?? throw new Exception($"_format property is not set for {image}!");
 
             if (format == "r8g8b8a8_dx11")
@@ -60,7 +60,7 @@ namespace Alchemy
         /// <param name="format">igMetaImage containing the format of the pixel data</param>
         public static void SetPixels(this igImage2 image, byte[] pixels, int width, int height, igMetaImage? format)
         {
-            string formatStr = format?.GetReference()?.objectName ?? "r8g8b8a8_dx11";
+            string formatStr = format?.Reference?.objectName ?? "r8g8b8a8_dx11";
 
             CompressionFormat compression = StringToCompressionFormat(formatStr);
 
@@ -80,7 +80,7 @@ namespace Alchemy
             image._levelCount = 1; // (u16)(int.Log2(int.Min(width, height)) - 1); // TODO: Fix LOD not working if set to > 1
 
             if (image._format == null) image._format = new igMetaImage();
-            image._format.SetReference(NamedReference.EXID("metaimages", format));
+            image._format.Reference = NamedReference.EXID("metaimages", format);
 
             BcEncoder encoder = new BcEncoder();
             encoder.OutputOptions.GenerateMipMaps = false;

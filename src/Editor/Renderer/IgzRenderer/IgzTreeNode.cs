@@ -10,6 +10,8 @@ namespace NST
     /// </summary>
     public class IgzTreeNode : TreeNode
     {
+        const bool showBaseMetaObjectTypes = false;
+
         public igObject? Object { get; } = null; // Corresponding object, null for folders
 
         public List<IgzTreeNode> Parents { get; } = []; // Parent object nodes
@@ -22,15 +24,13 @@ namespace NST
         public CSubSoundPreview? SubSoundPreview { get; set; } = null;
         private bool _audioPreview = false;
 
-        public override string GetDisplayName() => GetDisplayName(true) ?? Name + _uuid;
-
         /// <summary>
         /// Object node constructor
         /// </summary>
         public IgzTreeNode(igObject obj)
         {
             Object = obj;
-            _uuid = ImGui.GetID(GetDisplayName());
+            _uuid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -41,33 +41,7 @@ namespace NST
             Name = name;
             IsFolder = true;
             Children = children?.Cast<TreeNode>().ToList() ?? [];
-            _uuid = ImGui.GetID(GetDisplayName());
-        }
-
-        /// <summary>
-        /// Returns the display name for this node in the form "(Type): (Name)" or "(Type) (Count)"
-        /// </summary>
-        /// <param name="includeType">Whether to include the type in the display name</param>
-        /// <returns></returns>
-        public string? GetDisplayName(bool includeType)
-        {
-            if (Object == null) return null;
-
-            string? objectName = Object.GetObjectName();
-            string typeName = Object.GetType().Name;
-            string displayName = typeName;
-
-            if (objectName != null)
-            {
-                if (!includeType) displayName = objectName;
-                else displayName += ": " + objectName;
-            }
-            else if (TypeCount > 0)
-            {
-                displayName += " " + TypeCount;
-            }
-
-            return displayName;
+            _uuid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -84,7 +58,7 @@ namespace NST
                     return IsUpdated;
 
                 case IgzTreeView.ObjectHierarchyMode.Named:
-                    return Object?.GetObjectName() != null;
+                    return Object?.ObjectName != null;
 
                 case IgzTreeView.ObjectHierarchyMode.Root:
                     if (!exploredNodes.Contains(this))
@@ -93,6 +67,7 @@ namespace NST
                         if (Object?.GetType() == typeof(igVscMetaObject)) return true;
                         if (Object?.GetType().IsAssignableTo(typeof(igFxMaterial)) == true) return true;
                     }
+                    if (Object is igEntity entity && entity._bitfield._canSpawn && !entity._bitfield._isArchetype) return true;
                     return false;
             }
             return false;
@@ -203,7 +178,7 @@ namespace NST
 
             ImGui.SameLine(0, 0);
 
-            HighlightText(GetDisplayName()!, tree.SearchQuery);
+            HighlightText(GetDisplayName(), tree.SearchQuery);
 
             RenderObjectName(tree.IsSearchActive ? null : parent);
         }
@@ -234,6 +209,35 @@ namespace NST
         }
 
         /// <summary>
+        /// Returns the display name for this node in the form "(Type): (Name)" or "(Type) (Count)"
+        /// </summary>
+        public override string GetDisplayName()
+        {
+            if (Object == null) return "";
+
+            string? objectName = Object.ObjectName;
+            string displayName = Object.GetType().Name;
+
+            if (showBaseMetaObjectTypes && AttributeUtils.GetBaseMetaObjectType(Object) is Type baseMetaObjectType)
+            {
+                // Simplify MetaObjects names
+                objectName = displayName;
+                displayName = baseMetaObjectType.Name;
+            }
+
+            if (objectName != null)
+            {
+                displayName += ": " + objectName;
+            }
+            else if (TypeCount > 0)
+            {
+                displayName += " " + TypeCount;
+            }
+
+            return displayName;
+        }
+
+        /// <summary>
         /// Renders the colorized object type and name
         /// </summary>
         /// <param name="parent">Parent node, used to shorten child object names</param>
@@ -244,12 +248,10 @@ namespace NST
 
             Type objectType = Object.GetType();
             string typeName = objectType.Name;
-            string? objectName = Object.GetObjectName();
+            string? objectName = Object.ObjectName;
             bool hasName = !string.IsNullOrEmpty(objectName);
-
-            Type? baseMetaObjectType = AttributeUtils.GetBaseMetaObjectType(Object);
             
-            if (prettifyMetaObjects && baseMetaObjectType != null)
+            if (showBaseMetaObjectTypes && prettifyMetaObjects && AttributeUtils.GetBaseMetaObjectType(Object) is Type baseMetaObjectType)
             {
                 // Simplify MetaObjects names
                 typeName = baseMetaObjectType.Name + ": ";
@@ -261,7 +263,7 @@ namespace NST
                 typeName += ": ";
 
                 // Simplify names that start with their parent name
-                string? parentName = parent?.Object?.GetObjectName();
+                string? parentName = parent?.Object?.ObjectName;
                 if (parentName != null && objectName!.StartsWith(parentName))
                 {
                     objectName = objectName.Substring(parentName.Length);
@@ -313,11 +315,18 @@ namespace NST
 
             if (Object.GetType().IsAssignableTo(typeof(igHashTable)))
             {
+                FieldRenderer.RenderHashTable(renderer, (dynamic)Object);
                 ImGui.Spacing();
-                ImGui.Text("HashTable preview:");
-                ImGui.Spacing();
-                FieldRenderer.RenderHashTable(renderer, (dynamic)Object, Object.GetType().GetDisplayName());
-                ImGui.Spacing();
+            }
+            
+            // "Focus" button
+
+            if (Object is igEntity entity || Object is igSpline2 || Object is igSplineControlPoint2)
+            {
+                if (ImGui.SmallButton("Focus in editor"))
+                {
+                    App.FocusObject3D(renderer.ArchiveRenderer.Archive, Object);
+                }
             }
 
             // Previews
@@ -390,15 +399,27 @@ namespace NST
         {
             if (Object == null) return;
 
-            if (ImGui.Selectable("Copy name"))
+            if (ImGui.Selectable("Copy object name"))
             {
                 ImGui.SetClipboardText(GetDisplayName());
             }
-            if (ImGui.Selectable("Copy object"))
+            
+            Dictionary<string, CloneMode> pasteModes = new()
             {
-                IgzRenderer.CopyObject = (igObject)Object.Clone();
-                IgzRenderer.CopyRenderer = tree.Renderer;
+                { "shallow", CloneMode.Shallow },
+                { "deep", CloneMode.Deep | CloneMode.SkipComponents },
+                { "full", CloneMode.Deep },
+            };
+            foreach ((string modeStr, CloneMode mode) in pasteModes)
+            {
+                if (ImGui.Selectable($"Copy object ({modeStr})"))
+                {
+                    IgzRenderer.CopyObject = (igObject)Object.Clone(mode: CloneMode.Shallow);
+                    IgzRenderer.CopyRenderer = tree.Renderer;
+                    IgzRenderer.CopyMode = mode;
+                }
             }
+
             if (IgzRenderer.CopyObject != null && IgzRenderer.CopyRenderer != null)
             {
                 ImGui.Separator();
@@ -408,19 +429,16 @@ namespace NST
                     // Paste in the same file
                     if(tree.Renderer == IgzRenderer.CopyRenderer)
                     {
-                        igObject clone = (igObject)IgzRenderer.CopyObject.Clone("_Copy");
-                        tree.Add(clone);
+                        igObject clone = tree.Renderer.Igz.AddClone(IgzRenderer.CopyObject, mode: IgzRenderer.CopyMode);
+                        IgzTreeNode newNode = tree.Add(clone, true)[0];
+                        tree.SetSelectedNode(newNode);
                     }
                     // Paste in a different file
-                    else
+                    else if (tree.Renderer.ArchiveRenderer == IgzRenderer.CopyRenderer.ArchiveRenderer)
                     {
-                        igObject clone = (igObject)IgzRenderer.CopyObject.Clone(deep: true);
-                        tree.Add(clone);
-
-                        foreach (igObject child in clone.GetChildrenRecursive())
-                        {
-                            tree.Add(child);
-                        }
+                        igObject clone = tree.Renderer.Igz.AddClone(IgzRenderer.CopyObject, IgzRenderer.CopyRenderer.Igz);
+                        IgzTreeNode newNode = tree.Add(clone, true)[0];
+                        tree.SetSelectedNode(newNode);
 
                         foreach (var tdep in IgzRenderer.CopyRenderer.Igz.Dependencies)
                         {
@@ -430,7 +448,16 @@ namespace NST
                             }
                         }
                     }
-                    // Todo: paste in a different archive (add dependencies to archive)
+                    // Paste in a different archive
+                    else
+                    {
+                        igObject clone = IgzFile.Clone(IgzRenderer.CopyObject,
+                            IgzRenderer.CopyRenderer.ArchiveRenderer.Archive, tree.Renderer.ArchiveRenderer.Archive,
+                            IgzRenderer.CopyRenderer.Igz, tree.Renderer.Igz
+                        );
+                        IgzTreeNode newNode = tree.Add(clone, true)[0];
+                        tree.SetSelectedNode(newNode);
+                    }
                 }
 
                 bool canPasteValues = Object.GetType().IsAssignableTo(IgzRenderer.CopyObject.GetType());
@@ -450,44 +477,42 @@ namespace NST
 
             if (ImGui.Selectable("Rename"))
             {
-                ModalRenderer.ShowRenameModal(Object.GetObjectName() ?? "", (newName) => 
+                ModalRenderer.ShowRenameModal(Object.ObjectName ?? "", (newName) => 
                 {
-                    Object?.SetObjectName(newName);
+                    Object.ObjectName = newName;
                     tree.Renderer.SetUpdated(Object);
                 });
             }
             if (ImGui.Selectable("Duplicate"))
             {
-                igObject clone = IgzFile.Clone(Object, "_Copy");
-
-                IgzTreeNode newNode = tree.Add(clone);
-
+                igObject clone = tree.Renderer.Igz.AddClone(Object, mode: CloneMode.Deep | CloneMode.SkipComponents);
+                IgzTreeNode newNode = tree.Add(clone, true)[0];
                 tree.SetSelectedNode(newNode);
             }
             if (ImGui.Selectable("Delete"))
             {
-                if (Parents.Count > 0)
+                List<igObject> removed = tree.Renderer.Igz.Remove(Object).ToList();
+
+                foreach (igObject obj in removed)
                 {
-                    ModalRenderer.ShowMessageModal("This object could not be deleted", $"This object is referenced by {Parents.Count} other object(s).");
+                    tree.Remove(this, false);
+                    tree.Renderer.SetUpdated(Object);
                 }
-                else
+
+                if (tree.SelectedNode == this)
                 {
-                    ModalRenderer.ShowDeleteModal(Object?.GetObjectName() ?? "", () => 
-                    {
-                        tree.Remove(this);
-                        tree.SetSelectedNode(null);
-                    });
+                    tree.SetSelectedNode(null);
                 }
             }
         }
 
         // private void _RenderExternalReferences(IgzRenderer renderer)
         // {
-        //     string? objectName = Object?.GetObjectName();
+        //     string? objectName = Object?.ObjectName;
 
         //     if (objectName == null) return;
 
-        //     List<string> externalReferences = NamespaceUtils.FindExternalReference(renderer.GetIgz().GetName(false), objectName);
+        //     List<string> externalReferences = NamespaceUtils.FindExternalReference(renderer.Igz.GetName(false), objectName);
 
         //     if (externalReferences.Count == 0) return;
 

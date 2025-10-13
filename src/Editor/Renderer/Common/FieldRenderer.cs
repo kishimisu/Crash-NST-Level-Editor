@@ -404,24 +404,24 @@ namespace NST
         /// <summary>
         /// Renders a dropdown input for an igObjectRefMetaField
         /// </summary>
-        private static void CreateObjectRefInputIgz(FileRenderer renderer, igObject? value, Type type, string label, Action<object?> onChange)
+        private static void CreateObjectRefInputIgz(FileRenderer renderer, igObject? obj, Type type, string label, Action<object?> onChange)
         {
             // External reference (REXT, RNEX)
-            if (value?.GetReference() is NamedReference reference)
+            if (obj?.Reference != null)
             {
-                string displayName = $"{reference.namespaceName}::{reference.objectName}";
+                string displayName = $"{obj.Reference.namespaceName}::{obj.Reference.objectName}";
 
                 CreateStringInput(renderer, displayName, label, (newVal) => 
                 {
                     if (newVal == null) return;
-                    reference.SetNames((string)newVal);
+                    obj.Reference.SetNames((string)newVal);
                     renderer.SetUpdated();
                 }, false);
             }
             // Regular object pointer (ROFS)
             else
             {
-                CreateObjectRefInput(renderer, value, type, label, onChange);
+                CreateObjectRefInput(renderer, obj, type, label, onChange);
             }
         }
 
@@ -501,10 +501,10 @@ namespace NST
 
                                 onChange.Invoke(node);
 
-                                igzRenderer.TreeView.Add(node, igObj);
+                                igzRenderer.TreeView.Add(node);
                                 igzRenderer.TreeView.SelectChildNode(node);
 
-                                igObj.SetMemoryPool(igzRenderer.TreeView.ObjectNodes[0].Object!.GetMemoryPool());
+                                igObj.MemoryPool = igzRenderer.TreeView.ObjectNodes[0].Object!.MemoryPool;
                             }
                         }
                     }
@@ -719,9 +719,13 @@ namespace NST
         /// <summary>
         /// Renders a list of key and value pairs from an igHashTable
         /// </summary>
-        public static void RenderHashTable<K, V>(IgzRenderer renderer, igHashTable<K, V> table, string name) where K : notnull
+        public static void RenderHashTable<K, V>(IgzRenderer renderer, igHashTable<K, V> table) where K : notnull
         {
-            if (!ImGui.BeginTable("HashTable" + name, 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoSavedSettings))
+            ImGui.Spacing();
+            ImGui.Text($"HashTable preview ({table.Dict.Count}):");
+            ImGui.Spacing();
+
+            if (!ImGui.BeginTable("HashTable" + table, 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg | ImGuiTableFlags.SizingStretchProp | ImGuiTableFlags.NoSavedSettings))
             {
                 return;
             }

@@ -46,6 +46,7 @@ namespace NST
         {
             this.file = file;
             this.renderer = renderer;
+            if (renderer is IgzRenderer igzRenderer) this.igz = igzRenderer.Igz;
         }
 
         public FileUpdateInfos(IgArchiveFile file, IgzFile? igz = null, bool keepActive = false)
@@ -136,7 +137,7 @@ namespace NST
         /// <summary>
         /// Get the IGZ instance associated to a file, if it exists
         /// </summary>
-        public IgzFile? GetIgz(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file].igz : null;
+        public IgzFile? GetIgz(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file].igz ?? (_files[file].renderer as IgzRenderer)?.Igz : null;
 
         /// <summary>
         /// Get the list of updated files
@@ -152,6 +153,8 @@ namespace NST
         /// Check if a renderer is associated to any file
         /// </summary>
         public bool HasRenderer(FileRenderer renderer) => _files.Values.Any(f => f.renderer == renderer);
+
+        public FileUpdateInfos? GetInfos(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file] : null;
 
         /// <summary>
         /// Add a file to the list of active files.
@@ -174,7 +177,12 @@ namespace NST
         /// </summary>
         public void Add(IgArchiveFile file, IgzFile igz, bool keepActive = false)
         {
-            if (_files.ContainsKey(file)) return;
+            if (_files.ContainsKey(file))
+            {
+                _files[file].igz = igz;
+                _files[file].keepActive |= keepActive;
+                return;
+            }
             _files.Add(file, new FileUpdateInfos(file, igz, keepActive));
         }
 
@@ -230,7 +238,7 @@ namespace NST
             }
 
             IgzRenderer renderer = GetOrCreateRenderer(file, archiveRenderer);
-            renderer.TreeView.SelectNode(reference);
+            renderer.TreeView.SelectNode(reference, false);
             
             return renderer;
         }
@@ -246,11 +254,15 @@ namespace NST
             }
             if (infos.renderer != null)
             {
+                // Console.WriteLine($"[GetOrCreateRenderer] Reusing renderer for {file.GetName(false)}" + "#" + infos.igz?.uid);
                 return (IgzRenderer)infos.renderer;
             }
 
+            // Console.WriteLine($"[GetOrCreateRenderer] Creating renderer for {file.GetName(false)}, igz ? {infos.igz != null}" + "#" + infos.igz?.uid);
+
             IgzRenderer renderer = new IgzRenderer(infos.igz ?? file.ToIgzFile(), file, archiveRenderer);
             infos.renderer = renderer;
+            infos.igz = renderer.Igz;
 
             return renderer;
         }
@@ -259,15 +271,16 @@ namespace NST
         /// Apply the changes made to a file.
         /// </summary>
         /// <param name="removeFromActive">Whether to remove the file from the active list</param>
-        public void ApplyChanges(IgArchiveFile file, bool removeFromActive = false)
+        // public void ApplyChanges(IgArchiveFile file, bool removeFromActive = false)
+        public void ApplyChanges(FileUpdateInfos infos, bool removeFromActive = false)
         {
-            if (!_files.TryGetValue(file, out FileUpdateInfos? infos)) return;
+            // if (!_files.TryGetValue(file, out FileUpdateInfos? infos)) return;
 
             infos.Apply();
 
             if (removeFromActive && !infos.keepActive && !infos.IsWindow())
             {
-                _files.Remove(file);
+                _files.Remove(infos.file);
             }
         }
 
@@ -319,7 +332,7 @@ namespace NST
         public override string ToString()
         {
             List<FileUpdateInfos> infos = _files.Values.ToList();
-            return $"Active files: {infos.Count}, Updated files: {infos.Count(f => f.updated)}, Renderers: {infos.Count(f => f.renderer != null)}, Windows: {infos.Count(f => f.IsWindow())}";
+            return $"({ImGuiUtils.id}) Active files: {infos.Count}, Updated files: {infos.Count(f => f.updated)}, Renderers: {infos.Count(f => f.renderer != null)}, Windows: {infos.Count(f => f.IsWindow())}";
         }
     }
 }

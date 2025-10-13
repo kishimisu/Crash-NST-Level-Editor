@@ -15,5 +15,11 @@ namespace Alchemy
         public List<T> FindAll(Predicate<T> predicate) => _data.FindAll(predicate);
         public IEnumerable<TOut> Select<TOut>(Func<T, TOut> selector) => _data.Select(selector);
         public IEnumerator<T> GetEnumerator() => _data.GetEnumerator();
+
+        public override void Write(IgzWriter writer)
+        {
+            _elementCount = _data.Count;
+            base.Write(writer);
+        }
     }
 }

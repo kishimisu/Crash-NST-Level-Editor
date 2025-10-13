@@ -33,7 +33,8 @@ namespace NST
         public SilkWindow()
         {
             WindowOptions options = WindowOptions.Default;
-            options.Size = new Vector2D<int>(1600, 900);
+            options.WindowBorder = WindowBorder.Resizable;
+            options.WindowState = WindowState.Maximized;
             options.Title = "Crash NST Editor v1.4";
             options.API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Compatability, ContextFlags.Default, new APIVersion(3, 3));
 
@@ -89,7 +90,9 @@ namespace NST
 
         private unsafe void SetupImGUI()
         {
-            _imgui = new ImGuiController(_gl, _window, _input, null, LoadIconFont);
+            float scale = _window.Size.Y > 2000 ? 2.0f : _window.Size.Y > 1080 ? 1.5f : 1.0f;
+
+            _imgui = new ImGuiController(_gl, _window, _input, null, () => LoadIconFont(scale));
 
             _io = ImGui.GetIO();
             _io.MouseDrawCursor = true;
@@ -99,18 +102,23 @@ namespace NST
             ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 12);
         }
 
-        private unsafe static void LoadIconFont()
+        private unsafe static void LoadIconFont(float scale_factor = 1.0f)
         {
             ushort[] range = new ushort[3] { 0x0020, 0xFFFF, 0x00 };
+
+            float font_size = 13.0f * scale_factor;
 
             fixed (ushort* rangePtr = &range[0])
             {
                 ImFontConfigPtr config = ImGuiNative.ImFontConfig_ImFontConfig();
-                config.MergeMode = true;
+                config.SizePixels = font_size;
 
-                ImGui.GetIO().Fonts.AddFontDefault();
-                ImGui.GetIO().Fonts.AddFontFromFileTTF("assets/icomoon.ttf", 10.0f, config, new IntPtr(rangePtr));
+                ImGui.GetIO().Fonts.AddFontDefault(config);
+                config.MergeMode = true;
+                ImGui.GetIO().Fonts.AddFontFromFileTTF("assets/icomoon.ttf", font_size, config, new IntPtr(rangePtr));
             }
+
+            ImGui.GetStyle().ScaleAllSizes(scale_factor);
         }
 
         private void OnRender(double deltaTime)

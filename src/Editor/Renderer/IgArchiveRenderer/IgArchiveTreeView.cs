@@ -52,6 +52,8 @@ namespace NST
 
             for (int i = 0; i < path.Length; i++)
             {
+                if (i == path.Length - 1 && file.GetPath().EndsWith("/")) break;
+
                 string segment = path[i];
                 nodeIdentifier += segment + "/";
 
@@ -97,25 +99,34 @@ namespace NST
 
             if (node != null)
             {
-                const int max_parent_depth = 20; // guard infinite loops
-                for (int i = 0; i < max_parent_depth; i++)
+                RemoveFile(node);
+            }
+            else
+            {
+                Console.WriteLine("Failed to remove file (not found): " + file.GetPath());
+            }
+        }
+
+        public void RemoveFile(IgArchiveTreeNode? node)
+        {
+            if (node == null) return;
+            
+            const int max_parent_depth = 20; // guard infinite loops
+            for (int i = 0; i < max_parent_depth; i++)
+            {
+                AllNodes.Remove(node);
+                _rootNodes.Remove(node);
+
+                IgArchiveTreeNode? parent = AllNodes.FirstOrDefault(e => e.Children.Contains(node));
+
+                parent?.Children.Remove(node);
+                node = parent;
+
+                if (node == null || node.Children.Count > 0)
                 {
-                    AllNodes.Remove(node);
-                    _rootNodes.Remove(node);
-
-                    IgArchiveTreeNode? parent = AllNodes.FirstOrDefault(e => e.Children.Contains(node));
-
-                    parent?.Children.Remove(node);
-                    node = parent;
-
-                    if (node == null || node.Children.Count > 0)
-                    {
-                        return;
-                    }
+                    return;
                 }
             }
-
-            Console.WriteLine("Failed to remove file (not found): " + file.GetPath());
         }
 
         /// <summary>

@@ -9,29 +9,84 @@ namespace NST
     /// </summary>
     public class IgArchiveRenderer
     {
-        public IgArchive Archive { get; }
-        public ActiveFileManager FileManager { get; } = new ActiveFileManager();
+        public IgArchive Archive { get; private set; }
+        public ActiveFileManager FileManager { get; private set; }
 
         private IgArchiveTreeView _treeView;
         private IgArchiveFile? _selectedFile = null;
         private Dictionary<HashedReference, int> _collisionData = [];
+        private HashSet<IgArchiveFile> _includeInPackageFile = [];
 
         private uint _uuid;
         private bool _isOpen = true;
         private bool _isUpdated = false;
         private bool _showAudioPlayer = false; // Used for .snd files
+        private bool _hasBackup = false;
+        private bool _compressOnSave = true;
+        private bool _isLevelArchive = false;
 
         public string GetWindowName() => (string.IsNullOrEmpty(Archive.GetName()) ? "New Archive" : Archive.GetName()) + "###" + _uuid;
         public int FindCollisionShapeIndex(HashedReference reference) => _collisionData.ContainsKey(reference) ? _collisionData[reference] : -1;
+        public int FindCollisionShapeIndex(NamedReference reference) => FindCollisionShapeIndex(reference.ToEXID());
+        public bool IncludeInPackageFile(IgArchiveFile file) => _includeInPackageFile.Contains(file);
 
         public IgArchiveRenderer(string archivePath) : this(IgArchive.Open(archivePath)) { }
 
         public IgArchiveRenderer(IgArchive archive)
         {
             Archive = archive;
+            Setup();
+        }
+
+        private void Setup()
+        {
+            FileManager = new ActiveFileManager();
+
             _treeView = new IgArchiveTreeView(this);
+            
+            _uuid = ImGuiUtils.Uuid();
             _collisionData = StaticCollisionsUtils.GetCollisionData(Archive);
-            _uuid = ImGui.GetID(Archive.GetPath());
+            _compressOnSave = LocalStorage.Get("compress_on_save_" + Archive.GetPath(), true);
+            _hasBackup = File.Exists(Archive.GetPath() + ".backup");
+            _includeInPackageFile.Clear();
+            _selectedFile = null;
+            _showAudioPlayer = false;
+
+            IgArchiveFile? packageFile = Archive.FindPackageFile();
+
+            if (packageFile == null) return;
+            
+            _isLevelArchive = true;
+
+            IgzFile packageIgz = packageFile.ToIgzFile();
+            igStreamingChunkInfo? chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>();
+
+            if (chunkInfo == null) return;
+
+            List<string?> includedFiles = chunkInfo._required._data.Select(e => e._name).ToList();
+
+            foreach (IgArchiveFile file in Archive.GetFiles())
+            {
+                if (file == packageFile) continue;
+
+                string filePath = file.GetPath().ToLower();
+
+                if (includedFiles.Remove(filePath))
+                {
+                    _includeInPackageFile.Add(file);
+                }
+            }
+        }
+
+        /// <summary>
+        /// Adds a new file to the archive and updates the tree view
+        /// </summary>
+        public void AddFile(IgArchiveFile file, bool addToPackageFile = true)
+        {
+            Archive.AddFile(file);
+            _treeView.AddFile(file);
+
+            if (addToPackageFile) _includeInPackageFile.Add(file);
         }
 
         /// <summary>
@@ -39,24 +94,31 @@ namespace NST
         /// </summary>
         public void Render()
         {
+            if (!_isOpen)
+            {
+                TryCloseArchive();
+                return;
+            }
+
             Vector2 displaySize = ImGui.GetIO().DisplaySize;
             ImGui.SetNextWindowSize(displaySize * new Vector2(1, 0.5f), ImGuiCond.FirstUseEver);
             ImGui.SetNextWindowPos(Vector2.Zero, ImGuiCond.FirstUseEver);
 
-            if (!_isOpen)
-            {
-                App.CloseArchive(this);
-                return;
-            }
-
-            ImGuiWindowFlags flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse;
+            ImGuiWindowFlags flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.MenuBar;
 
             if (_isUpdated) flags |= ImGuiWindowFlags.UnsavedDocument;
 
             if (ImGui.Begin(GetWindowName(), ref _isOpen, flags))
             {
                 float columnWidth = ImGui.GetContentRegionAvail().X * 0.3f;
+
+                RenderMenuBar();
                 
+                if (_isLevelArchive && ImGui.Button("Open Level Editor"))
+                {
+                    App.OpenLevelExplorer(this);
+                }
+
                 if (ImGui.BeginTable("TreeAndInfo", 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg))
                 {
                     ImGui.TableSetupColumn("igArchiveTree", ImGuiTableColumnFlags.WidthFixed, columnWidth);
@@ -76,12 +138,79 @@ namespace NST
                 // Shortcuts
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E)) App.OpenLevelExplorer(this); // Level Explorer
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(); // Restore backup
             }
 
             // Render undocked IGZs
             FileManager.RenderWindows();
             
             ImGui.End();
+        }
+
+        private void RenderMenuBar()
+        {
+            if (ImGui.BeginMenuBar())
+            {
+                if (ImGui.BeginMenu("File"))
+                {
+                    if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
+                    if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) SaveArchive(true);
+                    if (ImGui.MenuItem("Compress on save", null, _compressOnSave))
+                    { 
+                        _compressOnSave = !_compressOnSave;
+                        LocalStorage.Set("compress_on_save_" + Archive.GetPath(), _compressOnSave);
+                    }
+                    ImGui.Separator();
+                    if (ImGui.MenuItem("Close")) _isOpen = false;
+
+                    ImGui.EndMenu();
+                }
+
+                if (ImGui.BeginMenu("Backup"))
+                {
+                    if (!_hasBackup)
+                    {
+                        ImGui.MenuItem("No backup found", null, false, false);
+                        if (ImGui.MenuItem("Create backup")) CreateBackup();
+                    }
+                    else
+                    {
+                        ImGui.MenuItem("Backup found!", null, false, false);
+                        if (ImGui.MenuItem("Restore backup", "Ctrl+Shift+R")) RestoreBackup();
+                        if (ImGui.MenuItem("Delete backup")) DeleteBackup();
+                    }
+                    ImGui.EndMenu();
+                }
+
+                ImGui.EndMenuBar();
+            }
+        }
+
+        private void CreateBackup()
+        {
+            File.Copy(Archive.GetPath(), Archive.GetPath() + ".backup");
+            _hasBackup = true;
+        }
+
+        private void DeleteBackup()
+        {
+            ModalRenderer.ShowDeleteModal("Are you sure you want to delete the archive's backup?", () =>
+            {
+                File.Delete(Archive.GetPath() + ".backup");
+                _hasBackup = false;
+            });
+        }
+
+        private void RestoreBackup()
+        {
+            File.Copy(Archive.GetPath() + ".backup", Archive.GetPath(), true);
+
+            Archive = IgArchive.Open(Archive.GetPath());
+
+            Setup();
+
+            _isUpdated = true;
         }
 
         /// <summary>
@@ -96,7 +225,7 @@ namespace NST
             if (renderer != null)
             {
                 ImGui.TableNextColumn();
-                renderer.RenderContent(true);
+                renderer.RenderContent();
                 return;
             }
 
@@ -170,7 +299,8 @@ namespace NST
         {
             FileUpdateInfos infos = SetObjectUpdated(file, entity);
 
-            if (infos.updatedCollisions.Keys.Contains(entity)) return;
+            if (shapeIndex == -1 || infos.updatedCollisions.Keys.Contains(entity)) return;
+            if (shapeIndex == null && shapeInstance == null) return;
             
             string namespaceName = file.GetName(false);
             NamedReference reference = entity.ToNamedReference(namespaceName);
@@ -267,16 +397,26 @@ namespace NST
                 return;
             }
 
-            FileRenderer? renderer = FileManager.GetRenderer(file);
+            // Try to reuse an existing renderer
+            FileUpdateInfos? infos = FileManager.GetInfos(file);
+            FileRenderer? renderer = infos?.renderer;
 
-            // Create a new renderer
             if (renderer == null)
             {
-                renderer = FileRenderer.Create(file, this);
-                
-                FileManager.Add(file, renderer);
+                // Create a new renderer
+                if (infos?.igz == null)
+                {
+                    renderer = FileRenderer.Create(file, this);
+                    FileManager.Add(file, renderer);
+                }
+                // Create a new renderer using an open igz file
+                else
+                {
+                    renderer = new IgzRenderer(infos.igz, file, this);
+                    infos.renderer = renderer;
+                }
             }
-            // Focus the previously opened renderer
+            // Focus the renderer
             else if (renderer.IsOpenAsWindow)
             {
                 ImGui.SetWindowFocus(renderer.GetWindowName());
@@ -305,6 +445,19 @@ namespace NST
             }
         }
 
+        public void TryCloseArchive()
+        {
+            if (_isUpdated)
+            {
+                ModalRenderer.ShowWarningModal("Are you sure you want to close the archive without saving?", () => { _isUpdated = false; _isOpen = false; });
+                _isOpen = true;
+            }
+            else
+            {
+                App.CloseArchive(this);
+            }
+        }
+
         /// <summary>
         /// Try to save the current archive to disk.
         /// Will show a confirmation modal if it's a game archive.
@@ -313,10 +466,10 @@ namespace NST
         {
             if (!_isUpdated) return;
 
-            if (LocalStorage.GamePath != null && Archive.GetPath().StartsWith(LocalStorage.GamePath)) // Check if overwriting a game file
+            if (LocalStorage.GamePath != null && Archive.GetPath().StartsWith(LocalStorage.GamePath) && !_hasBackup) // Check if overwriting a game file
             {
                 ModalRenderer.ShowConfirmationModal(
-                    "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.", 
+                    "Warning: you're about to overwrite a game file with no backup!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.", 
                     () =>  SaveArchive(true), // Save as...
                     () =>  SaveArchive(false) // Overwrite
                 );
@@ -335,11 +488,33 @@ namespace NST
         {
             string? path = Archive.GetPath();
 
+            // Check that all object names are unique
+            foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
+            {
+                if (infos.igz == null) continue;
+
+                HashSet<string> objectNames = [];
+
+                foreach (igObject obj in infos.igz.Objects)
+                {
+                    if (obj.ObjectName != null && !objectNames.Add(obj.ObjectName))
+                    {
+                        ModalRenderer.ShowMessageModal("Could not save the archive", $"Found duplicate object name: {obj.ObjectName}\nin {archiveFile.GetPath()}");
+                        return;
+                    }
+                }
+            }
+
             if (saveAs || string.IsNullOrEmpty(path))
             {
                 path = FileExplorer.SaveFile("", FileExplorer.EXT_ARCHIVES, Archive.GetName());
                 if (path == null) return;
                 LocalStorage.AddRecentFile(path);
+
+                if (!_compressOnSave)
+                {
+                    LocalStorage.Set("compress_on_save_" + path, _compressOnSave);
+                }
             }
 
             List<CollisionUpdateInfos> updatedCollisions = [];
@@ -347,13 +522,11 @@ namespace NST
             // Loop through all updated files
             foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
             {
-                if (!infos.updated) continue;
-
                 // Add updated collisions
                 updatedCollisions.AddRange(infos.updatedCollisions.Values);
 
                 // Save file
-                FileManager.ApplyChanges(archiveFile, _selectedFile != archiveFile);
+                FileManager.ApplyChanges(infos, _selectedFile != archiveFile);
             }
 
             // Rebuild collisions if needed
@@ -363,67 +536,21 @@ namespace NST
             }
 
             // Rebuild package file if needed
-            RebuildPackageFile();
+            List<IgArchiveFile> includedFiles = Archive.GetFiles().Where(e => _includeInPackageFile.Contains(e)).ToList();
+            Archive.RebuildPackageFile(includedFiles);
+
+            if (_compressOnSave)
+            {
+                Archive.CompressAll();
+            }
+            else
+            {
+                Archive.UncompressAll();
+            }
 
             // Save archive
             Archive.Save(path, true);
             _isUpdated = false;
-        }
-
-        /// <summary>
-        /// Rebuild the archive's package file by adding new files
-        /// </summary>
-        private void RebuildPackageFile()
-        {
-            List<string> fileTypeOrder = [
-                "script", "sound_sample", "sound_bank", "lang_file", "loose", "shader",
-                "texture", "material_instances", "font", "vsc", "igx_file", 
-                "havokrigidbody", "model", "asset_behavior", 
-                "havokanimdb", "hkb_behavior", "hkc_character", 
-                "behavior", "sky_model", "effect", "actorskin", 
-                "sound_stream", "character_events", "graphdata_behavior", 
-                "character_data", "gui_project",
-                "navmesh", "igx_entities", "pkg"
-            ];
-
-            IgArchiveFile? packageFile = Archive.FindPackageFile();
-
-            if (packageFile == null)
-            {
-                return;
-            }
-
-            IgzFile packageIgz = packageFile.ToIgzFile();
-
-            var chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>()!;
-            bool needsRebuild = false;
-
-            foreach (IgArchiveFile file in Archive.GetFiles())
-            {
-                if (file == packageFile) continue;
-
-                string filePath = file.GetPath().ToLower();
-                bool exists = chunkInfo._required._data.Any(x => x._name == filePath);
-
-                if (!exists)
-                {
-                    chunkInfo._required._data.Add(new ChunkFileInfoMetaField
-                    {
-                        _name = filePath,
-                        _type = "igx_entities" // TODO: Find file type dynamically
-                    });
-
-                    needsRebuild = true;
-
-                    Console.WriteLine($"Added {file.GetName()} to package file.");
-                }
-            }
-
-            if (needsRebuild) 
-            {
-                chunkInfo._required._data.Sort((a, b) => fileTypeOrder.IndexOf(a._type!) - fileTypeOrder.IndexOf(b._type!));
-                packageFile.SetData(packageIgz.Save());
-            }
         }
 
         /// <summary>
@@ -467,11 +594,13 @@ namespace NST
         /// </summary>
         private void DeleteFile(IgArchiveFile file)
         {
-            ModalRenderer.ShowDeleteModal(file.GetName(), () =>
+            ModalRenderer.ShowDeleteModal("Are you sure you want to delete " + file.GetName() + "?", () =>
             {
                 FileManager.Remove(file, true);
                 Archive.RemoveFile(file);
                 _treeView.RemoveFile(file);
+                _includeInPackageFile.Remove(file);
+                _isUpdated = true;
                 FocusNode(null);
             });
         }
@@ -526,6 +655,15 @@ namespace NST
         /// </summary>
         public void RenderNodePopup(IgArchiveFile file)
         {
+            bool includeInPkg = _includeInPackageFile.Contains(file);
+
+            if (!file.GetPath().StartsWith("packages/") && ImGui.Checkbox("Include in package file", ref includeInPkg))
+            {
+                _isUpdated = true;
+
+                if (includeInPkg) _includeInPackageFile.Add(file);
+                else _includeInPackageFile.Remove(file);
+            }
             if (FileManager.IsFileUpdated(file))
             {
                 if (ImGui.Selectable("Discard changes")) DiscardChanges(file);

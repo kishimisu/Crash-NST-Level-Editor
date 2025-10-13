@@ -58,7 +58,7 @@ namespace NST
 
         public static void InitAudioPlayer(CSoundSample soundSample)
         {
-            InitAudioPlayer(soundSample._data.ToArray(), true, soundSample.GetObjectName() ?? "CSoundSample");
+            InitAudioPlayer(soundSample._data.ToArray(), true, soundSample.ObjectName ?? "CSoundSample");
         }
 
         public static void InitAudioPlayer(CSubSound subSound, bool autoPlay = false)
@@ -69,7 +69,7 @@ namespace NST
 
             if (fileName == null)
             {
-                Console.Error.WriteLine($"Warning: Could not load audio, file name is null. ({subSound.GetObjectName()})");
+                Console.Error.WriteLine($"Warning: Could not load audio, file name is null. ({subSound.ObjectName})");
                 return;
             }
 

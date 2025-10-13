@@ -1,3 +1,6 @@
+using System.Text.RegularExpressions;
+using NST;
+
 namespace Alchemy
 {
     /// <summary>
@@ -6,6 +9,7 @@ namespace Alchemy
     /// </summary>
     public class IgzFile
     {
+        public uint uid;
         private string _path;
         public List<igObject> Objects { get; set; } = [];
         public TDEP_Fixup Dependencies { get; set; } = [];
@@ -15,10 +19,11 @@ namespace Alchemy
         /// <summary>
         /// Creates a new IGZ file from a list of objects
         /// </summary>
-        public IgzFile(string path, List<igObject> objects)
+        public IgzFile(string path, List<igObject>? objects = null)
         {
             _path = path;
-            Objects = objects;
+            Objects = objects ?? [];
+            uid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -33,6 +38,7 @@ namespace Alchemy
             _path = path;
             Objects = reader.GetObjects();
             Dependencies = reader.GetDependencies();
+            uid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -76,7 +82,7 @@ namespace Alchemy
         /// <returns>The object if found, null otherwise</returns>
         public T? FindObject<T>() where T : igObject
         {
-            return (T?)(object?)Objects.FirstOrDefault(o => o is T);
+            return (T?)(object?)Objects.Find(o => o is T);
         }
 
         /// <summary>
@@ -102,7 +108,7 @@ namespace Alchemy
 
             string objectName = reference.objectName.ToLowerInvariant();
 
-            return Objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName);
+            return Objects.Find(o => o.ObjectName?.ToLowerInvariant() == objectName);
         }
 
         public T? FindObject<T>(NamedReference reference) where T : igObject
@@ -114,32 +120,294 @@ namespace Alchemy
         {
             objectName = objectName.ToLowerInvariant();
 
-            return Objects.FirstOrDefault(o => o.GetObjectName()?.ToLowerInvariant() == objectName) as T;
+            return Objects.Find(o => o.ObjectName?.ToLowerInvariant() == objectName) as T;
         }
 
         public T? FindObject<T>(uint nameHash) where T : igObject
         {
-            return Objects.FirstOrDefault(o => {
+            return Objects.Find(o => {
                 if (o is not T) return false;
-                if (o.GetObjectName() == null) return false;
-                return NamespaceUtils.ComputeHash(o.GetObjectName()!) == nameHash;
+                if (o.ObjectName == null) return false;
+                return NamespaceUtils.ComputeHash(o.ObjectName!) == nameHash;
             }) as T;
         }
 
-        public static T Clone<T>(T obj, string? suffix = null, bool deep = false) where T : igObject
+        private static string IncrementTrailingNumber(string input)
         {
-            return (T)obj.Clone(suffix, deep);
+            if (string.IsNullOrEmpty(input)) return input;
+
+            // Match digits at the end of the string
+            var match = Regex.Match(input, @"(\d+)$");
+            if (!match.Success)
+            {
+                // No trailing number found, just append 1
+                return input + "1";
+            }
+
+            string numberStr = match.Value;
+            int numberLength = numberStr.Length;
+
+            int number = int.Parse(numberStr);
+            number++;
+
+            string newNumberStr = number.ToString().PadLeft(numberLength, '0');
+
+            // If the number grew in length (e.g. 0999 -> 1000), don't pad
+            if (newNumberStr.Length > numberLength)
+            {
+                newNumberStr = number.ToString();
+            }
+
+            return input.Substring(0, match.Index) + newNumberStr;
         }
 
-        // public static T Clone<T>(T obj, string? newName = null, bool deep = false) where T : igObject
+        private string FindSuitableName(string name, IEnumerable<igObject>? additionalObjects = null)
+        {
+            var objects = Objects.Concat(additionalObjects ?? []);
+
+            while (objects.Any(e => e.ObjectName == name))
+            {
+                name = IncrementTrailingNumber(name);
+            } 
+
+            return name;
+        }
+
+        /// <summary>
+        /// Clone an object and all of its dependencies to another archive
+        /// </summary>
+        public static T Clone<T>(T sourceObject, IgArchive sourceArchive, IgArchive destArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null) where T : igObject
+        {
+            igObject clone = destIgz.AddClone(sourceObject, sourceIgz, clones);
+
+            List<string> dependencies = sourceIgz.GetDependencies(sourceObject);
+
+            AddDependencies(sourceArchive, destArchive, dependencies);
+
+            foreach (var tdep in sourceIgz.Dependencies)
+            {
+                foreach (var dep in dependencies)
+                {
+                    if (dep == Path.GetFileNameWithoutExtension(tdep.path).ToLowerInvariant() && !destIgz.Dependencies.Contains(tdep))
+                    {
+                        destIgz.Dependencies.Add(tdep);
+                        break;
+                    }
+                }
+            }
+
+            return (T)clone;
+        }
+
+        /// <summary>
+        /// Clone an object and add it to this file
+        /// </summary>
+        /// <param name="obj">The object to clone</param>
+        /// <param name="source">The source igz file</param>
+        /// <param name="clones">The list of cloned objects</param>
+        /// <returns>The cloned object</returns>
+        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep) where T : igObject
+        {
+            if (obj.ObjectName == null) throw new Exception("Not implemented");
+            
+            source ??= this;
+            clones ??= new Dictionary<igObject, igObject>();
+
+            obj = source.FindObject<T>(obj.ObjectName) ?? obj;
+
+            List<igObject> prevKeys = clones.Keys.ToList();
+
+            // Clone object recursively
+            T clone = source.CreateClone(obj, this, clones, mode);
+
+            Dictionary<igObject, igObject> newClones = clones.Where(kvp => !prevKeys.Contains(kvp.Key)).ToDictionary();
+
+            foreach ((igObject src, igObject dst) in newClones)
+            {
+                if (Objects.Contains(dst))
+                {
+                    continue;
+                }
+
+                if (source == this)
+                {
+                    Objects.Add(dst);
+                }
+                else
+                {
+                    // Update handles
+                    foreach (var handle in dst.GetHandles())
+                    {
+                        if (handle.namespaceName.ToLower() == source.GetName(false).ToLower())
+                        {
+                            handle.namespaceName = GetName(false);
+                        }
+                    }
+
+                    Objects.Add(dst);
+                }
+            }
+
+            return clone;
+        }
+
+        private T CreateClone<T>(T obj, IgzFile dest, Dictionary<igObject, igObject> clones, CloneMode mode = CloneMode.Deep) where T : igObject
+        {
+            List<igObject> prevKeys = clones.Keys.ToList();
+
+            T clone = (T)obj.Clone(this, dest, mode, clones);
+
+            Dictionary<igObject, igObject> newClones = clones.Where(kvp => !prevKeys.Contains(kvp.Key)).ToDictionary();
+
+            foreach (igObject dst in newClones.Values)
+            {
+                if (dst.ObjectName != null)
+                {
+                    string newName = dest.FindSuitableName(dst.ObjectName, clones.Values);
+                    dst.ObjectName = newName;
+                }
+            }
+
+            foreach ((igObject src, igObject dst) in newClones)
+            {
+                List<NamedReference> srcHandles = src.GetHandles();
+                List<NamedReference> dstHandles = dst.GetHandles();
+
+                foreach ((NamedReference srcHandle, NamedReference dstHandle) in srcHandles.Zip(dstHandles))
+                {
+                    if (srcHandle.namespaceName.ToLower() != GetName(false).ToLower()) continue;
+
+                    igObject? srcObject = FindObject(srcHandle);
+
+                    if (srcObject == null)
+                    {
+                        continue;
+                    }
+
+                    if (!clones.ContainsKey(srcObject))
+                    {
+                        igObject handleClone = CreateClone(srcObject, dest, clones, mode);
+
+                        dstHandle.objectName = handleClone.ObjectName!;
+                    }
+                    else
+                    {
+                        dstHandle.objectName = clones[srcObject].ObjectName!;
+                    }
+                }
+            }
+
+            return clone;
+        }
+
+        public static void AddDependencies(IgArchive source, IgArchive destination, List<string> dependencies, HashSet<string>? added = null)
+        {
+            added ??= new HashSet<string>();
+
+            foreach (IgArchiveFile file in source.GetFiles())
+            {
+                foreach (string dep in dependencies)
+                {
+                    if (file.GetName(false).ToLowerInvariant() == dep
+                        && !added.Contains(file.GetPath())
+                        && !destination.GetFiles().Any(f => f.GetPath() == file.GetPath()))
+                    {
+                        destination.AddFile(file);
+                        added.Add(file.GetPath());
+
+                        if (file.IsIGZ())
+                            AddDependencies(source, destination, file.ToIgzFile().GetDependencies(), added);
+                    }
+                }
+            }
+        }
+
+        public List<string> GetDependencies(igObject obj)
+        {
+            List<string> deps = [];
+            List<igObject> children = [ obj ];
+            children.AddRange(obj.GetChildrenRecursive(this, ChildrenSearchParams.IncludeHandles));
+
+            foreach (igObject child in children)
+            {
+                deps.AddRange(child.GetStrings());
+
+                foreach (NamedReference handle in child.GetHandles())
+                {
+                    deps.Add(handle.namespaceName);
+                }
+            }
+
+            string namespaceName = GetName(false).ToLowerInvariant();
+
+            return deps
+                .Where(d => !string.IsNullOrEmpty(d))
+                .Select(d => Path.GetFileNameWithoutExtension(d).ToLowerInvariant())
+                .Distinct()
+                .Where(d => d != namespaceName)
+                .ToList();
+        }
+
+        public List<string> GetDependencies()
+        {
+            List<string> deps = Dependencies.Select(d => d.path).ToList();
+
+            foreach (igObject obj in Objects)
+            {
+                foreach (NamedReference handle in obj.GetHandles())
+                {
+                    deps.Add(handle.namespaceName);
+                }
+            }
+
+            return deps.Where(d => !string.IsNullOrEmpty(d)).Select(d => Path.GetFileNameWithoutExtension(d).ToLowerInvariant()).Distinct().ToList();
+        }
+
+        public HashSet<igObject> Remove(igObject obj, bool force = true, HashSet<igObject>? removed = null)
+        {
+            igObject? objectList = (Objects[0] as igObjectList);
+
+            List<igObject> parents = Objects.Where(e => e != objectList && e.GetChildren(this, ChildrenSearchParams.IncludeHandles).Contains(obj)).ToList();
+
+            removed ??= new HashSet<igObject>();
+
+            if (parents.Count == 0 || force)
+            {
+                Console.WriteLine("Removing " + obj + (force ? " (force)" : ""));
+
+                removed.Add(obj);
+
+                Objects.Remove(obj);
+
+                foreach (igObject parent in parents)
+                {
+                    parent.RemoveChild(obj);
+                }
+
+                foreach (igObject child in obj.GetChildren(this, ChildrenSearchParams.IncludeHandles))
+                {
+                    if (removed.Contains(child)) continue;
+
+                    Remove(child, false, removed);
+                }
+            }
+
+            return removed;
+        }
+
+        // public List<igObject> FindParents(igObject obj, ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
         // {
-        //     T clone = (T)obj.Clone(deep);
+        //     return Objects.Where(o => o.GetChildren(searchParams).Any(c => c == obj)).ToList();
+        // }
+        // public List<igObject> FindParentsRecursive(igObject obj, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject> visited = null)
+        // {
+        //     visited ??= new HashSet<igObject>();
 
-        //     if (newName != null) {
-        //         clone.SetObjectName(newName);
-        //     }
+        //     List<igObject> parents = FindParents(obj, searchParams)
+        //         .Where(p => visited.Add(p))
+        //         .ToList();
 
-        //     return clone;
+        //     return parents.Concat(parents.SelectMany(p => FindParentsRecursive(p, searchParams, visited))).ToList();
         // }
 
         // public static IgzFile CreateTexture(string imagePath, CompressionFormat compressionFormat = CompressionFormat.Bc1)

@@ -60,12 +60,11 @@ namespace NST
         /// <summary>
         /// Renders the IGZ file
         /// </summary>
-        /// <param name="horizontalLayout">True for archive renderers, false for level editors</param>
-        public void Render(bool horizontalLayout = true)
+        public void Render()
         {
             if (!IsOpenAsWindow)
             {
-                RenderContent(horizontalLayout);
+                RenderContent();
                 return;
             }
 
@@ -79,24 +78,21 @@ namespace NST
 
             // Render content
             ImGui.Begin(GetWindowName(), ref IsOpenAsWindow, flags);
-            RenderContent(horizontalLayout);
+            RenderContent();
             ImGui.End();
         }
 
         /// <summary>
         /// Render the tree view and object view
         /// </summary>
-        public void RenderContent(bool horizontalLayout)
+        public void RenderContent()
         {
             // Start table
-            if (horizontalLayout)
+            if (!ImGui.BeginTable("FileRendererTable" + GetHashCode(), 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg))
             {
-                if (!ImGui.BeginTable("FileRendererTable" + GetHashCode(), 2, ImGuiTableFlags.Resizable | ImGuiTableFlags.RowBg))
-                {
-                    return;
-                }
-                ImGui.TableNextColumn();
+                return;
             }
+            ImGui.TableNextColumn();
 
             // Back button
             if (LastRenderer != null)
@@ -112,43 +108,20 @@ namespace NST
             ImGui.Text(ArchiveFile.GetName());
             
             // Action buttons
-            if (horizontalLayout)
+            if (!IsOpenAsWindow && ImGui.SmallButton("Open in new window"))
             {
-                // (IgArchiveRenderer) Pop out as window
-                if (!IsOpenAsWindow && ImGui.SmallButton("Open in new window"))
-                {
-                    IsOpenAsWindow = true;
-                }
-            }
-            else
-            {
-                // (Level Editor) Open in original archive
-                if (ImGui.SmallButton("Open in archive"))
-                {
-                    App.FocusRenderer(this);
-                }
+                IsOpenAsWindow = true;
             }
 
             // Render preview (texture, model, audio...)
             _previewManager?.RenderInTreeView();
 
             // Render tree view and object view
-            if (horizontalLayout)
-            {
-                RenderTreeView();
-                ImGui.TableNextColumn();
-                
-                RenderObjectView();
-                ImGui.EndTable();
-            }
-            else
-            {
-                ImGui.SetNextWindowSizeConstraints(Vector2.Zero, new Vector2(-1, ImGui.GetContentRegionAvail().Y * 0.6f));
-                RenderObjectView();
-                
-                ImGui.Separator();
-                RenderTreeView();
-            }
+            RenderTreeView();
+            ImGui.TableNextColumn();
+            
+            RenderObjectView();
+            ImGui.EndTable();
 
             // Handle shortcuts
             if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.W))

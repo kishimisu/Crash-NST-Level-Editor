@@ -164,13 +164,14 @@ namespace NST
     /// <summary>
     /// Modal for deleting a file (Yes / No)
     /// </summary>
-    public class DeleteModal() : ModalBase<Action>("Delete File")
+    public class DeleteModal(string text = "Delete File") : ModalBase<Action>(text)
     {
         public override bool Render()
         {
+
             if (!base.Render()) return false;
 
-            ImGui.Text("Are you sure you want to delete " + _text + "?");
+            ImGui.Text(_text);
             ImGui.Spacing();
 
             Vector2 buttonSize = ComputeButtonSize(2);
@@ -184,6 +185,8 @@ namespace NST
             return true;
         }
     }
+
+    public class WarningModal() : DeleteModal("This archive has pending changes!") { }
 
     /// <summary>
     /// Modal for renaming a file (OK / Cancel)
@@ -224,7 +227,8 @@ namespace NST
         private static ConfirmationModal _confirmationModal = new ConfirmationModal();
         private static DeleteModal _deleteModal = new DeleteModal();
         private static RenameModal _renameModal = new RenameModal();
-        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal ];
+        private static WarningModal _warningModal = new WarningModal();
+        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal, _warningModal ];
 
         /// <summary>
         /// Show a message modal (OK button)
@@ -248,6 +252,14 @@ namespace NST
         public static void ShowDeleteModal(string fileName, Action action)
         {
             _deleteModal.Open(fileName, action);
+        }
+
+        /// <summary>
+        /// Show a warning modal (Yes / No)
+        /// </summary>
+        public static void ShowWarningModal(string fileName, Action action)
+        {
+            _warningModal.Open(fileName, action);
         }
 
         /// <summary>

@@ -141,19 +141,11 @@ namespace NST
         /// <summary>
         /// Read a value from the local storage, falling back to a default value if it doesn't exist
         /// </summary>
-        public static T Get<T>(string key, T defaultValue)
-        {
-            return Get<T>(key) ?? defaultValue;
-        }
-
-        /// <summary>
-        /// Read a value from the local storage
-        /// </summary>
-        public static T? Get<T>(string key)
+        public static T? Get<T>(string key, T? defaultValue = default)
         {
             var data = GetAll();
             
-            if (!data.ContainsKey(key)) return default;
+            if (!data.ContainsKey(key)) return defaultValue;
 
             if (typeof(T) == typeof(string)) return (T)(object)data[key];
 

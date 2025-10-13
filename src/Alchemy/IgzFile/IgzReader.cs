@@ -93,8 +93,7 @@ namespace Alchemy
                 igObject obj = CreateRootObject(typeName, globalOffset);
 
                 // Set memory pool
-                MemoryPool memoryPool = GetMemoryPool(offset);
-                obj.SetMemoryPool(memoryPool);
+                obj.MemoryPool = GetMemoryPool(offset);
                 
                 _objects.Add(globalOffset, obj);
             }
@@ -117,7 +116,7 @@ namespace Alchemy
                     igObject obj = objectList._data[i];
                     string? name = nameList._data[i].GetName();
 
-                    obj.SetObjectName(name);
+                    obj.ObjectName = name;
                 }
             }
         }
@@ -367,12 +366,12 @@ namespace Alchemy
             else if (IsFixupActive("RNEX", position, removeFixup))
             {
                 objectRef = (igObject)CreateEmptyInstance(type);
-                objectRef.SetReference(_fixups.objectReferences[(int)value]);
+                objectRef.Reference = _fixups.objectReferences[(int)value];
             }
             else if (IsFixupActive("REXT", position, removeFixup))
             {
                 objectRef = (igObject)CreateEmptyInstance(type);
-                objectRef.SetReference(_fixups.exidReferences[(int)value]);
+                objectRef.Reference = _fixups.exidReferences[(int)value];
             }
 
             return objectRef;

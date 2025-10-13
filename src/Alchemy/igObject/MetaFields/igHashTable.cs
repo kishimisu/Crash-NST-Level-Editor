@@ -48,7 +48,7 @@ namespace Alchemy
                 K key = keys[i];
 
                 if (key == null || key.Equals(GetInvalidKey())) continue;
-                if (key is igHandleMetaField handle && !handle.HasData()) continue;
+                if (key is igHandleMetaField handle && handle.Reference == null) continue;
                 if (key is igKerningPairMetaField kp && kp._first == 0 && kp._second == 0) continue;
                 if (key is igEnumMetaField em && (uint)em._value == 0xFAFAFAFA) continue;
                 if (key is DotNetDataMetaField dm && dm._elementType == 1073741825) continue;
@@ -137,6 +137,26 @@ namespace Alchemy
             }
 
             throw new Exception($"Failed to find empty slot for key {key}");
+        }
+
+        public override void RemoveChild(igObject child)
+        {
+            foreach ((K key, V value) in Dict.ToList())
+            {
+                if ((key is igObject k && k == child) || (value is igObject v && v == child) ||
+                    (key is igHandleMetaField kh && kh.Reference != null && kh.Reference.objectName == child.ObjectName) ||
+                    (value is igHandleMetaField vh && vh.Reference != null && vh.Reference.objectName == child.ObjectName))
+                {
+                    int index = _keys.IndexOf(key);
+
+                    _keys[index] = GetInvalidKey();
+                    _values[index] = default;
+
+                    Dict.Remove(key);
+                }
+            }
+
+            _hashItemCount = Dict.Count;
         }
     }
 }

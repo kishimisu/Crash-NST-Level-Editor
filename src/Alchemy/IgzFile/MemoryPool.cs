@@ -17,11 +17,11 @@ namespace Alchemy
             this.alignment = alignment;
         }
 
-        public static readonly MemoryPool Default = new MemoryPool // TODO: change to ("Default", 0, 0) for prod
+        public static readonly MemoryPool Default = new MemoryPool
         {
-            name = "<ERROR>",
-            identifier = -1,
-            alignment = -1 
+            name = "Default",
+            identifier = 0,
+            alignment = 0 
         };
 
         public ChunkInfo ToChunkInfo(int offset, int size)

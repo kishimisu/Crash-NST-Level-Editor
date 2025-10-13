@@ -9,6 +9,7 @@ namespace NST
     {
         void Update(double? deltaTime = null);
         void SetFocus(bool focused);
+        void LookAt(Vector3 target) {}
         bool Focused();
     }
 

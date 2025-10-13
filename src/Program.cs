@@ -31,7 +31,7 @@ class Program
         // Find crate entities
         foreach (CEntity entity in entities)
         {
-            string? objectName = entity.GetObjectName();
+            string? objectName = entity.ObjectName;
 
             if (objectName == null || !objectName.Contains("Crate_") || objectName.EndsWith("_gen")) {
                 continue;

@@ -176,7 +176,7 @@ namespace THREE
                 var selectedObject = this.selectedObjects[i];
                 selectedObject.Traverse(obj =>
                 {
-                    if (obj is Mesh)
+                    if (obj is Mesh || obj is Line)
                     {
                         if (bVisible)
                         {
@@ -205,7 +205,7 @@ namespace THREE
                 var selectedObject = this.selectedObjects[i];
                 selectedObject.Traverse(obj =>
                 {
-                    if (obj is Mesh) selectedMeshes.Add(obj);
+                    if (obj is Mesh || obj is Line) selectedMeshes.Add(obj);
                 });
             }
 

@@ -88,7 +88,7 @@ namespace NST
         /// </summary>
         public virtual void Render(double? deltaTime = null)
         {
-            if (!_alwaysRender && !_firstFrame && !_controls.Focused()) return;
+            // if (!_alwaysRender && !_firstFrame && !_controls.Focused()) return;
 
             SilkWindow.instance.SetViewport(0, 0, _width, _height);
 

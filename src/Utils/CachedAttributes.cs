@@ -72,7 +72,7 @@ namespace Alchemy
         public int GetSize() => _attr.size;
         public int GetAlignment() => _attr.alignment;
         public List<CachedFieldAttr> GetFields() => _fields;
-        public CachedFieldAttr? GetField(string name) => _fields.FirstOrDefault(f => f.GetName() == name);
+        public CachedFieldAttr? GetField(string name) => _fields.Find(f => f.GetName() == name);
 
         public bool IsBaseMetaObject() => _attr.metaObject;
         public Type? GetBaseMetaObjectType() => _attr.baseMetaType;

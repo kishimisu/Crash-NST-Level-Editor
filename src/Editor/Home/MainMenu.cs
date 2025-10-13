@@ -8,7 +8,7 @@ namespace NST
     /// </summary>
     public class MainMenu
     {
-        private ModManager _modManager = new ModManager();
+        public ModManager ModManager { get; } = new ModManager();
 
         public bool IsOpen = true;
 
@@ -18,7 +18,7 @@ namespace NST
         public void Initialize()
         {
             // Load saved mods
-            _modManager.Initialize();
+            ModManager.Initialize();
 
             // Remove recent files that don't exist anymore
             foreach (string path in LocalStorage.RecentFiles.ToList())
@@ -52,7 +52,7 @@ namespace NST
 
                 ImGui.NextColumn();
 
-                _modManager.Render();
+                ModManager.Render();
             }
 
             ImGui.End();

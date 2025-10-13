@@ -39,12 +39,12 @@ namespace Alchemy
         private uint _hash;
 
         private byte[] _data;
-        private CompressionType _compressionType;
+        private CompressionType _compressionType = CompressionType.Uncompressed;
         private int _uncompressedSize;
 
         private BlockData[] _blocksData = [];
         private int _blockIndex;
-        private int _sectorSize;
+        private int _sectorSize = IgArchive.SECTOR_SIZE;
 
         public string GetFullPath() => ROOT_DIR + _path;
         public string GetPath() => _path;
@@ -66,6 +66,12 @@ namespace Alchemy
         /// Uncompress and convert this file to a Havok file
         /// </summary>
         public HavokFile ToHavokFile() => new HavokFile(_path, Uncompress());
+
+        public IgArchiveFile(string path)
+        {
+            _path = path;
+            _hash = NamespaceUtils.ComputeHash(path);
+        }
 
         /// <summary>
         /// Constructor used when parsing an IgArchive

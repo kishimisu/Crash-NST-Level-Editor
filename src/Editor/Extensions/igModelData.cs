@@ -61,7 +61,7 @@ namespace NST
 
             if (vertexBuffer == null || indexBuffer == null) return null;
 
-            NamedReference? materialReference = drawcall._materialHandle.GetReference();
+            NamedReference? materialReference = drawcall._materialHandle.Reference;
 
             DrawCallData data = new DrawCallData() { 
                 index = drawCallIndex, 

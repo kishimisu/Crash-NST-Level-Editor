@@ -36,11 +36,11 @@ namespace NST
                 {
                     if (e is not igGraphicsTexture attr) return null;
                     
-                    string? fileName = attr._imageHandle.GetNamespaceName();
+                    string? fileName = attr._imageHandle.Reference?.namespaceName;
                     
                     if (fileName?.Contains(formattedPath) == true) // || fileName?.StartsWith("CavityBakedColorMap") == true)
                     {
-                        return attr._imageHandle.GetReference();
+                        return attr._imageHandle.Reference;
                     }
 
                     return null;

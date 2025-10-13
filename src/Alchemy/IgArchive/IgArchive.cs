@@ -223,6 +223,119 @@ namespace Alchemy
         }
 
         /// <summary>
+        /// Rebuild the archive's package file by adding new files
+        /// </summary>
+        public void RebuildPackageFile(List<IgArchiveFile> files)
+        {
+            List<string> fileTypeOrder = [
+                "script", "sound_sample", "sound_bank", "lang_file", "loose", "shader",
+                "texture", "material_instances", "font", "vsc", "igx_file", 
+                "havokrigidbody", "model", "asset_behavior", 
+                "havokanimdb", "hkb_behavior", "hkc_character", 
+                "behavior", "sky_model", "effect", "actorskin", 
+                "sound_stream", "character_events", "graphdata_behavior", 
+                "character_data", "gui_project",
+                "navmesh", "igx_entities", "pkg"
+            ];
+
+            IgArchiveFile? packageFile = FindPackageFile();
+
+            if (packageFile == null)
+            {
+                return;
+            }
+
+            IgzFile packageIgz = packageFile.ToIgzFile();
+
+            var chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>()!;
+            bool needsRebuild = false;
+
+            List<ChunkFileInfoMetaField> existingFiles = chunkInfo._required._data.ToList();
+            List<ChunkFileInfoMetaField> newFiles = [];
+
+            foreach (IgArchiveFile file in files)
+            {
+                if (file == packageFile) continue;
+
+                string filePath = file.GetPath().ToLower();
+
+                ChunkFileInfoMetaField? chunk = existingFiles.FirstOrDefault(x => x._name == filePath);
+
+                if (chunk == null)
+                {
+                    needsRebuild = true;
+                    var newChunk = new ChunkFileInfoMetaField
+                    {
+                        _name = filePath,
+                        _type = GetFileType(filePath)
+                    };
+                    newFiles.Add(newChunk);
+                    Console.WriteLine($"[Package file] Added {newChunk._name} ({newChunk._type})");
+                }
+                else
+                {
+                    existingFiles.Remove(chunk);
+                    newFiles.Add(chunk);
+                }
+            }
+
+            existingFiles.RemoveAll(e => e._type == "pkg");
+
+            if (existingFiles.Count > 0)
+            {
+                needsRebuild = true;
+                existingFiles.ForEach(e => Console.WriteLine("[Package file] Removed " + e._name));
+            }
+
+            if (needsRebuild) 
+            {
+                newFiles.Sort((a, b) => {
+                    int comp = fileTypeOrder.IndexOf(a._type!) - fileTypeOrder.IndexOf(b._type!);
+                    if (comp != 0) return comp;
+                    return a._name!.CompareTo(b._name!);
+                });
+
+                chunkInfo._required._data.Set(newFiles);
+
+                packageFile.SetData(packageIgz.Save());
+            }
+        }
+
+        private static string GetFileType(string filePath)
+        {
+            if (filePath.EndsWith(".hkx"))                 return "havokrigidbody";
+            if (filePath.EndsWith(".hka"))                 return "havokanimdb";
+            if (filePath.EndsWith(".hkb"))                 return "hkb_behavior";
+            if (filePath.EndsWith(".hkc"))                 return "hkc_character";
+            if (filePath.EndsWith(".hkp"))                 return "behavior";
+            if (filePath.EndsWith(".lng"))                 return "lang_file";
+            if (filePath.EndsWith(".mapnav"))              return "navmesh";
+
+            if (filePath.StartsWith("maps/"))              return "igx_entities";
+            if (filePath.StartsWith("scripts/"))           return "script";
+            if (filePath.StartsWith("sound_samples/"))     return "sound_sample";
+            if (filePath.StartsWith("sound_streams/"))     return "sound_stream";
+            if (filePath.StartsWith("sounds/banks/"))      return "sound_bank";
+            if (filePath.StartsWith("textures/"))          return "texture";
+            if (filePath.StartsWith("loosetextures/"))     return "texture";
+            if (filePath.StartsWith("materialinstances/")) return "material_instances";
+            if (filePath.StartsWith("vsc/"))               return "vsc";
+            if (filePath.StartsWith("models/"))            return "model";
+            if (filePath.StartsWith("behaviors/"))         return "asset_behavior";
+            if (filePath.StartsWith("sky/"))               return "sky_model";
+            if (filePath.StartsWith("vfx/"))               return "effect";
+            if (filePath.StartsWith("actors/"))            return "actorskin";
+            if (filePath.StartsWith("animation_events/"))  return "character_events";
+            if (filePath.StartsWith("behavior_events/"))   return "character_events";
+            if (filePath.StartsWith("behaviors/"))         return "graphdata_behavior";
+            if (filePath.StartsWith("packages/"))          return "pkg";
+
+            Console.WriteLine("Could not find file type for " + filePath);
+
+            return "igx_file"; // anims/ loosedata/ vfxfonts/ ?
+        }
+
+        /// <summary>
         /// Clone a file in the archive. 
         /// Will generate the file name using the following pattern until the file has a unique path: name_1, name_2, ...
         /// </summary>

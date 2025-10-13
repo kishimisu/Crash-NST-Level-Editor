@@ -95,7 +95,7 @@ namespace NST
         /// <param name="keyboardFocus">Whether to set the current keyboard focus to this node</param>
         /// <param name="expandParents">Whether to expand the parents of the selected node</param>
         /// <param name="clearNodePath">Clearing the node path will force to select the first appearance of the node in the tree</param>
-        public void SetSelectedNode(T? node, bool keyboardFocus = true, bool expandParents = true, bool clearNodePath = true)
+        public void SetSelectedNode(T? node, bool keyboardFocus = true, bool expandParents = true, bool clearNodePath = true, bool expandNode = false)
         {
             SelectedNode = node;
             SelectedNodePath = clearNodePath ? "" : node?.NodePath ?? "";
@@ -105,6 +105,11 @@ namespace NST
             }
 
             node.NextFocus = keyboardFocus ? NextFocusState.FocusAndKeyboard : NextFocusState.Focus;
+
+            if (expandNode)
+            {
+                node.NextOpen = NextOpenState.Open;
+            }
 
             if (expandParents)
             {

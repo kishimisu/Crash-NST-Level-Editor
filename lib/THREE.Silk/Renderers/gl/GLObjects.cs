@@ -73,9 +73,14 @@ namespace THREE
             //    UpdateList[bufferGeometry.Id] = frame;
             //}
 
-            if (object3D is InstancedMesh)
+            if (object3D is InstancedMesh instancedMesh)
             {
-                Attributes.Update<float>((object3D as InstancedMesh).InstanceMatrix, GLEnum.ArrayBuffer);
+                Attributes.Update<float>(instancedMesh.InstanceMatrix, GLEnum.ArrayBuffer);
+
+                if (instancedMesh.InstanceColor != null)
+                {
+                    Attributes.Update<float>(instancedMesh.InstanceColor, GLEnum.ArrayBuffer);
+                }
             }
 
             return bufferGeometry as BufferGeometry;
