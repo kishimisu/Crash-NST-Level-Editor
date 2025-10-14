@@ -32,7 +32,7 @@ namespace NST
         /// <param name="openOnSingleChild">Automatically opens the node if it has only one child</param>
         public void Render(IgArchiveRenderer renderer, IgArchiveTreeView tree, bool defaultOpen = false)
         {
-            defaultOpen = defaultOpen || NodePath.StartsWith("maps/");
+            defaultOpen = defaultOpen || NodePath == "maps/" || (NodePath.StartsWith("maps/") && Children.Count < 3);
 
             // Setup node
             ImGuiTreeNodeFlags? flags = SetupNode(tree, false, defaultOpen, () => OnFocus(renderer), ImGuiTreeNodeFlags.SpanFullWidth);

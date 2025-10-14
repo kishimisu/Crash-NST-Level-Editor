@@ -259,7 +259,7 @@ namespace Alchemy
 
                 string filePath = file.GetPath().ToLower();
 
-                ChunkFileInfoMetaField? chunk = existingFiles.FirstOrDefault(x => x._name == filePath);
+                ChunkFileInfoMetaField? chunk = existingFiles.Find(x => x._name == filePath);
 
                 if (chunk == null)
                 {
@@ -279,7 +279,14 @@ namespace Alchemy
                 }
             }
 
-            existingFiles.RemoveAll(e => e._type == "pkg");
+            foreach (ChunkFileInfoMetaField file in existingFiles.ToList())
+            {
+                if (file._type == "pkg")
+                {
+                    existingFiles.Remove(file);
+                    newFiles.Add(file);
+                }
+            }
 
             if (existingFiles.Count > 0)
             {

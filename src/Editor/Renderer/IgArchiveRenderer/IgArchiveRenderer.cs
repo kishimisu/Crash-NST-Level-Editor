@@ -35,6 +35,7 @@ namespace NST
         public IgArchiveRenderer(IgArchive archive)
         {
             Archive = archive;
+            _uuid = ImGuiUtils.Uuid();
             Setup();
         }
 
@@ -44,7 +45,6 @@ namespace NST
 
             _treeView = new IgArchiveTreeView(this);
             
-            _uuid = ImGuiUtils.Uuid();
             _collisionData = StaticCollisionsUtils.GetCollisionData(Archive);
             _compressOnSave = LocalStorage.Get("compress_on_save_" + Archive.GetPath(), true);
             _hasBackup = File.Exists(Archive.GetPath() + ".backup");
@@ -126,6 +126,8 @@ namespace NST
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
                     
+                    // ImGui.Text(FileManager.ToString());
+
                     // Render tree view
                     _treeView.Render();
 
@@ -204,6 +206,8 @@ namespace NST
 
         private void RestoreBackup()
         {
+            if (!_hasBackup) return;
+            
             File.Copy(Archive.GetPath() + ".backup", Archive.GetPath(), true);
 
             Archive = IgArchive.Open(Archive.GetPath());
@@ -673,6 +677,25 @@ namespace NST
             if (ImGui.Selectable("Duplicate")) DuplicateFile(file);
             if (ImGui.Selectable("Extract"))   ExtractFile(file);
             if (ImGui.Selectable("Delete"))    DeleteFile(file);
+        }
+
+        public T Clone<T>(T sourceObject, IgArchive sourceArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null) where T : igObject
+        {
+            List<IgArchiveFile> prevFiles = Archive.GetFiles().ToList();
+
+            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, clones);
+
+            foreach (IgArchiveFile file in Archive.GetFiles().ToList().Except(prevFiles))
+            {
+                if (!file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/"))
+                {
+                    _includeInPackageFile.Add(file);
+                }
+
+                _treeView.AddFile(file);
+            }
+
+            return clone;
         }
     }
 }

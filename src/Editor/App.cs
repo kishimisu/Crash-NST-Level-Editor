@@ -49,7 +49,7 @@ namespace NST
             // Render level explorers
             foreach (LevelExplorer viewer in _editors.ToList())
             {
-                if (!viewer.IsOpen())
+                if (!viewer.IsOpen)
                 {
                     _editors.Remove(viewer);
                 }
@@ -139,7 +139,7 @@ namespace NST
         {
             _archives.Remove(archive);
 
-            LevelExplorer? explorer = _editors.Find(e => e._archiveRenderer == archive);
+            LevelExplorer? explorer = _editors.Find(e => e.ArchiveRenderer == archive);
 
             if (explorer != null)
             {
@@ -245,9 +245,9 @@ namespace NST
         {
             foreach (LevelExplorer viewer in _editors)
             {
-                if (viewer.GetArchive() == archiveRenderer.Archive)
+                if (viewer.ArchiveRenderer == archiveRenderer)
                 {
-                    if (!viewer.IsOpen()) viewer.SetOpen();
+                    viewer.IsOpen = true;
                     ImGui.SetWindowFocus(viewer.GetWindowName());
                     return;
                 }
@@ -260,7 +260,7 @@ namespace NST
         {
             foreach (LevelExplorer explorer in _editors)
             {
-                if (explorer.GetArchive().GetPath() == archive.GetPath())
+                if (explorer.Archive.GetPath() == archive.GetPath())
                 {
                     explorer.FocusObject(obj);
                     ImGui.SetWindowFocus(explorer.GetWindowName());

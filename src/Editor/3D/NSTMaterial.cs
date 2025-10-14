@@ -43,6 +43,8 @@ namespace NST
 
         public THREE.Vector4 color = new THREE.Vector4(1, 1, 1, 1);
 
+        public static float DefaultShininess = 5.0f;
+
         private static readonly Dictionary<EIG_GFX_BLENDING_FUNCTION, int> _BLENDING_FACTOR_MAP = new()
         {
             { EIG_GFX_BLENDING_FUNCTION.DESTINATION_ALPHA, THREE.Constants.DstAlphaFactor },
@@ -226,7 +228,7 @@ namespace NST
         public THREE.Material CreateThreeMaterial(int drawCallIndex = 0)
         {
             if (type == null) // Drawcall has no material
-                return new THREE.MeshPhongMaterial() { Shininess = 0 };
+                return new THREE.MeshPhongMaterial() { Shininess = DefaultShininess };
 
             THREE.Material material = type.IsAssignableTo(typeof(CUnlitMaterial)) || type == typeof(CCloudParticleSortedMaterial)
                 ? new THREE.MeshBasicMaterial()
@@ -263,7 +265,7 @@ namespace NST
 
             material.Metalness = 0;
             material.Roughness = 0;
-            material.Shininess = 0;
+            material.Shininess = DefaultShininess;
             material.Color = new THREE.Color(color.X, color.Y, color.Z);
 
             if (type.IsAssignableTo(typeof(CBlendedDecalMaterial))) 

@@ -273,9 +273,8 @@ namespace NST
             if (targetNode == null)
             {
                 file = file.Clone();
-                AddFile(file);
 
-                Renderer.Archive.AddFile(file);
+                Renderer.AddFile(file);
                 Renderer.SetFileUpdated(file, isNewFile: true);
             }
             // Drag from another archive to a folder (copy file)
@@ -284,9 +283,8 @@ namespace NST
                 string newPath = targetNode.NodePath + file.GetName();
                 
                 file = file.Clone(newPath);
-                AddFile(file);
 
-                Renderer.Archive.AddFile(file);
+                Renderer.AddFile(file);
                 Renderer.SetFileUpdated(file, isNewFile: true);
             }
             // Drag from/to the same archive (move file)

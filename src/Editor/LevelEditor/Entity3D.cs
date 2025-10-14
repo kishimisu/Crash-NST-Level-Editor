@@ -84,6 +84,16 @@ namespace NST
 
             group.Traverse(e => e.UserData["entity"] = this);
 
+            if (IsTemplate || IsHidden)
+            {
+                THREE.Color color = new THREE.Color(IsTemplate ? 0xffff00 : 0xff00ff);
+                group.Traverse(e =>
+                {
+                    if (e.Material != null) 
+                        e.Material = new THREE.MeshPhongMaterial() { Shininess = NSTMaterial.DefaultShininess, Color = color };
+                });
+            }
+
             foreach (THREE.Object3D child in CreateChildrenObject3D(selected))
             {
                 group.Attach(child);

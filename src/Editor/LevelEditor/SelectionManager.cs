@@ -44,7 +44,7 @@ namespace NST
             var newObjects = _selection.Except(previousSelection);
             var removedObjects = previousSelection.Except(_selection);
 
-            _explorer._instanceManager.RefreshInstances(newObjects.Union(removedObjects).ToList());
+            _explorer.InstanceManager.RefreshInstances(newObjects.Union(removedObjects).ToList());
 
             if (_selection.Count == 0) _gizmos.Visible = false;
         }
@@ -87,7 +87,7 @@ namespace NST
                 return;
             }
             
-            _explorer._instanceManager.ConvertToInstanced([obj]);
+            _explorer.InstanceManager.ConvertToInstanced([obj]);
 
             _selectionContainer.Remove(obj.Object3D!);
             _selection.Remove(obj);
@@ -96,11 +96,11 @@ namespace NST
 
         public void ClearSelection(bool refreshInstances = false)
         {
-            _explorer._instanceManager.ConvertToInstanced(_selection);
+            _explorer.InstanceManager.ConvertToInstanced(_selection);
 
             if (refreshInstances)
             {
-                _explorer._instanceManager.RefreshInstances(_selection);
+                _explorer.InstanceManager.RefreshInstances(_selection);
             }
 
             _selection.Clear();
@@ -118,7 +118,7 @@ namespace NST
                     controlPoint.Object._position._x = localPos.X;
                     controlPoint.Object._position._y = localPos.Y;
                     controlPoint.Object._position._z = localPos.Z;
-                    _explorer._instanceManager.RefreshInstances([controlPoint._parent._parent]);
+                    _explorer.InstanceManager.RefreshInstances([controlPoint._parent._parent]);
                     fileManager.GetOrCreateRenderer(controlPoint.ArchiveFile, archiveRenderer).SetUpdated(controlPoint.Object);
                     continue;
                 }
@@ -181,7 +181,7 @@ namespace NST
 
                 if (entity3D.IsPrefabInstance)
                 {
-                    _explorer._instanceManager.RefreshInstances(entity3D.Children.Where(e => e is NSTEntity entity && entity.IsPrefabChild).ToList());
+                    _explorer.InstanceManager.RefreshInstances(entity3D.Children.Where(e => e is NSTEntity entity && entity.IsPrefabChild).ToList());
                 }
             }
         }
@@ -192,9 +192,9 @@ namespace NST
             _copyExplorer = explorer;
         }
 
-        public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint)
+        public NSTObject? Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint)
         {
-            if (_copyPaste.Count == 0) return;
+            if (_copyPaste.Count == 0) return null;
 
             bool copyToSameFile = (_explorer == _copyExplorer);
 
@@ -208,7 +208,7 @@ namespace NST
 
             foreach ((IgArchiveFile file, List<NSTEntity> entities) in instances)
             {
-                IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer._fileManager.GetIgz(file)!;
+                IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
                 
                 IgzFile? dstIgz = null;
                 IgArchiveFile? dstFile = null;
@@ -262,7 +262,7 @@ namespace NST
                             foreach (NSTEntity prefabChild in entity.PrefabTemplate!.PrefabTemplateInstances)
                             {
                                 NSTEntity newPrefabChild = clone.CloneAsPrefabChild(prefabChild.ParentPrefabInstance!);
-                                _explorer._instanceManager.Register(newPrefabChild);
+                                _explorer.InstanceManager.Register(newPrefabChild);
                                 newEntities.Add(prefabChild, newPrefabChild);
                             }
                         }
@@ -271,7 +271,7 @@ namespace NST
                             newEntities.Add(entity, clone);
                         }
 
-                        _explorer._instanceManager.Register(clone);
+                        _explorer.InstanceManager.Register(clone);
 
                         renderer.SetEntityUpdated(file, entityClone, clone.CollisionShapeIndex);
 
@@ -284,13 +284,13 @@ namespace NST
                     {
                         hknpShapeInstance? shape = _copyExplorer.FindHavokShape(entity);
 
-                        igEntity entityClone = IgzFile.Clone(entity.Object, _copyExplorer.GetArchive(), renderer.Archive, srcIgz, dstIgz, clones);
+                        igEntity entityClone = renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones);
 
                         NSTEntity clone = entity.Clone(entityClone, dstFile);
 
                         newEntities.Add(entity, clone);
 
-                        _explorer._instanceManager.Register(clone);
+                        _explorer.InstanceManager.Register(clone);
 
                         renderer.SetEntityUpdated(dstFile, entityClone, shapeInstance: shape);
 
@@ -304,7 +304,7 @@ namespace NST
                 dstFile.SetData(dstIgz.Save());
             }
 
-            if (newEntities.Count == 0) return;
+            if (newEntities.Count == 0) return null;
 
             foreach ((NSTEntity original, NSTEntity clone) in newEntities)
             {
@@ -340,8 +340,8 @@ namespace NST
                     NSTEntity newPrefabChildTemplate = originalChild.Clone(cloneChild, clone.ArchiveFile);
                     NSTEntity childInstance = newPrefabChildTemplate.CloneAsPrefabChild(clone);
 
-                    _explorer._instanceManager.Register(newPrefabChildTemplate);
-                    _explorer._instanceManager.Register(childInstance);
+                    _explorer.InstanceManager.Register(newPrefabChildTemplate);
+                    _explorer.InstanceManager.Register(childInstance);
 
                     Console.WriteLine("[Paste][Prefab] Created prefab child entity: " + childInstance.Object);
                 }
@@ -356,8 +356,7 @@ namespace NST
 
             ApplyChanges(fileManager, renderer);
 
-            _explorer._treeView.RebuildTree(_explorer._instanceManager.allEntities.Cast<NSTObject>().ToList());
-            _explorer._treeView.SelectObject(newEntities.Values.ToList()[0]);
+            return newEntities.Values.ToList()[0];
         }
     }
 }

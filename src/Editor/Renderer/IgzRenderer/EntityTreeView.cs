@@ -149,7 +149,7 @@ namespace NST
             }
             else if (clickedOpen)
             {
-                IgzRenderer? igzRenderer = tree.Explorer._fileManager.GetOrCreateRenderer(Object.ToReference(), tree.Explorer._archiveRenderer);
+                IgzRenderer? igzRenderer = tree.Explorer.FileManager.GetOrCreateRenderer(Object.ToReference(), tree.Explorer.ArchiveRenderer);
 
                 if (igzRenderer != null)
                 {

@@ -5,17 +5,17 @@ namespace NST
 {
     public class InstanceManager
     {
-        NSTModel? _model = null;
+        public List<NSTEntity> Entities { get; } = [];
 
-        public List<NSTEntity> entities = [];
-        public THREE.Object3D group = new THREE.Group();
+        private NSTModel? _model = null;
+        private THREE.Object3D group = new THREE.Group();
 
         public InstanceManager(NSTModel? model = null) => _model = model;
 
         public void Add(NSTEntity entity)
         {
             entity.InstanceManager = this;
-            entities.Add(entity);
+            Entities.Add(entity);
         }
 
         public void ConvertToInstanced(THREE.Object3D scene, LevelExplorer.DebugMode debugMode)
@@ -24,7 +24,7 @@ namespace NST
 
             scene.Remove(group);
 
-            if (entities.Count == 0) return;
+            if (Entities.Count == 0) return;
 
             group = CreateInstancedGroup(debugMode);
 
@@ -36,7 +36,7 @@ namespace NST
 
                 if (debugMode != LevelExplorer.DebugMode.None && e.Material != null)
                 {
-                    e.Material = new THREE.MeshPhongMaterial() { Shininess = 0 };
+                    e.Material = new THREE.MeshPhongMaterial() { Shininess = NSTMaterial.DefaultShininess };
                 }
             });
 
@@ -44,7 +44,7 @@ namespace NST
 
             SetLayer();
 
-            entities.ForEach(e => 
+            Entities.ForEach(e => 
             {
                 if (e.IsSelected) return;
 
@@ -57,7 +57,7 @@ namespace NST
 
         private THREE.Group CreateInstancedGroup(LevelExplorer.DebugMode debugMode)
         {
-            var instances = entities.Where(e => !e.IsSelected);
+            var instances = Entities.Where(e => !e.IsSelected);
 
             THREE.Color highlightColor = new THREE.Color(0xff5141);
             THREE.Color defaultColor = new THREE.Color(0xb6b6b6);
@@ -69,6 +69,7 @@ namespace NST
                 LevelExplorer.DebugMode.Prefabs => instances.Select(e => e.IsPrefabChild ? highlightColor : defaultColor),
                 LevelExplorer.DebugMode.Collisions => instances.Select(e => e.CollisionShapeIndex != -1 ? highlightColor : defaultColor),
                 LevelExplorer.DebugMode.GameObjects => instances.Select(e => e.Object.GetType() != typeof(igEntity) ? highlightColor : defaultColor),
+                LevelExplorer.DebugMode.Instanced => instances.Select(e => highlightColor),
 
                 _ => _model == null 
                     ? instances.Select(e => new THREE.Color((int)e.Object.GetType().GetUniqueColor()))
@@ -90,7 +91,7 @@ namespace NST
         {
             string? modelName = _model?.Name.ToLower();
 
-            if (entities.Count > 0 && entities[0].Object is CScriptTriggerEntity)
+            if (Entities.Count > 0 && Entities[0].Object is CScriptTriggerEntity)
             {
                 group.Layers.Set((int)LevelExplorer.CameraLayer.Triggers);
                 group.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Triggers));
@@ -115,40 +116,23 @@ namespace NST
 
     public class InstancedMeshManager
     {
-        public THREE.Group _rootObject = new THREE.Group();
-        public List<NSTEntity> allEntities = [];
+        public List<NSTEntity> AllEntities { get; } = [];
+        public THREE.Group RootObject { get; } = new THREE.Group();
 
-        LevelExplorer _explorer;
-        Dictionary<NSTModel, InstanceManager> _instances = [];
-        InstanceManager _entitiesWithoutModel = new InstanceManager();
-        InstanceManager _scriptTriggers = new InstanceManager();
+        private LevelExplorer _explorer;
+        private Dictionary<NSTModel, InstanceManager> _instances = [];
+        private InstanceManager _entitiesWithoutModel = new InstanceManager();
+        private InstanceManager _scriptTriggers = new InstanceManager();
 
         public InstancedMeshManager(LevelExplorer explorer, THREE.Scene scene)
         {
             _explorer = explorer;
-            scene.Add(_rootObject);
-        }
-
-        public NSTObject? Find(igObject obj) => FindRecursive(obj, allEntities.Cast<NSTObject>().ToHashSet());
-        private NSTObject? FindRecursive(igObject obj, HashSet<NSTObject> objects)
-        {
-            foreach (NSTObject entity in objects)
-            {
-                if (entity.GetObject() == obj) return entity;
-
-                foreach (NSTObject child in entity.Children)
-                {
-                    NSTObject? result = FindRecursive(obj, child.Children);
-                    if (result != null) return result;
-                }
-            }
-            
-            return null;
+            scene.Add(RootObject);
         }
 
         public void Register(NSTEntity entity, List<NSTEntity>? entities = null)
         {            
-            allEntities.Add(entity);
+            AllEntities.Add(entity);
 
             if (!entity.IsSpawned) return;
 
@@ -173,8 +157,8 @@ namespace NST
             foreach (igEntity child in entity.GetPrefabChildren())
             {
                 NSTEntity? prefabEntity = entities == null 
-                    ? allEntities.Find(e => e.Object == child && !e.IsPrefabChild)
-                    : allEntities.Union(entities).FirstOrDefault(e => e.Object == child && !e.IsPrefabChild);
+                    ? AllEntities.Find(e => e.Object == child && !e.IsPrefabChild)
+                    : AllEntities.Union(entities).FirstOrDefault(e => e.Object == child && !e.IsPrefabChild);
 
                 if (prefabEntity == null)
                 {
@@ -184,7 +168,7 @@ namespace NST
                 else if (prefabEntity.InstanceManager != null)
                 {
                     Console.WriteLine("[Prefab] Remove original prefab child template: " + child);
-                    prefabEntity.InstanceManager.entities.Remove(prefabEntity);
+                    prefabEntity.InstanceManager.Entities.Remove(prefabEntity);
                     prefabEntity.InstanceManager = null;
                 }
 
@@ -227,7 +211,7 @@ namespace NST
                 Register(entity, entities);
             }
 
-            RefreshInstances(allEntities.Cast<NSTObject>().ToList());
+            RefreshInstances(AllEntities.Cast<NSTObject>().ToList());
         }
 
         public List<NSTObject> SelectFromRaycast(THREE.Intersection hit)
@@ -242,7 +226,7 @@ namespace NST
             else if (hit.object3D.UserData.ContainsKey("instance"))
             {
                 InstanceManager instance = (InstanceManager)hit.object3D.UserData["instance"];
-                NSTEntity entity = instance.entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
+                NSTEntity entity = instance.Entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
 
                 Console.WriteLine("Hit instance: " + entity.Object.ObjectName);
                 return Select(entity);
@@ -261,7 +245,7 @@ namespace NST
 
         public List<NSTObject> Select(NSTObject obj, bool fromTree = false)
         {
-            List<NSTEntity> selection = _explorer._selectionManager._selection.OfType<NSTEntity>().ToList();
+            List<NSTEntity> selection = _explorer.SelectionManager._selection.OfType<NSTEntity>().ToList();
             
             bool shiftPressed = ImGui.IsKeyDown(ImGuiKey.LeftShift);
             bool selectionEmpty = selection.Count == 0;
@@ -325,7 +309,7 @@ namespace NST
         {
             List<NSTEntity> prefabs = [ prefabInstance ];
 
-            foreach (NSTEntity entity in allEntities)
+            foreach (NSTEntity entity in AllEntities)
             {
                 if (entity.IsPrefabChild && entity.ParentPrefabInstance == prefabInstance && entity.IsSpawned)
                 {
@@ -340,7 +324,7 @@ namespace NST
         {
             List<NSTEntity> prefabs = [ prefabChild ];
 
-            foreach (NSTEntity entity in allEntities)
+            foreach (NSTEntity entity in AllEntities)
             {
                 if (entity != prefabChild && entity.IsPrefabChild && entity.Object == prefabChild.Object)
                 {
@@ -385,14 +369,31 @@ namespace NST
                 }
                 else if (!entity.IsSelected)
                 {
-                    _rootObject.Add(entity.CreateObject3D());
+                    RootObject.Add(entity.CreateObject3D());
                 }
             }
 
             foreach (InstanceManager instance in instances)
             {
-                instance.ConvertToInstanced(_rootObject, _explorer.DebugRenderMode);
+                instance.ConvertToInstanced(RootObject, _explorer.DebugRenderMode);
             }
+        }
+
+        public NSTObject? Find(igObject obj) => FindRecursive(obj, AllEntities.Cast<NSTObject>().ToHashSet());
+        private NSTObject? FindRecursive(igObject obj, HashSet<NSTObject> objects)
+        {
+            foreach (NSTObject entity in objects)
+            {
+                if (entity.GetObject() == obj) return entity;
+
+                foreach (NSTObject child in entity.Children)
+                {
+                    NSTObject? result = FindRecursive(obj, child.Children);
+                    if (result != null) return result;
+                }
+            }
+            
+            return null;
         }
     }
 }

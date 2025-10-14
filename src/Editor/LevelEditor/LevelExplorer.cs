@@ -7,29 +7,28 @@ namespace NST
 {
     public class LevelExplorer : ThreeSceneRenderer
     {
-        static Dictionary<string, NSTModel> _cachedModels = [];
-        static Dictionary<NamedReference, NSTMaterial> _cachedMaterials = [];
+        private static Dictionary<string, NSTModel> _cachedModels = [];
+        private static Dictionary<NamedReference, NSTMaterial> _cachedMaterials = [];
 
-        IgArchive _archive;
-        public IgArchiveRenderer _archiveRenderer;
-        public ActiveFileManager _fileManager;
+        public IgArchiveRenderer ArchiveRenderer { get; private set; }
+        public IgArchive Archive => ArchiveRenderer.Archive;
 
-        public EntityTreeView _treeView;
-        public InstancedMeshManager _instanceManager;
-        public SelectionManager _selectionManager;
-        THREE.Silk.TransformControls _gizmos;
-        System.Numerics.Vector4 _renderBounds = new System.Numerics.Vector4();
+        public InstancedMeshManager InstanceManager { get; private set; }
+        public SelectionManager SelectionManager { get; private set; }
+        public ActiveFileManager FileManager => ArchiveRenderer.FileManager;
 
-        ProgressManager _progressManager = new ProgressManager();
-        Task _initializationTask;
+        private EntityTreeView _treeView;
+        private THREE.Silk.TransformControls _gizmos;
+        private System.Numerics.Vector4 _renderBounds = new System.Numerics.Vector4();
 
-        bool _isOpen = true;
-        bool _isDragging = false;
+        private Task _initializationTask;
+        private ProgressManager _progressManager = new ProgressManager();
 
         public enum CameraLayer { Default = 0, AllEntities = 1, Splines = 2, Triggers = 3, Templates = 4, Clouds = 5, Shadows = 6, Hidden = 7 };
-        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3 };
-        readonly string[] _debugModes = new string[] { "None", "Static Collisions", "Prefabs", "Game Objects" };
-        readonly Dictionary<string, bool> _layers = new()
+        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Instanced = 4 };
+        
+        private readonly string[] _debugModes = new string[] { "None", "Static Collisions", "Prefabs", "Game Objects" };
+        private readonly Dictionary<string, bool> _layers = new()
         {
             { "All Entities", true },
             { "Splines", true },
@@ -42,23 +41,20 @@ namespace NST
 
         public DebugMode DebugRenderMode => (DebugMode)_debugMode;
         private int _debugMode = 0;
+        private const bool SKIP_TEXTURES = false;
 
-        public IgArchive GetArchive() => _archive;
-        public bool IsOpen() => _isOpen;
-        public void SetOpen(bool isOpen = true) => _isOpen = isOpen;
-        public string GetWindowName() => _archive.GetName() + "##" + GetHashCode();
+        public bool IsOpen = true;
+        private bool _isDragging = false;
 
-        public const bool SKIP_TEXTURES = false;
+        public string GetWindowName() => Archive.GetName() + "##" + GetHashCode();
 
         public LevelExplorer(IgArchiveRenderer archiveRenderer) : base(useEffectComposer: true, alwaysRender: false)
         {
             InitScene();
 
-            _archiveRenderer = archiveRenderer;
-            _archive = archiveRenderer.Archive;
-            _fileManager = archiveRenderer.FileManager;
+            ArchiveRenderer = archiveRenderer;
 
-            _initializationTask = Task.Run(() => LoadEntities(_archive))
+            _initializationTask = Task.Run(() => LoadEntities(archiveRenderer.Archive))
                 .ContinueWith(t =>
                 {
                     if (t.IsFaulted && t.Exception != null)
@@ -114,16 +110,16 @@ namespace NST
 
             _gizmos._mouseUpEvent += (string obj) =>
             {
-                _selectionManager.ApplyChanges(_fileManager, _archiveRenderer);
+                SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
             };
 
             _scene.Add(_gizmos);
 
             _outlinePass.gizmos = _gizmos;
 
-            _instanceManager = new InstancedMeshManager(this, _scene);
+            InstanceManager = new InstancedMeshManager(this, _scene);
 
-            _selectionManager = new SelectionManager(_instanceManager._rootObject, _gizmos, _outlinePass, this);
+            SelectionManager = new SelectionManager(InstanceManager.RootObject, _gizmos, _outlinePass, this);
 
             SilkWindow.instance.RestoreViewport();
         }
@@ -146,13 +142,13 @@ namespace NST
             // Step 1: Find entities (+ model names)
 
             List<IgArchiveFile> mapFiles = archive.GetFiles()
-                .Where( f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") )
+                .Where( f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && ArchiveRenderer.IncludeInPackageFile(f) )
                 .ToList();
 
             for (int i = 0; i < mapFiles.Count; i++)
             {
                 IgArchiveFile mapFile = mapFiles[i];
-                IgzFile igz = _fileManager.GetIgz(mapFile) ?? mapFile.ToIgzFile();
+                IgzFile igz = FileManager.GetIgz(mapFile) ?? mapFile.ToIgzFile();
 
                 _progressManager.SetProgress("entities", (float)(i+1) / mapFiles.Count, $"Loading entity files {i + 1}/{mapFiles.Count}...");
 
@@ -162,7 +158,7 @@ namespace NST
                 {
                     if (obj is not igEntity entity) continue;
 
-                    string? modelName = entity.GetModelName(_archive);
+                    string? modelName = entity.GetModelName(archive);
 
                     NSTEntity entity3D = new NSTEntity(entity, mapFile);
 
@@ -184,7 +180,7 @@ namespace NST
 
                 if (entityAdded)
                 {
-                    _fileManager.Add(mapFile, igz, true);
+                    FileManager.Add(mapFile, igz, true);
                 }
             }
 
@@ -277,7 +273,7 @@ namespace NST
                 NamedReference textureRef = _textureToMaterials.Keys.ElementAt(i);
                 _progressManager.SetProgress("textures", (float)(i+1) / _textureToMaterials.Count, $"Loading textures {i + 1}/{_textureToMaterials.Count}...");
 
-                igImage2? texture = (igImage2?)AlchemyUtils.FindObjectInArchives(textureRef, _archive);
+                igImage2? texture = (igImage2?)AlchemyUtils.FindObjectInArchives(textureRef, archive);
                 if (texture == null)
                 {
                     Console.WriteLine($"WARNING: Failed to find texture file for {textureRef}.");
@@ -344,26 +340,26 @@ namespace NST
             // Step 8: Find collisions
             foreach (NSTEntity entity in entities.Keys)
             {
-                entity.CollisionShapeIndex = _archiveRenderer.FindCollisionShapeIndex(entity.ToReference());
+                entity.CollisionShapeIndex = ArchiveRenderer.FindCollisionShapeIndex(entity.ToReference());
             }
 
             // Step 9: Add entities to scene
-            _instanceManager.Register(_archive, entities.Keys.ToList());
+            InstanceManager.Register(archive, entities.Keys.ToList());
 
             // Step 10: Add entities to tree
-            _treeView = new EntityTreeView(this, _instanceManager.allEntities.Cast<NSTObject>().ToList());// entitiesList.Cast<NSTObject>().ToList());
+            _treeView = new EntityTreeView(this, InstanceManager.AllEntities.Cast<NSTObject>().ToList());// entitiesList.Cast<NSTObject>().ToList());
 
             Console.WriteLine($"[THREAD] Loaded {entities.Count} entities in {sw.ElapsedMilliseconds}ms");
         }
 
         public override void Render(double? deltaTime)
         {
-            if (!_isOpen) return;
+            if (!IsOpen) return;
 
             ImGui.SetNextWindowPos(new System.Numerics.Vector2(0, 0), ImGuiCond.Once, new System.Numerics.Vector2(0, 0));
             ImGui.SetNextWindowSize(new System.Numerics.Vector2(1500, 850), ImGuiCond.Once);
 
-            if (ImGui.Begin(GetWindowName(), ref _isOpen))
+            if (ImGui.Begin(GetWindowName(), ref IsOpen))
             {
                 if (!_initializationTask.IsCompleted)
                 {
@@ -418,7 +414,7 @@ namespace NST
 
             // Dictionary<HashedReference, int> collisionData = StaticCollisionsUtils.GetCollisionData(_archive);
 
-            IgArchiveFile file = _archive.FindCollisionFile(".hkx")!;
+            IgArchiveFile file = Archive.FindCollisionFile(".hkx")!;
 
             HavokFile hkx = file.ToHavokFile();
 
@@ -442,19 +438,15 @@ namespace NST
 
             if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
             {
-                _selectionManager.Copy(this);
+                SelectionManager.Copy(this);
             }   
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
             {
-                const float maxDistance = 5000.0f;
-                var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
-                float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
-                THREE.Vector3 spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
-                _selectionManager.Paste(_archiveRenderer, _fileManager, spawnPoint);
+                PasteObjects();
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
             {
-                _archiveRenderer.TrySaveArchive();
+                ArchiveRenderer.TrySaveArchive();
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
@@ -474,28 +466,48 @@ namespace NST
             }
         }
 
+        private void PasteObjects()
+        {
+            const float maxDistance = 5000.0f;
+
+            // Raycast to find spawn point
+            var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
+            float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
+            THREE.Vector3 spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+
+            // Paste selection
+            NSTObject? newObject = SelectionManager.Paste(ArchiveRenderer, FileManager, spawnPoint);
+
+            _treeView.RebuildTree(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
+
+            if (newObject != null)
+            {
+                _treeView.SelectObject(newObject);
+            }
+        }
+
         private void DeleteSelection()
         {
-            if (_selectionManager._selection.Count == 0) return;
+            if (SelectionManager._selection.Count == 0) return;
             
-            List<NSTEntity> selected = _selectionManager._selection.OfType<NSTEntity>().ToList();
+            List<NSTEntity> selected = SelectionManager._selection.OfType<NSTEntity>().ToList();
 
-            foreach (NSTEntity entity in _selectionManager._selection)
+            foreach (NSTEntity entity in SelectionManager._selection)
             {
-                FileUpdateInfos infos = _fileManager.GetInfos(entity.ArchiveFile)!;
+                FileUpdateInfos infos = FileManager.GetInfos(entity.ArchiveFile)!;
                 IgzRenderer? renderer = infos.renderer as IgzRenderer;
 
                 List<igObject> removed = infos.igz!.Remove(entity.Object).ToList();
 
                 foreach (igObject obj in removed)
                 {
-                    _archiveRenderer.SetObjectUpdated(entity.ArchiveFile, obj);
+                    ArchiveRenderer.SetObjectUpdated(entity.ArchiveFile, obj);
 
                     renderer?.TreeView.Remove(obj);
 
                     if (obj is not igEntity) continue;
 
-                    NSTEntity? removedEntity = _instanceManager.allEntities.Find(x => x.Object == obj);
+                    NSTEntity? removedEntity = InstanceManager.AllEntities.Find(x => x.Object == obj);
                     if (removedEntity == null)
                     {
                         Console.WriteLine("Warning: Object not found: " + obj);
@@ -504,17 +516,17 @@ namespace NST
 
                     if (removedEntity.InstanceManager != null)
                     {
-                        removedEntity.InstanceManager.entities.Remove(removedEntity);
+                        removedEntity.InstanceManager.Entities.Remove(removedEntity);
                     }
 
-                    _instanceManager.allEntities.Remove(removedEntity);
+                    InstanceManager.AllEntities.Remove(removedEntity);
                 }
             }
 
-            _selectionManager.ClearSelection(true);
+            SelectionManager.ClearSelection(true);
             _gizmos.Visible = false;
 
-            _treeView.RebuildTree(_instanceManager.allEntities.Cast<NSTObject>().ToList());
+            _treeView.RebuildTree(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
         }
 
         public void RenderSettingsPanel()
@@ -536,7 +548,7 @@ namespace NST
                 if (ImGui.Combo("Debug mode", ref _debugMode, _debugModes, _debugModes.Length))
                 {
                     _debugMode = _debugMode % _debugModes.Length;
-                    _instanceManager.RefreshInstances(_instanceManager.allEntities.Cast<NSTObject>().ToList());
+                    InstanceManager.RefreshInstances(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
                 }
 
                 ImGui.SeparatorText("Visible camera layers:");
@@ -591,7 +603,7 @@ namespace NST
 
         public void FocusObject(igObject igObj)
         {
-            NSTObject? obj = _instanceManager.Find(igObj);
+            NSTObject? obj = InstanceManager.Find(igObj);
             if (obj == null)
             {
                 Console.WriteLine("Warning: Object not found: " + igObj);
@@ -618,8 +630,8 @@ namespace NST
 
         public void SelectObject(NSTObject obj)
         {
-            List<NSTObject> selected = _instanceManager.Select(obj, true);
-            _selectionManager.UpdateSelection(selected);
+            List<NSTObject> selected = InstanceManager.Select(obj, true);
+            SelectionManager.UpdateSelection(selected);
         }
 
         private List<THREE.Intersection> Raycast(THREE.Vector2 mouseClipSpace, float distance)
@@ -645,7 +657,7 @@ namespace NST
                 }
             }
 
-            return raycaster.IntersectObject(_instanceManager._rootObject, true);
+            return raycaster.IntersectObject(InstanceManager.RootObject, true);
         }
 
         private void SelectFromRaycast(List<THREE.Intersection> intersects) 
@@ -654,21 +666,21 @@ namespace NST
 
             foreach (THREE.Intersection intersect in intersects)
             {
-                hitEntities = _instanceManager.SelectFromRaycast(intersect);
+                hitEntities = InstanceManager.SelectFromRaycast(intersect);
                 if (hitEntities.Count > 0) break;
             }
 
             if (hitEntities.Count == 0) 
             {
                 Console.WriteLine("No hit");
-                _selectionManager.ClearSelection(true);
+                SelectionManager.ClearSelection(true);
                 _gizmos.Visible = false;
                 return;
             }
 
             bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
 
-            _selectionManager.UpdateSelection(hitEntities, newSelection);
+            SelectionManager.UpdateSelection(hitEntities, newSelection);
 
             _treeView.SelectObject(hitEntities[0]);
         }

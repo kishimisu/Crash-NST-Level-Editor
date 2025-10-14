@@ -366,12 +366,12 @@ namespace Alchemy
             else if (IsFixupActive("RNEX", position, removeFixup))
             {
                 objectRef = (igObject)CreateEmptyInstance(type);
-                objectRef.Reference = _fixups.objectReferences[(int)value];
+                objectRef.Reference = _fixups.objectReferences[(int)value].Clone();
             }
             else if (IsFixupActive("REXT", position, removeFixup))
             {
                 objectRef = (igObject)CreateEmptyInstance(type);
-                objectRef.Reference = _fixups.exidReferences[(int)value];
+                objectRef.Reference = _fixups.exidReferences[(int)value].Clone();
             }
 
             return objectRef;

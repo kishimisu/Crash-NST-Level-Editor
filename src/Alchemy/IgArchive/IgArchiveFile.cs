@@ -138,6 +138,7 @@ namespace Alchemy
             }
 
             _path = newPath;
+            _hash = NamespaceUtils.ComputeHash(newPath);
         }
 
         /// <summary>

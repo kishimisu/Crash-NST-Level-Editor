@@ -20,7 +20,7 @@ namespace Alchemy
             bool isHandle = (_handle & 0x80000000) != 0;
             int handleIndex = (int)_handle & 0x3FFFFFFF;
 
-            Reference = reader.GetObjectReference(handleIndex, isHandle);
+            Reference = reader.GetObjectReference(handleIndex, isHandle).Clone();
         }
 
         public override void Write(IgzWriter writer)
