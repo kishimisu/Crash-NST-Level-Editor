@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: common_Gem_Platform_Spline_c.igz
 
     [ObjectAttr(128, metaType: typeof(CVscComponentData))]
-    public class common_Gem_Platform_Spline_c_common_Gem_Platform_SplineData : CVscComponentData
+    public class common_Gem_Platform_Spline_c : CVscComponentData
     {
         [FieldAttr(40)] public bool _LockPlayer;
         [FieldAttr(48)] public igHandleMetaField _LockedPlayerCamera = new();

@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: common_Crash_TimeTrial_Best_Times_Display.igz
 
     [ObjectAttr(360, metaType: typeof(igGuiVscBehavior))]
-    public class common_Crash_TimeTrial_Best_Times_Display_Crash_Pause_Time_Trial_Display : igGuiVscBehavior
+    public class common_Crash_TimeTrial_Best_Times_Display : igGuiVscBehavior
     {
         [FieldAttr(40)] public igHandleMetaField _Gui_Placeable_0x28 = new();
         [FieldAttr(48)] public igHandleMetaField _Gui_Placeable_0x30 = new();

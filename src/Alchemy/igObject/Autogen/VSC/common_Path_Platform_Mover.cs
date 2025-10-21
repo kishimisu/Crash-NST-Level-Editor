@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: common_Path_Platform_Mover.igz
 
     [ObjectAttr(248, metaType: typeof(CVscComponentData))]
-    public class common_Path_Platform_Mover_common_Gem_Platform_SplineData : CVscComponentData
+    public class common_Path_Platform_Mover : CVscComponentData
     {
         public enum ENewEnum4_id_6yu8wy7t
         {

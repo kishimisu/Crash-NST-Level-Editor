@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: L300_Hub_SecretRoom_Path.igz
 
     [ObjectAttr(72, metaType: typeof(CVscComponentData))]
-    public class L300_Hub_SecretRoom_Path_L300_Hub_Generic_Path_Platform_Start_FadeOutData : CVscComponentData
+    public class L300_Hub_SecretRoom_Path : CVscComponentData
     {
         [FieldAttr(40)] public bool _Bool_0x28;
         [FieldAttr(41)] public bool _Bool_0x29;

@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: HavokBehavior_Enemy_Death.igz
 
     [ObjectAttr(160, metaType: typeof(CVscComponentData))]
-    public class HavokBehavior_Enemy_Death_Standard_Enemy_DeathData : CVscComponentData
+    public class HavokBehavior_Enemy_Death : CVscComponentData
     {
         [FieldAttr(40)] public bool _LaunchDeathOnly;
         [FieldAttr(48)] public string? _DeathDefault = null;

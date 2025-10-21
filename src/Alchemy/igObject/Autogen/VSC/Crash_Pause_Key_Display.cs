@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: Crash_Pause_Key_Display.igz
 
     [ObjectAttr(96, metaType: typeof(igGuiVscBehavior))]
-    public class Crash_Pause_Key_Display_Crash_Pause_Significant_Object_Display : igGuiVscBehavior
+    public class Crash_Pause_Key_Display : igGuiVscBehavior
     {
         [FieldAttr(40)] public int _Int_0x28;
         [FieldAttr(48)] public igHandleMetaField _Gui_Animation_Tag = new();

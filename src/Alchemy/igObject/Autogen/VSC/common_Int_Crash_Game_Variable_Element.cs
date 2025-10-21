@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: common_Int_Crash_Game_Variable_Element.igz
 
     [ObjectAttr(80, metaType: typeof(igGuiVscBehavior))]
-    public class common_Int_Crash_Game_Variable_Element_common_Boolean_Game_Variable_Display : igGuiVscBehavior
+    public class common_Int_Crash_Game_Variable_Element : igGuiVscBehavior
     {
         [FieldAttr(40)] public igHandleMetaField _Game_Int_Variable_0x28 = new();
         [FieldAttr(48)] public igHandleMetaField _Game_Int_Variable_0x30 = new();

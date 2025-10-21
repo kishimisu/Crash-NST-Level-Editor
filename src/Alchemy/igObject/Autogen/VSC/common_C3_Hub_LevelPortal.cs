@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: common_C3_Hub_LevelPortal.igz
 
     [ObjectAttr(552, metaType: typeof(CVscComponentData))]
-    public class common_C3_Hub_LevelPortal_common_C2_WarpRoom_LevelPortalData : CVscComponentData
+    public class common_C3_Hub_LevelPortal : CVscComponentData
     {
         [FieldAttr(40)] public string? _BehaviorEventCrashTeleportOutStart = null;
         [FieldAttr(48)] public igHandleMetaField _Bolt_Point_0x30 = new();

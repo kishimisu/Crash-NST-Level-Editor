@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: Crash_Pause_Crystal_Display.igz
 
     [ObjectAttr(104, metaType: typeof(igGuiVscBehavior))]
-    public class Crash_Pause_Crystal_Display_Crash_Pause_Significant_Object_Display : igGuiVscBehavior
+    public class Crash_Pause_Crystal_Display : igGuiVscBehavior
     {
         [FieldAttr(40)] public igHandleMetaField _Crash_Pause_Significant_Object_Displays001 = new();
         [FieldAttr(48)] public igHandleMetaField _Crash_Pause_Significant_Object_Displays003 = new();

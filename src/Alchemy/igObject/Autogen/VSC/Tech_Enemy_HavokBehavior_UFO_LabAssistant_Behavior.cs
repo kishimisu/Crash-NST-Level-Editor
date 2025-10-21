@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: Tech_Enemy_HavokBehavior_UFO_LabAssistant_Behavior.igz
 
     [ObjectAttr(112, metaType: typeof(CVscComponentData))]
-    public class Tech_Enemy_HavokBehavior_UFO_LabAssistant_Behavior_Tech_Enemy_HavokBehavior_UFO_LabAssistant_BehaviorData : CVscComponentData
+    public class Tech_Enemy_HavokBehavior_UFO_LabAssistant_Behavior : CVscComponentData
     {
         [FieldAttr(40)] public string? _String_0x28 = null;
         [FieldAttr(48)] public string? _String_0x30 = null;

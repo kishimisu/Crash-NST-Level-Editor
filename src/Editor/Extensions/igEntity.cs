@@ -96,9 +96,9 @@ namespace NST
                 }
             }            
 
-            if (string.IsNullOrEmpty(modelName)) // Multiple_Spawner_Template_c_Multiple_Spawner_TemplateData
+            if (string.IsNullOrEmpty(modelName)) // Multiple_Spawner_Template_c
             {
-                var multipleSpawner = entity.GetComponent<Multiple_Spawner_Template_c_Multiple_Spawner_TemplateData>();
+                var multipleSpawner = entity.GetComponent<Multiple_Spawner_Template_c>();
 
                 if (multipleSpawner != null)
                 {
@@ -179,7 +179,7 @@ namespace NST
                 return [entityToSpawn];
             }
 
-            Multiple_Spawner_Template_c_Multiple_Spawner_TemplateData? multiSpawner = entity.GetComponent<Multiple_Spawner_Template_c_Multiple_Spawner_TemplateData>();
+            Multiple_Spawner_Template_c? multiSpawner = entity.GetComponent<Multiple_Spawner_Template_c>();
             if (multiSpawner == null) return null;
 
             NamedReference? entityListRef = multiSpawner._Spawn_Entity_List.Reference;

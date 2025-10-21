@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: Animated_Multiple_Spawner_Template_Behavior.igz
 
     [ObjectAttr(160, metaType: typeof(CVscComponentData))]
-    public class Animated_Multiple_Spawner_Template_Behavior_Multiple_Spawner_TemplateData : CVscComponentData
+    public class Animated_Multiple_Spawner_Template_Behavior : CVscComponentData
     {
         [FieldAttr(40)] public bool _Multiple_Spawner_TemplateDatas002;
         [FieldAttr(41)] public bool _Multiple_Spawner_TemplateDatas005;

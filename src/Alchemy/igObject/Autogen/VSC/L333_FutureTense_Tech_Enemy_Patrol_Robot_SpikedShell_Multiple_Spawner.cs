@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: L333_FutureTense_Tech_Enemy_Patrol_Robot_SpikedShell_Multiple_Spawner.igz
 
     [ObjectAttr(96, metaType: typeof(CVscComponentData))]
-    public class L333_FutureTense_Tech_Enemy_Patrol_Robot_SpikedShell_Multiple_Spawner_Multiple_Spawner_TemplateData : CVscComponentData
+    public class L333_FutureTense_Tech_Enemy_Patrol_Robot_SpikedShell_Multiple_Spawner : CVscComponentData
     {
         [FieldAttr(40)] public igHandleMetaField _Multiple_Spawner_TemplateDatas_0x28 = new();
         [FieldAttr(48)] public igHandleMetaField _Bolt_Point = new();

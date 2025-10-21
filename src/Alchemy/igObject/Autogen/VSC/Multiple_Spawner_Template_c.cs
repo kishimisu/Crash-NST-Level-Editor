@@ -3,7 +3,7 @@ namespace Alchemy
     // VSC object extracted from: Multiple_Spawner_Template_c.igz
 
     [ObjectAttr(112, metaType: typeof(CVscComponentData))]
-    public class Multiple_Spawner_Template_c_Multiple_Spawner_TemplateData : CVscComponentData
+    public class Multiple_Spawner_Template_c : CVscComponentData
     {
         [FieldAttr(40)] public bool _SpawnMultipleWaves;
         [FieldAttr(41)] public bool _WaitForSpawnTemplateEvent;
