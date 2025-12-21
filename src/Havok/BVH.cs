@@ -41,15 +41,17 @@ namespace Havok
             return new Vector3(x, y, z);
         }
 
-        public List<hkcdStaticTreeCodec3Axis6> BuildAxis6Tree()
+        public List<hkcdStaticTreeCodec3Axis6> BuildAxis6Tree(List<hknpShapeInstance> shapes)
         {
             var tree = new List<hkcdStaticTreeCodec3Axis6>();
+            var ids = new Dictionary<BVHNode, int>();
 
             void CompressNode(BVHNode node, Vector3 pbbmin, Vector3 pbbmax, bool root = false)
             {
                 var currindex = tree.Count();
                 var compressed = new hkcdStaticTreeCodec3Axis6();
                 tree.Add(compressed);
+                ids.Add(node, currindex);
 
                 // Compress the bounding box
                 compressed._xyz_0 = CompressDim(node.boundsMin.X, node.boundsMax.X, pbbmin.X, pbbmax.X);
@@ -88,6 +90,42 @@ namespace Havok
             }
 
             CompressNode(this, boundsMin, boundsMax, true);
+
+            foreach ((BVHNode node, int index) in ids)
+            {
+                if (!node.isLeaf) continue;
+
+                hknpShapeInstance shape = shapes[node.instanceIndex];
+
+                uint type = 0x3f000060;
+
+                if (shape._transform.M41 != 0 || shape._transform.M42 != 0 || shape._transform.M43 != 0)
+                {
+                    type |= 0x2;
+                }
+                if (shape._transform.M11 != 1 || shape._transform.M12 != 0 || shape._transform.M13 != 0 ||
+                    shape._transform.M21 != 0 || shape._transform.M22 != 1 || shape._transform.M23 != 0 ||
+                    shape._transform.M31 != 0 || shape._transform.M32 != 0 || shape._transform.M33 != 1)
+                {
+                    type |= 0x4;
+                }
+                if (shape._scale.X != 1 || shape._scale.Y != 1 || shape._scale.Z != 1)
+                {
+                    type |= 0x8;
+                }
+
+                byte[] typeBytes = BitConverter.GetBytes(type);
+                float typeFloat = BitConverter.ToSingle(typeBytes, 0);
+
+                uint indexHex = 0x3f000000 | (uint)index;
+                byte[] indexBytes = BitConverter.GetBytes(indexHex);
+                float indexFloat = BitConverter.ToSingle(indexBytes, 0);
+
+                shape._transform.M14 = typeFloat;
+                shape._transform.M24 = shape._transform.M31;
+                shape._transform.M44 = indexFloat;
+            }
+
             return tree;
         }
     }
@@ -108,16 +146,21 @@ namespace Havok
                 Vector3 shapeMin = Vector3.Zero;
                 Vector3 shapeMax = Vector3.Zero;
 
+                Vector3 scale = new Vector3(instance._scale.X, instance._scale.Y, instance._scale.Z);
+                
                 if (instance._shape is hknpCompressedMeshShape cshape)
                 {
                     shapeMin = cshape._data._meshTree._min.AsVector3();
                     shapeMax = cshape._data._meshTree._max.AsVector3();
 
+                    THREE.Matrix4 scaledTransform = instance._transform.ToMatrix4()
+                        .PreMultiply(new THREE.Matrix4().MakeScale(scale.X, scale.Y, scale.Z));
+
                     THREE.Box3 shapeBounds = new THREE.Box3(
                         new THREE.Vector3(shapeMin.X, shapeMin.Y, shapeMin.Z),
                         new THREE.Vector3(shapeMax.X, shapeMax.Y, shapeMax.Z)
                     )
-                    .ApplyMatrix4Affine(instance._transform.ToMatrix4());
+                    .ApplyMatrix4Affine(scaledTransform);
 
                     shapeMin = new Vector3(shapeBounds.Min.X, shapeBounds.Min.Y, shapeBounds.Min.Z);
                     shapeMax = new Vector3(shapeBounds.Max.X, shapeBounds.Max.Y, shapeBounds.Max.Z);
@@ -128,7 +171,7 @@ namespace Havok
                     shapeMax = new Vector3(float.MinValue, float.MinValue, float.MinValue);
 
                     for (int i = 0; i < pshape._vertices.Count; i++) {
-                        Vector3 vertex = Vector3.Transform(pshape._vertices[i].AsVector3(), instance._transform);
+                        Vector3 vertex = Vector3.Transform(pshape._vertices[i].AsVector3() * scale, instance._transform);
                         shapeMin = Vector3.Min(shapeMin, vertex);
                         shapeMax = Vector3.Max(shapeMax, vertex);
                     }
@@ -148,7 +191,7 @@ namespace Havok
                     // Assume first vertex stores center, W = radius
                     Vector4 centerData = sshape._vertices[0];
                     Vector3 center = new Vector3(centerData.X, centerData.Y, centerData.Z);
-                    float radius = centerData.W;
+                    float radius = centerData.W * (scale.X + scale.Y + scale.Z) / 3f;
 
                     // Transform sphere center
                     Vector3 transformedCenter = Vector3.Transform(center, instance._transform);

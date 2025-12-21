@@ -8,6 +8,8 @@ namespace NST
     public class NSTModel
     {
         public string Name { get; } // Model name
+        public string FilePath { get;  set; } // Model file path in archive
+        public string OriginalPath { get; set; } // Value as found in the igz file
         public List<NSTMesh> Meshes { get; } = []; // List of meshes
 
         public NSTModel(List<NSTMesh> meshes, string name = "")

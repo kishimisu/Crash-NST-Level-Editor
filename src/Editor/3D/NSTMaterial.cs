@@ -340,6 +340,7 @@ namespace NST
                 {
                     ImGui.Indent();
                     ImGui.Text("> No material");
+                    ImGui.Unindent();
                 }
             }
 

@@ -12,9 +12,11 @@ namespace NST
         private const int MAX_RECENT_FILES = 15; // Maximum number of recent files to store
 
         public static List<string> RecentFiles { get; private set; } = []; // List of recently opened files
+        public static List<string> RecentLevels { get; private set; } = []; // List of recently opened levels
         
         public static string? GamePath { get; private set; } = null; // Path to the game folder
         public static string ArchivePath => Path.Join(GamePath ?? DEFAULT_GAME_PATH, "archives"); // Path to the archives folder
+        public static string UpdateFilePath => Path.Join(ArchivePath, "update.pak"); // Path to the update file
 
         private static string _storageFilePath = ""; // Path to the main local storage file
 
@@ -51,37 +53,67 @@ namespace NST
             }
             
             RecentFiles = Get<List<string>>("recent_files") ?? [];
+            RecentLevels = Get<List<string>>("recent_levels") ?? [];
+
+            AudioPlayerInstance.AutoPlayAudio = Get("auto_play_audio", false);
+        }
+
+        /// <summary>
+        /// Check if the file is locked by another process before saving
+        /// </summary>
+        public static bool IsFileLocked(string filePath)
+        {
+            FileStream? stream = null;
+
+            try
+            {
+                stream = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                return false;
+            }
+            catch (IOException)
+            {
+                return true;
+            }
+            finally
+            {
+                stream?.Close();
+            }
         }
 
         /// <summary>
         /// Add a file to the recent files list
         /// </summary>
-        public static void AddRecentFile(string path)
+        public static void AddRecentFile(string path, bool isLevel = false)
         {
-            if (RecentFiles.Contains(path))
+            List<string> list = isLevel ? RecentLevels : RecentFiles;
+
+            if (list.Contains(path))
             {
-                RecentFiles.Remove(path);
+                list.Remove(path);
             }
 
-            RecentFiles.Insert(0, path);
-            RecentFiles = RecentFiles.Take(MAX_RECENT_FILES).ToList();
+            list.Insert(0, path);
+            list = list.Take(MAX_RECENT_FILES).ToList();
 
-            Set("recent_files", RecentFiles);
+            Set(isLevel ? "recent_levels" : "recent_files", list);
         }
 
         /// <summary>
         /// Remove a file from the recent files list
         /// </summary>
-        public static void RemoveRecentFile(string path)
+        public static void RemoveRecentFile(string path, bool? isLevel = null)
         {
-            if (!RecentFiles.Contains(path))
+            if (isLevel != true && RecentFiles.Contains(path))
             {
-                return;
+                RecentFiles.Remove(path);
+                Set("recent_files", RecentFiles);
             }
 
-            RecentFiles.Remove(path);
-
-            Set("recent_files", RecentFiles);
+            if (isLevel != false && RecentLevels.Contains(path))
+            {
+                RecentLevels.Remove(path);
+                Set("recent_levels", RecentLevels);
+            }
         }
 
         /// <summary>

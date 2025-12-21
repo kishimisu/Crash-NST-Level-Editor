@@ -57,8 +57,9 @@ namespace Alchemy
         private string _path = "";
         private List<IgArchiveFile> _files = [];
 
+        public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(_path, includeExtension);
         public string GetPath() => _path;
-        public string GetName() => Path.GetFileName(_path);
+        public void SetPath(string path) => _path = path;
 
         public List<IgArchiveFile> GetFiles() => _files;
         public void AddFile(IgArchiveFile file) => _files.Add(file);
@@ -77,10 +78,11 @@ namespace Alchemy
         /// </summary>
         /// <param name="filePath">The path to the .pak file</param>
         /// <returns>A new IgArchive instance</returns>
-        public static IgArchive Open(string filePath) 
+        public static IgArchive Open(string filePath) => Open(new FileStream(filePath, FileMode.Open, FileAccess.Read), filePath);
+
+        public static IgArchive Open(Stream fs, string filePath) 
         {
             // Open file
-            using FileStream fs = new FileStream(filePath, FileMode.Open, FileAccess.Read);
             using BinaryReader reader = new BinaryReader(fs);
 
             // Parse header
@@ -223,126 +225,6 @@ namespace Alchemy
         }
 
         /// <summary>
-        /// Rebuild the archive's package file by adding new files
-        /// </summary>
-        public void RebuildPackageFile(List<IgArchiveFile> files)
-        {
-            List<string> fileTypeOrder = [
-                "script", "sound_sample", "sound_bank", "lang_file", "loose", "shader",
-                "texture", "material_instances", "font", "vsc", "igx_file", 
-                "havokrigidbody", "model", "asset_behavior", 
-                "havokanimdb", "hkb_behavior", "hkc_character", 
-                "behavior", "sky_model", "effect", "actorskin", 
-                "sound_stream", "character_events", "graphdata_behavior", 
-                "character_data", "gui_project",
-                "navmesh", "igx_entities", "pkg"
-            ];
-
-            IgArchiveFile? packageFile = FindPackageFile();
-
-            if (packageFile == null)
-            {
-                return;
-            }
-
-            IgzFile packageIgz = packageFile.ToIgzFile();
-
-            var chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>()!;
-            bool needsRebuild = false;
-
-            List<ChunkFileInfoMetaField> existingFiles = chunkInfo._required._data.ToList();
-            List<ChunkFileInfoMetaField> newFiles = [];
-
-            foreach (IgArchiveFile file in files)
-            {
-                if (file == packageFile) continue;
-
-                string filePath = file.GetPath().ToLower();
-
-                ChunkFileInfoMetaField? chunk = existingFiles.Find(x => x._name == filePath);
-
-                if (chunk == null)
-                {
-                    needsRebuild = true;
-                    var newChunk = new ChunkFileInfoMetaField
-                    {
-                        _name = filePath,
-                        _type = GetFileType(filePath)
-                    };
-                    newFiles.Add(newChunk);
-                    Console.WriteLine($"[Package file] Added {newChunk._name} ({newChunk._type})");
-                }
-                else
-                {
-                    existingFiles.Remove(chunk);
-                    newFiles.Add(chunk);
-                }
-            }
-
-            foreach (ChunkFileInfoMetaField file in existingFiles.ToList())
-            {
-                if (file._type == "pkg")
-                {
-                    existingFiles.Remove(file);
-                    newFiles.Add(file);
-                }
-            }
-
-            if (existingFiles.Count > 0)
-            {
-                needsRebuild = true;
-                existingFiles.ForEach(e => Console.WriteLine("[Package file] Removed " + e._name));
-            }
-
-            if (needsRebuild) 
-            {
-                newFiles.Sort((a, b) => {
-                    int comp = fileTypeOrder.IndexOf(a._type!) - fileTypeOrder.IndexOf(b._type!);
-                    if (comp != 0) return comp;
-                    return a._name!.CompareTo(b._name!);
-                });
-
-                chunkInfo._required._data.Set(newFiles);
-
-                packageFile.SetData(packageIgz.Save());
-            }
-        }
-
-        private static string GetFileType(string filePath)
-        {
-            if (filePath.EndsWith(".hkx"))                 return "havokrigidbody";
-            if (filePath.EndsWith(".hka"))                 return "havokanimdb";
-            if (filePath.EndsWith(".hkb"))                 return "hkb_behavior";
-            if (filePath.EndsWith(".hkc"))                 return "hkc_character";
-            if (filePath.EndsWith(".hkp"))                 return "behavior";
-            if (filePath.EndsWith(".lng"))                 return "lang_file";
-            if (filePath.EndsWith(".mapnav"))              return "navmesh";
-
-            if (filePath.StartsWith("maps/"))              return "igx_entities";
-            if (filePath.StartsWith("scripts/"))           return "script";
-            if (filePath.StartsWith("sound_samples/"))     return "sound_sample";
-            if (filePath.StartsWith("sound_streams/"))     return "sound_stream";
-            if (filePath.StartsWith("sounds/banks/"))      return "sound_bank";
-            if (filePath.StartsWith("textures/"))          return "texture";
-            if (filePath.StartsWith("loosetextures/"))     return "texture";
-            if (filePath.StartsWith("materialinstances/")) return "material_instances";
-            if (filePath.StartsWith("vsc/"))               return "vsc";
-            if (filePath.StartsWith("models/"))            return "model";
-            if (filePath.StartsWith("behaviors/"))         return "asset_behavior";
-            if (filePath.StartsWith("sky/"))               return "sky_model";
-            if (filePath.StartsWith("vfx/"))               return "effect";
-            if (filePath.StartsWith("actors/"))            return "actorskin";
-            if (filePath.StartsWith("animation_events/"))  return "character_events";
-            if (filePath.StartsWith("behavior_events/"))   return "character_events";
-            if (filePath.StartsWith("behaviors/"))         return "graphdata_behavior";
-            if (filePath.StartsWith("packages/"))          return "pkg";
-
-            Console.WriteLine("Could not find file type for " + filePath);
-
-            return "igx_file"; // anims/ loosedata/ vfxfonts/ ?
-        }
-
-        /// <summary>
         /// Clone a file in the archive. 
         /// Will generate the file name using the following pattern until the file has a unique path: name_1, name_2, ...
         /// </summary>
@@ -373,26 +255,25 @@ namespace Alchemy
         /// <param name="name">The string to search for</param>
         /// <param name="searchType">How the string should be compared</param>
         /// <returns>The first file that matches the search criteria, or null if no match is found</returns>
-        public IgArchiveFile? FindFile(string name, FileSearchType searchType = FileSearchType.NameWithExtension)
+        public IgArchiveFile? FindFile(string name, FileSearchType searchType = FileSearchType.NameWithExtension, StringComparison comp = StringComparison.InvariantCultureIgnoreCase)
         {
-            name = name.ToLower();
-
             IgArchiveFile? file = searchType switch
             {
                 FileSearchType.Name => 
-                    _files.Find(f => f.GetName(false).ToLowerInvariant() == name),
+                    _files.Find(f => f.GetName(false).Equals(name, comp)),
                 FileSearchType.NameContains =>
-                    _files.Find(f => f.GetName(false).ToLowerInvariant().Contains(name)),
+                    _files.Find(f => f.GetName(false).Contains(name, comp)),
                 FileSearchType.NameStartsWith =>
-                    _files.Find(f => f.GetName(false).ToLowerInvariant().StartsWith(name)),
+                    _files.Find(f => f.GetName(false).StartsWith(name, comp)),
                 FileSearchType.NameWithExtension =>
-                    _files.Find(f => f.GetName().ToLowerInvariant() == name),
+                    _files.Find(f => f.GetName().Equals(name, comp)),
                 FileSearchType.Path => 
-                    _files.Find(f => f.GetPath().ToLowerInvariant() == name),
+                    _files.Find(f => f.GetPath().Equals(name, comp)),
                 FileSearchType.FullPath => 
-                    _files.Find(f => f.GetFullPath().ToLowerInvariant() == name),
+                    _files.Find(f => f.GetFullPath().Equals(name, comp)),
                 FileSearchType.NamespaceHash =>
                     _files.Find(f => NamespaceUtils.ComputeHash(f.GetName(false)).ToString() == name),
+
                 _ => throw new ArgumentOutOfRangeException(nameof(searchType), searchType, null)
             };
             

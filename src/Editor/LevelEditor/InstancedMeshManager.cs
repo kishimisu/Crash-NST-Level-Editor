@@ -18,6 +18,12 @@ namespace NST
             Entities.Add(entity);
         }
 
+        public void Remove(NSTEntity entity)
+        {
+            entity.InstanceManager = null;
+            Entities.Remove(entity);
+        }
+
         public void ConvertToInstanced(THREE.Object3D scene, LevelExplorer.DebugMode debugMode)
         {
             // Console.WriteLine($"Converting {_model?.Name} to instanced: {entities.Where(e => !e.IsSelected).Count()}/{entities.Count}");
@@ -72,7 +78,7 @@ namespace NST
                 LevelExplorer.DebugMode.Instanced => instances.Select(e => highlightColor),
 
                 _ => _model == null 
-                    ? instances.Select(e => new THREE.Color((int)e.Object.GetType().GetUniqueColor()))
+                    ? instances.Select(e => MathUtils.FromImGuiColor(e.Object.GetType().GetUniqueColor()))
                     : instances.Select(e => new THREE.Color(1, 1, 1)) 
             }
             ).ToList();
@@ -116,8 +122,12 @@ namespace NST
 
     public class InstancedMeshManager
     {
-        public List<NSTEntity> AllEntities { get; } = [];
         public THREE.Group RootObject { get; } = new THREE.Group();
+
+        public List<NSTEntity> AllEntities { get; } = [];
+        public List<NSTObject> AllObjects { get; } = [];
+        public Dictionary<NamedReference, NSTObject> AllReferences { get; } = [];
+        public Dictionary<igEntity, NSTEntity> PrefabTemplates { get; } = [];
 
         private LevelExplorer _explorer;
         private Dictionary<NSTModel, InstanceManager> _instances = [];
@@ -130,8 +140,45 @@ namespace NST
             scene.Add(RootObject);
         }
 
-        public void Register(NSTEntity entity, List<NSTEntity>? entities = null)
+        public void Register(List<NSTObject> objects)
+        {
+            foreach (NSTObject obj in objects)
+            {
+                Register(obj);
+            }
+
+            foreach (NSTEntity entity in AllEntities.ToList())
+            {
+                entity.InitPrefabChildren(this);
+            }
+
+            foreach (NSTObject obj in AllObjects)
+            {
+                if (obj is NSTEntity entity)
+                {
+                    entity.InitChildren(_explorer, AllObjects);
+                    entity.InitScriptTriggerEntity(_explorer, AllEntities);
+                }
+                else if (obj is NSTCamera camera)
+                {
+                    camera.Setup(AllEntities);
+                }
+                else if (obj is NSTCameraBox cameraBox)
+                {
+                    cameraBox.Setup(AllObjects);
+                }
+            }
+
+            RefreshInstances(AllObjects);
+        }
+
+        public void Register(NSTObject obj)
         {            
+            AllObjects.Add(obj);
+            AllReferences.TryAdd(obj.ToReference(), obj);
+
+            if (obj is not NSTEntity entity) return;
+
             AllEntities.Add(entity);
 
             if (!entity.IsSpawned) return;
@@ -153,74 +200,38 @@ namespace NST
             {
                 _instances[entity.Model].Add(entity);
             }
-
-            foreach (igEntity child in entity.GetPrefabChildren())
-            {
-                NSTEntity? prefabEntity = entities == null 
-                    ? AllEntities.Find(e => e.Object == child && !e.IsPrefabChild)
-                    : AllEntities.Union(entities).FirstOrDefault(e => e.Object == child && !e.IsPrefabChild);
-
-                if (prefabEntity == null)
-                {
-                    // Console.WriteLine("[Prefab] Missing original prefab child: " + child);
-                    continue;
-                }
-                else if (prefabEntity.InstanceManager != null)
-                {
-                    Console.WriteLine("[Prefab] Remove original prefab child template: " + child);
-                    prefabEntity.InstanceManager.Entities.Remove(prefabEntity);
-                    prefabEntity.InstanceManager = null;
-                }
-
-                NSTEntity childInstance = prefabEntity.CloneAsPrefabChild(entity);
-                Register(childInstance, entities);
-
-                // Console.WriteLine("[Prefab] Register prefab child instance: " + child.ObjectName + " for instance: " + entity.Object);
-            }
         }
 
-        public void Register(IgArchive archive, List<NSTEntity> entities)
+        public void Unregister(NSTObject obj)
         {
-            // Find templates and hidden entities
-            foreach (NSTEntity entity in entities)
+            AllObjects.Remove(obj);
+            AllReferences.Remove(obj.ToReference());
+
+            foreach (NSTObject parent in obj.Parents)
             {
-                if (!entity.Object._bitfield._canSpawn || entity.Object._bitfield._isArchetype)
-                {
-                    if (entity.Object.GetType() != typeof(igEntity) || entity.Object.GetComponent<CModelComponentData>() == null)
-                    {
-                        entity.IsTemplate = true;
-                    }
-                    else
-                    {
-                        entity.IsHidden = true;
-                    }
-                }
-                else if (entity.Object.GetComponent<CStaticComponentData>()?._flagsBitfield._disableVisual == true)
-                {
-                    entity.IsHidden = true;
-                }
+                parent.Children.Remove(obj);
+            }
+            
+            if (obj is NSTEntity entity)
+            {
+                AllEntities.Remove(entity);
+                entity.InstanceManager?.Remove(entity);
             }
 
-            foreach (NSTEntity entity in entities)
+            if (obj.Object3D != null)
             {
-                entity.InitScriptTriggerEntity(archive, entities);
+                obj.Object3D.Parent.Remove(obj.Object3D);
+                obj.Object3D = null;
             }
-
-            foreach (NSTEntity entity in entities)
-            {
-                Register(entity, entities);
-            }
-
-            RefreshInstances(AllEntities.Cast<NSTObject>().ToList());
         }
 
         public List<NSTObject> SelectFromRaycast(THREE.Intersection hit)
         {
             if (hit.object3D.UserData.ContainsKey("entity"))
             {
-                NSTEntity entity = (NSTEntity)hit.object3D.UserData["entity"];
+                NSTObject entity = (NSTObject)hit.object3D.UserData["entity"];
 
-                Console.WriteLine("Hit entity: " + entity.Object.ObjectName);
+                // Console.WriteLine("Hit object: " + entity.GetObject().ObjectName);
                 return Select(entity);
             }
             else if (hit.object3D.UserData.ContainsKey("instance"))
@@ -228,16 +239,27 @@ namespace NST
                 InstanceManager instance = (InstanceManager)hit.object3D.UserData["instance"];
                 NSTEntity entity = instance.Entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
 
-                Console.WriteLine("Hit instance: " + entity.Object.ObjectName);
+                // Console.WriteLine("Hit instance: " + entity.Object.ObjectName);
                 return Select(entity);
             }
             else if (hit.object3D.UserData.ContainsKey("spline"))
             {
                 NSTSpline spline = (NSTSpline)hit.object3D.UserData["spline"];
-                NSTSplineControlPoint controlPoint = spline.Children.OfType<NSTSplineControlPoint>().ElementAt(hit.instanceId);
-
-                Console.WriteLine("Hit spline: " + spline.Object.ObjectName +  " #" + hit.instanceId);
+                NSTSplineControlPoint controlPoint = spline._controlPoints[hit.instanceId];
+                // Console.WriteLine("Hit spline: " + spline.Object.ObjectName +  " #" + hit.instanceId);
                 return Select(controlPoint);
+            }
+            else if (hit.object3D.UserData.ContainsKey("splineRotation"))
+            {
+                NSTSplineRotationKeyFrame keyframe = (NSTSplineRotationKeyFrame)hit.object3D.UserData["splineRotation"];
+                // Console.WriteLine("Hit spline rotation keyframe: " + keyframe.Object.ObjectName);
+                return Select(keyframe);
+            }
+            else if (hit.object3D.UserData.ContainsKey("splineMarker"))
+            {
+                NSTSplineMarker marker = (NSTSplineMarker)hit.object3D.UserData["splineMarker"];
+                // Console.WriteLine("Hit spline marker: " + marker.Object.ObjectName);
+                return Select(marker);
             }
 
             return [];
@@ -278,28 +300,43 @@ namespace NST
                 if (entity.IsSelected && selection.Count != 1) return [ entity ];
 
                 List<NSTObject> selected = [ entity ];
-                selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.IsSpawned));
+                // selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.IsSpawned));
+                selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity));
 
                 Console.WriteLine("Select " + selected.Count + " entities");
                 return selected;
             }
             else if (obj is NSTSplineControlPoint controlPoint)
             {
-                if (shiftPressed || controlPoint._parent._parent.IsSelected || controlPoint._parent.Children.Any(e => e.IsSelected))
+                if (shiftPressed || controlPoint.Parent.Parent.IsSelected || controlPoint.Parent.Children.Any(e => e.IsSelected))
                 {
                     Console.WriteLine("Select control point");
+                    controlPoint.Parent.Parent.Components?.SelectComponent<CSplineComponentData>();
+                    controlPoint.Parent.OpenControlPointList = true;
                     return [ controlPoint ];
                 }
                 else
                 {
                     Console.WriteLine("Select spline (from control point)");
-                    return [ controlPoint._parent._parent ];
+                    return [ controlPoint.Parent.Parent ];
                 }
+            }
+            else if (obj is NSTSplineRotationKeyFrame keyframe)
+            {
+                Console.WriteLine("Select keyframe");
+                keyframe.Parent.OpenRotationList = true;
+                return [ keyframe ];
+            }
+            else if (obj is NSTSplineMarker marker)
+            {
+                Console.WriteLine("Select marker");
+                marker.Parent.OpenMarkerList = true;
+                return [ marker ];
             }
             else if (obj is NSTSpline spline)
             {
                 Console.WriteLine("Select spline");
-                return [ spline._parent ];
+                return [ spline.Parent ];
             }
 
             return [ obj ];
@@ -309,44 +346,23 @@ namespace NST
         {
             List<NSTEntity> prefabs = [ prefabInstance ];
 
-            foreach (NSTEntity entity in AllEntities)
-            {
-                if (entity.IsPrefabChild && entity.ParentPrefabInstance == prefabInstance && entity.IsSpawned)
-                {
-                    prefabs.Add(entity);
-                }
-            }
+            prefabs.AddRange(prefabInstance.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == prefabInstance && e.IsSpawned));
 
             return prefabs;
         }
 
         private List<NSTEntity> SelectChildInstances(NSTEntity prefabChild)
         {
-            List<NSTEntity> prefabs = [ prefabChild ];
+            List<NSTEntity> instances = [ prefabChild ];
 
-            foreach (NSTEntity entity in AllEntities)
+            foreach (NSTEntity child in prefabChild.PrefabTemplate!.PrefabTemplateInstances)
             {
-                if (entity != prefabChild && entity.IsPrefabChild && entity.Object == prefabChild.Object)
-                {
-                    prefabs.Add(entity);
-                }
+                if (child == prefabChild) continue;
+
+                instances.Add(child);
             }
-
-            return prefabs;
-        }
-
-        public void ConvertToInstanced(List<NSTObject> objects)
-        {
-            foreach (NSTObject obj in objects)
-            {
-                if (obj.Object3D != null)
-                {
-                    obj.Object3D.Parent.Remove(obj.Object3D);
-                    obj.Object3D = null;
-                }
-
-                obj.IsSelected = false;
-            }
+            
+            return instances;
         }
 
         public void RefreshInstances(List<NSTObject> entities)
@@ -359,17 +375,50 @@ namespace NST
             
             foreach (NSTObject obj in entities)
             {
-                if (obj is not NSTEntity entity || entity.IsPrefabTemplate) continue;
-
                 // Console.WriteLine($"Refresh {entity.Object.ObjectName}, InstanceManager: {entity.InstanceManager}, IsInstanced: {entity.IsInstanced}, Object3D: {entity.Object3D}, IsSelected: {entity.IsSelected}");
                 
-                if (entity.InstanceManager != null)
+                if (obj is NSTEntity entity)
                 {
-                    instances.Add(entity.InstanceManager);
+                    if (entity.IsPrefabTemplate) continue;
+                
+                    if (entity.InstanceManager != null)
+                    {
+                        instances.Add(entity.InstanceManager);
+                    }
+                    else if (!entity.IsSelected)
+                    {
+                        RootObject.Add(entity.CreateObject3D());
+                    }
                 }
-                else if (!entity.IsSelected)
+                else
                 {
-                    RootObject.Add(entity.CreateObject3D());
+                    if (obj is NSTSplineControlPoint cp)
+                    {
+                        if (cp.Parent.Rotations3D != null && !cp.Parent.Parent.IsSelected && cp.Parent._controlPoints.All(c => !c.IsSelected) && cp.Parent._rotationKeyFrames.All(k => !k.IsSelected))
+                        {
+                            cp.Parent.Object3D!.Remove(cp.Parent.Rotations3D);
+                            cp.Parent.Rotations3D = null;
+                        }
+                        continue;
+                    }
+                    if (obj is NSTSplineRotationKeyFrame kf)
+                    {
+                        if (kf.Parent.Rotations3D != null && !kf.Parent.Parent.IsSelected && kf.Parent._controlPoints.All(c => !c.IsSelected) && kf.Parent._rotationKeyFrames.All(k => !k.IsSelected))
+                        {
+                            kf.Parent.Object3D!.Remove(kf.Parent.Rotations3D);
+                            kf.Parent.Rotations3D = null;
+                        }
+                        else if (kf.Parent.Rotations3D != null && kf.Object3D == null)
+                        {
+                            kf.Parent.Rotations3D.Add(kf.CreateObject3D());
+                        }
+                        continue;
+                    }
+                    
+                    if (!obj.IsSelected)
+                    {
+                        RootObject.Add(obj.CreateObject3D());
+                    }
                 }
             }
 
@@ -378,22 +427,48 @@ namespace NST
                 instance.ConvertToInstanced(RootObject, _explorer.DebugRenderMode);
             }
         }
-
-        public NSTObject? Find(igObject obj) => FindRecursive(obj, AllEntities.Cast<NSTObject>().ToHashSet());
-        private NSTObject? FindRecursive(igObject obj, HashSet<NSTObject> objects)
+        
+        public void RefreshModel(NSTEntity entity, NSTModel? model = null)
         {
-            foreach (NSTObject entity in objects)
+            if (model == null)
             {
-                if (entity.GetObject() == obj) return entity;
+                IgzFile? igz = _explorer.FileManager.GetIgz(entity.ArchiveFile);
 
-                foreach (NSTObject child in entity.Children)
+                if (igz == null)
                 {
-                    NSTObject? result = FindRecursive(obj, child.Children);
-                    if (result != null) return result;
+                    Console.WriteLine($"[RefreshModel] Error: igz file not found for {entity.Object} (${entity.ArchiveFile})");
+                    return;
+                }
+
+                string? modelName = entity.Object.GetModelName(igz, _explorer);
+
+            if (modelName != null)
+            {
+                modelName = Path.GetFileNameWithoutExtension(modelName).ToLower();
+
+                    if (!LevelExplorer._cachedModels.TryGetValue(modelName, out model))
+                {
+                    Console.WriteLine($"Warning: Model not found ({modelName})");
                 }
             }
-            
-            return null;
+            }
+
+            Unregister(entity);
+
+            entity.Model = model;
+
+            Register([ entity ]);
+
+            if (entity.IsSelected)
+            {
+                _explorer.SelectionManager.UpdateSelection([ entity ]);
+            }
+            else
+            {
+                RefreshInstances([ entity ]);
+            }
+
+            _explorer.RenderNextFrame = true;
         }
     }
 }

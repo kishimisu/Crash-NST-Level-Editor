@@ -178,6 +178,8 @@ namespace THREE
                 {
                     if (obj is Mesh || obj is Line)
                     {
+                        if (obj.UserData.ContainsKey("excludeFromOutline")) return;
+
                         if (bVisible)
                         {
 
@@ -205,6 +207,7 @@ namespace THREE
                 var selectedObject = this.selectedObjects[i];
                 selectedObject.Traverse(obj =>
                 {
+                    if (obj.UserData.ContainsKey("excludeFromOutline")) return;
                     if (obj is Mesh || obj is Line) selectedMeshes.Add(obj);
                 });
             }

@@ -55,10 +55,8 @@ namespace Alchemy
             return clone;
         }
 
-        public override void Copy(igObjectBase target)
+        public override void CopyTo(igObjectBase target)
         {
-            base.Copy(target);
-            
             if (target is igHandleMetaField handleMetaField)
             {
                 handleMetaField.Reference = Reference?.Clone();

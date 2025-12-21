@@ -14,6 +14,8 @@ namespace Havok
         public void Add(T element) => _elements.Add(element);
         public void AddRange(List<T> elements) => _elements.AddRange(elements);
         public void Clear() => _elements.Clear();
+        public int IndexOf(T element) => _elements.IndexOf(element);
+        public void Remove(T element) => _elements.Remove(element);
 
         protected void ParseElements(HavokFile hkx, BinaryReader reader, int offset, int count)
         {

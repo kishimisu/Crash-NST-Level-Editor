@@ -6,7 +6,7 @@ namespace Havok
     {
         public virtual uint Hash => 0x0;
 
-        public List<CachedFieldAttr> GetFields() => AttributeUtils.GetAttributes(GetType()).GetFields();
+        public IReadOnlyList<CachedFieldAttr> GetFields() => AttributeUtils.GetAttributes(GetType()).GetFields();
 
         public hkObject Clone() => (hkObject)MemberwiseClone();
         

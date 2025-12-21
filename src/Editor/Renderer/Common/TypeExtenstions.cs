@@ -1,7 +1,3 @@
-using Alchemy;
-using Havok;
-using ImGuiNET;
-
 namespace NST
 {
     /// <summary>
@@ -35,10 +31,10 @@ namespace NST
             { typeof(u32), COL_INTEGER },
             { typeof(i64), COL_INTEGER },
             { typeof(u64), COL_INTEGER },
-            { typeof(Matrix3x4), COL_VECTOR },
             { typeof(System.Numerics.Vector4), COL_VECTOR },
             { typeof(System.Numerics.Quaternion), COL_VECTOR },
             { typeof(System.Numerics.Matrix4x4), COL_VECTOR },
+            { typeof(Alchemy.Matrix3x4), COL_VECTOR },
             { typeof(Alchemy.igNameMetaField), COL_STRING },
             { typeof(Alchemy.ChunkFileInfoMetaField), COL_STRING },
             { typeof(Alchemy.igHandleMetaField), COL_HANDLE },
@@ -50,6 +46,8 @@ namespace NST
             { typeof(Alchemy.igMatrix44fMetaField), COL_VECTOR },
         };
         
+        static readonly Dictionary<Type, uint> _uniqueColorsCache = new Dictionary<Type, uint>();
+
         /// <summary>
         /// Gets the display name for a given type.
         /// Prettifies generic types
@@ -67,6 +65,11 @@ namespace NST
                 }
 
                 return $"{outerType}<{innerType}>";
+            }
+
+            if (type == typeof(float))
+            {
+                return "Float";
             }
 
             return type.Name;
@@ -87,11 +90,11 @@ namespace NST
                     return COL_MEMORY_REF;
                 }
             }
-            if (type.IsAssignableTo(typeof(igObject)) || type.IsAssignableTo(typeof(hkObject)))
+            if (type.IsAssignableTo(typeof(Alchemy.igObject)) || type.IsAssignableTo(typeof(Havok.hkObject)))
             {
                 return COL_OBJECT_REF;
             }
-            if (type.IsAssignableTo(typeof(igBitFieldMetaField)))
+            if (type.IsAssignableTo(typeof(Alchemy.igBitFieldMetaField)))
             {
                 return COL_BITFIELD;    
             }
@@ -99,7 +102,7 @@ namespace NST
             {
                 return color;
             }
-            if (type.IsAssignableTo(typeof(igMetaField)))
+            if (type.IsAssignableTo(typeof(Alchemy.igMetaField)))
             {
                 return COL_METAFIELD;
             }
@@ -112,7 +115,7 @@ namespace NST
                 return COL_ENUM;
             }
 
-            return ImGui.GetColorU32(ImGuiCol.Text);
+            return ImGuiNET.ImGui.GetColorU32(ImGuiNET.ImGuiCol.Text);
         }
 
         /// <summary>
@@ -120,13 +123,21 @@ namespace NST
         /// </summary>
         public static uint GetUniqueColor(this Type type)
         {
-            string name = type.Name;
-            uint hash = NamespaceUtils.ComputeHash(name);
+            if (_uniqueColorsCache.TryGetValue(type, out uint color))
+            {
+                return color;
+            }
+
+            uint hash = Alchemy.NamespaceUtils.ComputeHash(type.Name);
             Random random = new Random((int)hash);
+
             int r = random.Next(100, 255);
             int g = random.Next(100, 255);
             int b = random.Next(100, 255);
-            return 0xff000000 | (uint)((b << 16) | (g << 8) | r);
+            uint col = 0xff000000 | (uint)((b << 16) | (g << 8) | r);
+
+            _uniqueColorsCache[type] = col;
+            return col;
         }
     }
 }

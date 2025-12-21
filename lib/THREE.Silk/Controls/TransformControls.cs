@@ -465,9 +465,9 @@ namespace THREE.Silk
         #endregion
 
         IControlsContainer control;
-        Func<MouseEventArgs, Vector2> getMousePositionFunc;
+        Func<MouseEventArgs, Vector2?> getMousePositionFunc;
 
-        public TransformControls(IControlsContainer control, Camera camera, Func<MouseEventArgs, Vector2> getMousePosition) : base()
+        public TransformControls(IControlsContainer control, Camera camera, Func<MouseEventArgs, Vector2?> getMousePosition) : base()
         {
             _gizmo = new TransformControlsGizmo(this);
             _plane = new TransformControlsPlane(this);
@@ -487,9 +487,9 @@ namespace THREE.Silk
         {
             base.Dispose();
 
-            control.MouseDown += OnPointerDown;
-            control.MouseMove += OnPointerHover;
-            control.MouseUp += OnPointerUp;
+            control.MouseDown -= OnPointerDown;
+            control.MouseMove -= OnPointerHover;
+            control.MouseUp -= OnPointerUp;
 
             this.Traverse(node =>
             {
@@ -505,11 +505,15 @@ namespace THREE.Silk
             PointerHover(sender, e);
         }
 
-        void ComputeMousePosition(MouseEventArgs e)
+        bool ComputeMousePosition(MouseEventArgs e)
         {
-            Vector2 clipMouse = getMousePositionFunc(e);
+            Vector2? clipMouse = getMousePositionFunc(e);
+            if (clipMouse == null) return false;
+
             mouse.X = -clipMouse.X;
             mouse.Y = clipMouse.Y;
+
+            return true;
         }
 
         private void PointerHover(object sender, MouseEventArgs e)
@@ -520,7 +524,7 @@ namespace THREE.Silk
             //camera.LookAt(this.Parent.Position);
             //camera.UpdateMatrixWorld();
 
-            ComputeMousePosition(e);
+            if (!ComputeMousePosition(e)) return;
 
             _raycaster.SetFromCamera(mouse, camera);
 
@@ -544,7 +548,7 @@ namespace THREE.Silk
         {
             control.MouseMove -= OnPointerMove;
 
-            ComputeMousePosition(e);
+            if (!ComputeMousePosition(e)) return;
 
             PointerUp(mouse, e.Button);
 
@@ -572,7 +576,7 @@ namespace THREE.Silk
 
             PointerHover(sender, e);
 
-            ComputeMousePosition(e);
+            if (!ComputeMousePosition(e)) return;
 
             if (this.object3D == null || this.dragging == true || e.Button != MouseButton.Left) return;
 
@@ -612,7 +616,7 @@ namespace THREE.Silk
         {
             if (!this.enabled) return;
 
-            ComputeMousePosition(e);
+            if (!ComputeMousePosition(e)) return;
 
             PointerMove(mouse, e.Button);
 

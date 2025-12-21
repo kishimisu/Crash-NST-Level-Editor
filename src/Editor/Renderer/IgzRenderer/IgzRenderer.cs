@@ -15,7 +15,6 @@ namespace NST
         /// </summary>
         public static igObject? CopyObject { get; set; } = null; // Clipboard object
         public static IgzRenderer? CopyRenderer { get; set; } = null; // Clipboard parent renderer
-        public static CloneMode CopyMode = CloneMode.Shallow; // Object copy mode
 
         public override byte[] SaveFile() => Igz.Save();
         public override void ReloadFile() => SetIgz(ArchiveFile.ToIgzFile());
@@ -36,18 +35,7 @@ namespace NST
         {
             // Create the tree view
             Igz = igz;
-            TreeView.SetIgz(igz);
-
-            // Flag updated nodes
-            FileUpdateInfos? infos = ArchiveRenderer?.FileManager.GetInfos(ArchiveFile);
-            if (infos != null && infos.updatedObjects.Count > 0)
-            {
-                TreeView.ObjectNodes.ForEach(node => 
-                {
-                    if (node.Object != null && infos.updatedObjects.Contains(node.Object)) 
-                        node.IsUpdated = true;
-                });
-            }
+            TreeView.RebuildTree();
 
             try
             {

@@ -1,4 +1,5 @@
 using Alchemy;
+using System.Diagnostics.CodeAnalysis;
 
 namespace NST
 {
@@ -14,6 +15,11 @@ namespace NST
         {
             return (T?)entity._entityData?._componentData?._values.Find(e => e is T);
         }
+        public static bool TryGetComponent<T>(this igEntity entity, [NotNullWhen(true)] out T? component) where T : igComponentData
+        {
+            component = (T?)entity._entityData?._componentData?._values.Find(e => e is T);
+            return component != null;
+        }
 
         /// <summary>
         /// Get all igComponentData children
@@ -24,9 +30,64 @@ namespace NST
         }
 
         /// <summary>
+        /// Get all igComponentData children with their keys
+        /// </summary>
+        public static Dictionary<string, igComponentData> GetComponentsDictionary(this igEntity entity)
+        {
+            return entity._entityData?._componentData?.Dict.ToDictionary(x => x.Key, x => (igComponentData)x.Value) ?? [];
+        }
+
+        /// <summary>
+        /// Add a new component to this entity
+        /// </summary>
+        public static void AddComponent(this igEntity entity, string key, igComponentData component)
+        {
+            if (entity._entityData?._componentData == null)
+            {
+                Console.WriteLine("Warning: igEntity._entityData._componentData is null");
+                return;
+            }
+
+            if (entity._entityData._componentData.Dict.ContainsKey(key))
+            {
+                Console.WriteLine("Warning: igEntity._entityData._componentData already contains key " + key);
+                return;
+            }
+
+            entity._entityData._componentData.Add(key, component);
+            entity._entityData._componentData.RebuildDict = true;
+        }
+
+        /// <summary>
+        /// Remove a component from this entity
+        /// </summary>
+        public static void RemoveComponent(this igEntity entity, string componentKey)
+        {
+            entity._entityData?._componentData?.Remove(componentKey);
+        }
+
+        /// <summary>
+        /// Compute this entity's object-to-world matrix
+        /// </summary>
+        public static THREE.Matrix4 GetTransformMatrix(this igEntity entity)
+        {
+            THREE.Vector3 position = entity._parentSpacePosition.ToVector3();
+
+            if (entity._transform == null)
+            {
+                return new THREE.Matrix4().MakeTranslation(position.X, position.Y, position.Z);
+            }
+
+            THREE.Quaternion rotation = entity._transform._parentSpaceRotation.ToQuaternion();
+            THREE.Vector3 scale = entity._transform._nonUniformPersistentParentSpaceScale.ToVector3();
+
+            return new THREE.Matrix4().Compose(position, rotation, scale);
+        }
+
+        /// <summary>
         /// Find the model name associated to this entity
         /// </summary>
-        public static string? GetModelName(this igEntity entity, IgArchive archive)
+        public static string? GetModelName(this igEntity entity, IgzFile igz, LevelExplorer explorer)
         {
             // todo: cleanup this mess
             CModelComponentData? modelComponent = entity.GetComponent<CModelComponentData>();
@@ -57,7 +118,7 @@ namespace NST
 
                     if (entityToSpawnRef != null)
                     {
-                        igObject entityToSpawn = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, archive);
+                        igObject entityToSpawn = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, explorer.Archive, explorer, igz);
 
                         if (entityToSpawn is igEntity entityToSpawnEntity)
                         {
@@ -88,7 +149,7 @@ namespace NST
 
                                 if (string.IsNullOrEmpty(modelName))
                                 {
-                                    modelName = GetCollectibleModelName(entityToSpawnEntity, archive);
+                                    modelName = GetCollectibleModelName(entityToSpawnEntity, explorer);
                                 }
                             }
                         }
@@ -106,7 +167,7 @@ namespace NST
 
                     if (handleListRef != null)
                     {
-                        igObject handleListObject = AlchemyUtils.FindObjectInArchives(handleListRef, archive);
+                        igObject handleListObject = AlchemyUtils.FindObjectInArchives(handleListRef, explorer.Archive, explorer, igz);
 
                         if (handleListObject is CEntityHandleList handleList && handleList._count > 0)
                         {
@@ -114,11 +175,11 @@ namespace NST
 
                             if (entityToSpawnRef != null)
                             {
-                                igObject entityToSpawnObject = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, archive);
+                                igObject entityToSpawnObject = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, explorer.Archive, explorer);
 
                                 if (entityToSpawnObject is igEntity entityToSpawn)
                                 {
-                                    modelName = entityToSpawn.GetModelName(archive);
+                                    modelName = entityToSpawn.GetModelName(igz, explorer);
                                 }
                             }
                         }
@@ -128,15 +189,13 @@ namespace NST
 
             if (string.IsNullOrEmpty(modelName))
             {
-                modelName = GetCollectibleModelName(entity, archive);
+                modelName = GetCollectibleModelName(entity, explorer);
             }
-
-            modelName = Path.GetFileNameWithoutExtension(modelName);
 
             return modelName;
         }
 
-        private static string? GetCollectibleModelName(igEntity entity, IgArchive archive)
+        private static string? GetCollectibleModelName(igEntity entity, LevelExplorer explorer)
         {
             CCollectibleComponentData? cccd = entity.GetComponent<CCollectibleComponentData>();
 
@@ -146,7 +205,7 @@ namespace NST
 
                 if (idleVfxRef != null)
                 {
-                    IgArchiveFile? vfxFile = AlchemyUtils.FindFileInArchives(idleVfxRef.namespaceName, archive);
+                    IgArchiveFile? vfxFile = AlchemyUtils.FindFileInArchives(idleVfxRef.namespaceName, out _, explorer.Archive);
                     if (vfxFile != null)
                     {
                         IgzFile igz = vfxFile.ToIgzFile();
@@ -162,46 +221,6 @@ namespace NST
             }
 
             return null;
-        }
-    
-        public static List<igObject>? GetSpawnedChildren(this igEntity entity, IgArchive archive)
-        {
-            common_Spawner_TemplateData? spawner = entity.GetComponent<common_Spawner_TemplateData>();
-
-            if (spawner != null)
-            {
-                NamedReference? entityToSpawnRef = spawner._EntityToSpawn.Reference;
-                if (entityToSpawnRef == null) return null;
-
-                igEntity? entityToSpawn = (igEntity?)AlchemyUtils.FindObjectInArchives(entityToSpawnRef, archive);
-                if (entityToSpawn == null) return null;
-
-                return [entityToSpawn];
-            }
-
-            Multiple_Spawner_Template_c? multiSpawner = entity.GetComponent<Multiple_Spawner_Template_c>();
-            if (multiSpawner == null) return null;
-
-            NamedReference? entityListRef = multiSpawner._Spawn_Entity_List.Reference;
-            if (entityListRef == null) return null;
-
-            CEntityHandleList? entityList = (CEntityHandleList?)AlchemyUtils.FindObjectInArchives(entityListRef, archive);
-            if (entityList == null) return null;
-
-            List<igObject> prefabs = [];
-
-            foreach (igHandleMetaField? handle in entityList._data)
-            {
-                NamedReference? handleRef = handle?.Reference;
-                if (handleRef == null) continue;
-                
-                igEntity? spawnedEntity = (igEntity?)AlchemyUtils.FindObjectInArchives(handleRef, archive);
-                if (spawnedEntity == null) continue;
-
-                prefabs.Add(spawnedEntity);
-            }
-
-            return prefabs;
         }
     }
 }

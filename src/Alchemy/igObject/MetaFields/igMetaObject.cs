@@ -12,6 +12,7 @@ namespace Alchemy
             string typeName = Reference.objectName.Replace(".", "_");
 
             return Type.GetType($"Alchemy.{typeName}")
+                ?? Type.GetType($"Alchemy.{Reference.namespaceName}")
                 ?? Type.GetType($"Alchemy.{Reference.namespaceName}_{typeName}")
                 ?? throw new Exception($"Failed to find dynamic object of type {Reference} ({typeName})");
         }

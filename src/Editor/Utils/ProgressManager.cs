@@ -40,6 +40,7 @@ namespace NST
         /// </summary>
         private Dictionary<string, ProgressEntry> _entries = new()
         {
+            { "newlevel", new ProgressEntry() },
             { "entities", new ProgressEntry() },
             { "models", new ProgressEntry() },
             { "materials", new ProgressEntry() },

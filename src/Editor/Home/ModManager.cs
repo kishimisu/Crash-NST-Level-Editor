@@ -11,7 +11,7 @@ namespace NST
     public class ModManager
     {
         // List of all levels in the game
-        private readonly string[] _levels = {
+        public static readonly string[] _levels = {
             "Main Menu",
             "crash1/l100_hub",
             "crash1/l101_nsanitybeach",
@@ -138,7 +138,10 @@ namespace NST
         private bool _isGameModded = false;
 
         private int _selectedLevel = 0;
-        private long _lastLaunchGameClick = 0;
+
+        private static long _lastLaunchGameClick = 0;
+        public static bool CanClickPlay => (DateTime.Now.Ticks - _lastLaunchGameClick) / TimeSpan.TicksPerMillisecond > 3000;
+        public static void PlayButtonTimeout() => _lastLaunchGameClick = DateTime.Now.Ticks;
 
         /// <summary>
         /// Initialize the mod manager
@@ -162,15 +165,32 @@ namespace NST
             }
 
             // Check if game is modded
-            string? gamePath = LocalStorage.GamePath;
-
-            if (gamePath != null && File.Exists(Path.Join(gamePath, "archives", "update.pak")))
-            {
-                _isGameModded = true;
-            }
+            _isGameModded = CheckIsGameModded();
 
             // Load last selected level
             _selectedLevel = LocalStorage.Get("selected_level", 0);
+        }
+
+        /// <summary>
+        /// Returns true if the game folder is currently modded (update.pak exists and contains game files)
+        /// </summary>
+        private static bool CheckIsGameModded()
+        {
+            string? gamePath = LocalStorage.GamePath;
+            string updatePath = Path.Join(gamePath, "archives", "update.pak");
+
+            if (gamePath == null || !File.Exists(updatePath))
+            {
+                return false;
+            }
+
+            IgArchive update = IgArchive.Open(updatePath);
+
+            return update.GetFiles().Any(f =>
+            {
+                string name = f.GetName(false).ToLower();
+                return name != "chunkinfos_pkg" && !name.EndsWith("_custom_zoneinfo");
+            });
         }
 
         /// <summary>
@@ -311,6 +331,21 @@ namespace NST
         /// </summary>
         private void OnClickLaunchGame()
         {
+            PlayButtonTimeout();
+
+            if (_selectedLevel <= 0)
+            {
+                LaunchLevel();
+                return;
+            }
+
+            string levelPath = _levels[_selectedLevel];
+            levelPath += "/" + levelPath.Split('/').Last();
+            LaunchLevel(levelPath);
+        }
+
+        public static void LaunchLevel(string? levelPath = null)
+        {
             if (LocalStorage.GamePath == null)
             {
                 ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
@@ -318,14 +353,7 @@ namespace NST
             }
 
             string exePath = Path.Join(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe");
-
-            string args = "";
-
-            if (_selectedLevel > 0)
-            {
-                string levelName = _levels[_selectedLevel];
-                args = $"-om {levelName}/{levelName.Split('/').Last()}";
-            }
+            string args = levelPath == null ? "" : $"-om {levelPath}";
 
             Console.WriteLine($"{exePath} {args}");
 
@@ -360,7 +388,7 @@ namespace NST
             if (ImGui.BeginItemTooltip())
             {
                 ImGui.PushTextWrapPos(ImGui.GetFontSize() * 35);
-                ImGui.TextWrapped("You can click & hold items in the list to reorder them.\n\nIf some files are conflicting between mods, the priority will be given to the mod that appears first in the list.");
+                ImGui.TextWrapped("Load, manage and apply mods to the game.\n\n- Add mod(s): Add one or more mods (.pak) to the list\n- Apply Mods: Apply all *enabled* mods to the game\n- Unmod Game: Remove all mods from the game\n\nYou can click & hold items in the list to reorder them.\n\nIf some files are conflicting between mods, the priority will be given to the mod that appears first in the list.");
                 ImGui.PopTextWrapPos();
                 ImGui.EndTooltip();
             }
@@ -391,12 +419,11 @@ namespace NST
             if (_isGameModded || _modPaths.Count > 0)
             {
                 ImGui.SameLine();
-                Vector2 buttonSize = new Vector2(ImGui.GetContentRegionAvail().X * .25f, 0);
                 
                 if (_isGameModded)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(1, .2f, 0, 0.5f));
-                    if (ImGuiUtils.RightAlignedButton("Unmod game", buttonSize))
+                    if (ImGuiUtils.RightAlignedButton("Unmod game"))
                     {
                         OnClickUnmodGame();
                     }
@@ -405,7 +432,7 @@ namespace NST
                 if (_modPaths.Count > 0)
                 {
                     ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0, 1, .2f, 0.5f));
-                    if (ImGuiUtils.RightAlignedButton("Apply mods", buttonSize))
+                    if (ImGuiUtils.RightAlignedButton("Apply mods"))
                     {
                         OnClickApply();
                     }
@@ -419,13 +446,8 @@ namespace NST
         /// <summary>
         /// Render the level select dropdown
         /// </summary>
-        public void RenderLevelSelect(float? alignRight = null)
+        private void RenderLevelSelect()
         {
-            if (alignRight != null)
-            {
-                ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - alignRight.Value);
-            }
-
             float buttonPaddingX = ImGui.GetContentRegionAvail().X * 0.1f;
             float buttonWidth = ImGui.CalcTextSize("Launch game").X + buttonPaddingX * 2;
 
@@ -438,14 +460,13 @@ namespace NST
             }
             ImGui.SameLine();
 
-            bool isButtonActive = (DateTime.Now.Ticks - _lastLaunchGameClick) / TimeSpan.TicksPerMillisecond > 3000;
+            bool isButtonActive = CanClickPlay;
 
             ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new Vector2(buttonPaddingX, ImGui.GetStyle().FramePadding.Y));
             if (!isButtonActive) ImGui.BeginDisabled();
             if (ImGui.Button("Launch game"))
             {
                 OnClickLaunchGame();
-                _lastLaunchGameClick = DateTime.Now.Ticks;
             }
             if (!isButtonActive) ImGui.EndDisabled();
             ImGui.PopStyleVar();

@@ -20,6 +20,8 @@ namespace Alchemy
         Shallow = 1 << 0, // Only clone the top-level object
         Deep = 1 << 1, // Clone all objects recursively
         SkipComponents = 1 << 2, // Reuse components that have multiple parents instead of cloning them
+        SkipEntities = 1 << 3, // Skip cloning entities
+        ShallowAndChildren = 1 << 4, // Clone the top-level object and all of its children
     }
     
     /// <summary>
@@ -27,7 +29,7 @@ namespace Alchemy
     /// </summary>
     public abstract class igObjectBase
     {
-        protected List<CachedFieldAttr> GetFields() => AttributeUtils.GetAttributes(GetType()).GetFields();
+        public IReadOnlyList<CachedFieldAttr> GetFields() => AttributeUtils.GetAttributes(GetType()).GetFields();
 
         /// <summary>
         /// Parse each field of this igObject from an IGZ file stream
@@ -79,7 +81,7 @@ namespace Alchemy
         /// </summary>
         public virtual List<igObject> GetChildren(ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
         {
-            List<CachedFieldAttr> fields = GetFields();
+            IReadOnlyList<CachedFieldAttr> fields = GetFields();
             List<igObject> children = [];
 
             if (searchParams.HasFlag(ChildrenSearchParams.OnlyRefCounted))
@@ -288,18 +290,25 @@ namespace Alchemy
                 if (value == null) continue;
 
                 if (value is string str) strings.Add(str);
+                else if (value is igObject obj && obj.Reference != null) strings.Add(obj.Reference.namespaceName);
             }
+
+            strings.AddRange(GetHandles().Select(h => h.namespaceName));
 
             return strings;
         }
 
         /// <summary>
-        /// Copy all fields from this object to another
+        /// Copy all fields from this object to another object
         /// </summary>
-        public virtual void Copy(igObjectBase target)
+        public virtual void CopyTo(igObjectBase target)
         {
+            HashSet<string> targetFields = target.GetFields().Select(f => f.GetName()).ToHashSet();
+
             foreach (CachedFieldAttr field in GetFields())
             {
+                if (!targetFields.Contains(field.GetName())) continue;
+                
                 object? value = field.GetValue(this);
                 field.SetValue(target, value);
             }

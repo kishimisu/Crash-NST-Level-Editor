@@ -1,7 +1,7 @@
 namespace Alchemy
 {
     [ObjectAttr(24)]
-    public class igVectorMetaField<T> : igRefMetaField
+    public class igVectorMetaField<T> : igRefMetaField, IMemoryRef
     {
         [FieldAttr(0)] public int _elementCount;
         [FieldAttr(8)] public igMemoryRef<T> _data  = new();
@@ -12,9 +12,9 @@ namespace Alchemy
             set => _data[index] = value;
         }
         public int Count => _data.Count;
-        public List<T> FindAll(Predicate<T> predicate) => _data.FindAll(predicate);
+        public MemoryPool MemoryPool { get => _data.MemoryPool; set => _data.MemoryPool = value; }
         public IEnumerable<TOut> Select<TOut>(Func<T, TOut> selector) => _data.Select(selector);
-        public IEnumerator<T> GetEnumerator() => _data.GetEnumerator();
+        public void Clear() => _data.Clear();
 
         public override void Write(IgzWriter writer)
         {

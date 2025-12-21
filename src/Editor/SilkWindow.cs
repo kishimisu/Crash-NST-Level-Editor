@@ -35,7 +35,7 @@ namespace NST
             WindowOptions options = WindowOptions.Default;
             options.WindowBorder = WindowBorder.Resizable;
             options.WindowState = WindowState.Maximized;
-            options.Title = "Crash NST Editor v1.5";
+            options.Title = "Crash NST Editor v1.6";
             options.API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Compatability, ContextFlags.Default, new APIVersion(3, 3));
 
             options.VSync = false;
@@ -88,7 +88,7 @@ namespace NST
             }
         }
 
-        private unsafe void SetupImGUI()
+        private void SetupImGUI()
         {
             float scale = _window.Size.Y > 2000 ? 2.0f : _window.Size.Y > 1080 ? 1.5f : 1.0f;
 
@@ -99,7 +99,7 @@ namespace NST
             _io.ConfigWindowsMoveFromTitleBarOnly = true;
             _io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
-            ImGui.PushStyleVar(ImGuiStyleVar.IndentSpacing, 12);
+            ImGui.GetStyle().IndentSpacing = 12;
         }
 
         private unsafe static void LoadIconFont(float scale_factor = 1.0f)
@@ -114,8 +114,23 @@ namespace NST
                 config.SizePixels = font_size;
 
                 ImGui.GetIO().Fonts.AddFontDefault(config);
-                config.MergeMode = true;
-                ImGui.GetIO().Fonts.AddFontFromFileTTF("assets/icomoon.ttf", font_size, config, new IntPtr(rangePtr));
+
+                using Stream? fontStream = typeof(Program).Assembly.GetManifestResourceStream("NST.assets.icomoon.ttf");
+
+                if (fontStream != null)
+                {
+                    byte[] fontData = new byte[fontStream.Length];
+
+                    fixed (byte* fontPtr = fontData)
+                    {
+                        fontStream.ReadExactly(fontData);
+
+                        config.MergeMode = true;
+                        config.FontDataOwnedByAtlas = false;
+
+                        ImGui.GetIO().Fonts.AddFontFromMemoryTTF((nint)fontPtr, fontData.Length, font_size * 0.85f, config, new IntPtr(rangePtr));
+                    }
+                }
             }
 
             ImGui.GetStyle().ScaleAllSizes(scale_factor);

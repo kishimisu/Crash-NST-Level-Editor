@@ -8,19 +8,12 @@ namespace NST
     /// </summary>
     public class CollisionUpdateInfos
     {
-        public igEntity entity; // Updated entity
-        public string namespaceName; // File namespace
+        public NSTEntity entity; // Updated entity
+        public hknpShapeInstance? shapeInstance = null; // Full shape instance if not in the same archive
+        public bool removed = false; // Whether the entity has been removed
 
-        public int shapeIndex = -1; // Shape index in the current archive's StaticCollision.igz
-        public hknpShapeInstance? shapeInstance = null; // Full shape instance
-        
-        /// <summary>
-        /// Create a reference to the updated entity
-        /// </summary>
-        public HashedReference reference
-        {
-            get => entity.ToNamedReference(namespaceName).ToEXID();
-        }
+        public HashedReference reference => entity.ToReference().ToEXID();
+        public uint objectHash => entity.CollisionPrefabHash != 0 ? entity.CollisionPrefabHash : reference.objectHash;
     }
 
     /// <summary>
@@ -60,7 +53,8 @@ namespace NST
         /// Apply the changes made to the file.
         /// If the file is an IGZ file, its content will be saved.
         /// </summary>
-        public void Apply()
+        /// <returns>True if the file has been deleted</returns>
+        public bool Apply()
         {
             updated = false;
             removeOnDiscard = false;
@@ -70,18 +64,23 @@ namespace NST
 
             if (renderer != null)
             {
+                if (renderer is IgzRenderer igzRenderer && igzRenderer.Igz.Objects.Count == 0) return true;
+
                 renderer.TreeView.RemoveUnreferencedNodes();
                 renderer.TreeView.ClearUpdatedNodes();
 
                 // Apply changes to IGZ file
                 file.SetData(renderer.SaveFile());
             }
-            else 
-            if (igz != null)
+            else if (igz != null)
             {
+                if (igz.Objects.Count == 0) return true;
+
                 // Save IGZ file
                 file.SetData(igz.Save());
             }
+
+            return false;
         }
 
         /// <summary>
@@ -153,8 +152,29 @@ namespace NST
         /// Check if a renderer is associated to any file
         /// </summary>
         public bool HasRenderer(FileRenderer renderer) => _files.Values.Any(f => f.renderer == renderer);
-
+        
+        /// <summary>
+        /// Get the update infos corresponding to a file if it exists
+        /// </summary>
         public FileUpdateInfos? GetInfos(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file] : null;
+
+        /// <summary>
+        /// Find an object corresponding to a reference in the currently open files
+        /// </summary>
+        public igObject? FindObjectInOpenFiles(NamedReference reference, out IgArchiveFile? file)
+        {
+            foreach (var infos in _files)
+            {
+                if (infos.Value.igz != null && infos.Key.GetName(false).Equals(reference.namespaceName, StringComparison.InvariantCultureIgnoreCase))
+                {
+                    file = infos.Key;
+                    return infos.Value.igz.FindObject(reference);
+                }
+            }
+
+            file = null;
+            return null;
+        }
 
         /// <summary>
         /// Add a file to the list of active files.
@@ -194,7 +214,7 @@ namespace NST
         /// <param name="file">The file to add</param>
         /// <param name="removeOnDiscard">Whether to remove the file from the archive on "Discard"</param>
         /// <param name="originalPath">The original path of the file for rename operations</param>
-        public FileUpdateInfos SetUpdated(IgArchiveFile file, bool removeOnDiscard = false, string? originalPath = null)
+        public FileUpdateInfos SetUpdated(IgArchiveFile file, bool removeOnDiscard = false, string? originalPath = null, bool setTreeDirty = false)
         {
             if (!_files.TryGetValue(file, out FileUpdateInfos? infos))
             {
@@ -206,6 +226,7 @@ namespace NST
 
             if (removeOnDiscard) infos.removeOnDiscard = removeOnDiscard;
             if (originalPath != null) infos.originalPath = originalPath;
+            if (setTreeDirty && infos.renderer != null) infos.renderer.TreeView.NeedsRebuild = true;
 
             return infos;
         }
@@ -217,6 +238,10 @@ namespace NST
         {
             if (_files.TryGetValue(file, out FileUpdateInfos? infos))
             {
+                if (infos.renderer?.TreeView.NeedsRebuild == true)
+                {
+                    infos.renderer.TreeView.RebuildTree();
+                }
                 return infos.renderer;
             }
 
@@ -229,15 +254,16 @@ namespace NST
         public IgzRenderer? GetOrCreateRenderer(NamedReference reference, IgArchiveRenderer archiveRenderer)
         {
             string namespaceName = reference.namespaceName.ToLowerInvariant();
-            IgArchiveFile? file = _files.Keys.FirstOrDefault(f => f.GetName(false).ToLowerInvariant() == namespaceName);
+            FileUpdateInfos? infos = _files.Values.FirstOrDefault(f => f.file.GetName(false).ToLowerInvariant() == namespaceName);
 
-            if (file == null) 
+            if (infos == null) 
             {
-                Console.WriteLine($"Could not find file {namespaceName} in active files");
+                Console.WriteLine($"Warning: Could not find file {namespaceName} in active files");
                 return null;
             }
 
-            IgzRenderer renderer = GetOrCreateRenderer(file, archiveRenderer);
+            IgzRenderer renderer = GetOrCreateRenderer(infos.file, archiveRenderer);
+
             renderer.TreeView.SelectNode(reference, false);
             
             return renderer;
@@ -252,13 +278,16 @@ namespace NST
                 infos = new FileUpdateInfos(file);
                 _files[file] = infos;
             }
+            
             if (infos.renderer != null)
             {
-                // Console.WriteLine($"[GetOrCreateRenderer] Reusing renderer for {file.GetName(false)}" + "#" + infos.igz?.uid);
+                if (infos.renderer.TreeView.NeedsRebuild)
+                {
+                    infos.renderer.TreeView.RebuildTree();
+                }
+                
                 return (IgzRenderer)infos.renderer;
             }
-
-            // Console.WriteLine($"[GetOrCreateRenderer] Creating renderer for {file.GetName(false)}, igz ? {infos.igz != null}" + "#" + infos.igz?.uid);
 
             IgzRenderer renderer = new IgzRenderer(infos.igz ?? file.ToIgzFile(), file, archiveRenderer);
             infos.renderer = renderer;
@@ -272,16 +301,16 @@ namespace NST
         /// </summary>
         /// <param name="removeFromActive">Whether to remove the file from the active list</param>
         // public void ApplyChanges(IgArchiveFile file, bool removeFromActive = false)
-        public void ApplyChanges(FileUpdateInfos infos, bool removeFromActive = false)
+        public bool ApplyChanges(FileUpdateInfos infos, bool removeFromActive = false)
         {
-            // if (!_files.TryGetValue(file, out FileUpdateInfos? infos)) return;
-
-            infos.Apply();
+            bool isFileEmpty = infos.Apply();
 
             if (removeFromActive && !infos.keepActive && !infos.IsWindow())
             {
                 _files.Remove(infos.file);
             }
+
+            return isFileEmpty;
         }
 
         /// <summary>

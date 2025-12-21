@@ -114,15 +114,20 @@ namespace Alchemy
         {
             clones ??= new Dictionary<igObject, igObject>();
 
-            if (!mode.HasFlag(CloneMode.Deep) && clones.Count > 0) return this; // Shallow copy
+            // (Shallow copy) Skip if not root object
+            if (!mode.HasFlag(CloneMode.Deep) && !mode.HasFlag(CloneMode.ShallowAndChildren) && clones.Count > 0 && this is not igComponentList) return this;
 
-            if (GetType() == typeof(igMetaObject) || GetType() == typeof(igObject)) return this; // Skip empty objects
+            // Skip entities
+            if (mode.HasFlag(CloneMode.SkipEntities) && this is igEntity && clones.Count > 0) return this;
 
-            if (clones.ContainsKey(this)) return clones[this]; // Skip already cloned objects
+            // Skip empty objects
+            if (GetType() == typeof(igMetaObject) || GetType() == typeof(igObject)) return this;
 
-            // Skip components with multiple references
-            // TODO: cleanup & optimize
-            if (igz != null && mode.HasFlag(CloneMode.SkipComponents) && (this is igComponentData || this is igEntityData) &&
+            // Skip already cloned objects
+            if (clones.ContainsKey(this)) return clones[this];
+
+            // Skip components with multiple references (todo: cleanup & optimize)
+            if (igz != null && clones.Count > 0 && mode.HasFlag(CloneMode.SkipComponents) && (this is igComponentData || this is igEntityData) &&
                 igz.Objects.Count(
                     e => e.GetType() != typeof(igObjectList) && e.GetChildren(igz, ChildrenSearchParams.IncludeHandles).Contains(this)
                 ) > 1)
@@ -130,17 +135,19 @@ namespace Alchemy
                 return this;
             }
 
-            clones[this] = this; // Prevent infinite recursion
+            // (Shallow + children) switch to Shallow mode for the children
+            if (mode.HasFlag(CloneMode.ShallowAndChildren) && clones.Count > 0) mode = CloneMode.Shallow;
+
+            clones[this] = this; // Temporary assignment to prevent infinite recursion
 
             // Clone this object
             igObject clone = (igObject)base.Clone(igz, dst, mode, clones);
             clone.MemoryPool = MemoryPool;
-
             clones[this] = clone;
 
             return clone;
         }
 
-        public override string ToString() => $"{GetType().Name}{(ObjectName != null ? $": {ObjectName}" : "")} #{GetHashCode()}";
+        public override string ToString() => $"{GetType().Name}{(ObjectName != null ? $": {ObjectName}" : "")}{(Reference == null ? "" : $" ({Reference})")}";
     }
 }

@@ -17,11 +17,11 @@ namespace Alchemy
             this.alignment = alignment;
         }
 
-        public static readonly MemoryPool Default = new MemoryPool
+        public static MemoryPool Default => new MemoryPool
         {
             name = "Default",
             identifier = 0,
-            alignment = 0 
+            alignment = 8
         };
 
         public ChunkInfo ToChunkInfo(int offset, int size)
@@ -74,6 +74,6 @@ namespace Alchemy
             writer.Write(alignment);
         }
 
-        public override string ToString() => $"[ChunkInfo] Offset: {offset}, Size: {size}, Alignment: {alignment} (MemPoolOffset: {identifier})";
+        public override string ToString() => $"[ChunkInfo] Offset: {offset}, Alignment: {alignment}, Size: {size} (MemPoolOffset: {identifier})";
     }
 }

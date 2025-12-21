@@ -162,6 +162,11 @@ namespace NST
             if (multiReferences) ImGui.PopStyleColor();
             if (subselected) ImGui.PopStyleColor();
 
+            if (ImGui.IsItemFocused() && (ImGui.IsKeyPressed(ImGuiKey.Backspace) | ImGui.IsKeyPressed(ImGuiKey.Delete)))
+            {
+                RemoveFromTree(tree);
+            }
+
             if (ImGui.BeginPopupContextItem("IgzObjectPopup" + _uuid))
             {
                 RenderContextMenu(tree);
@@ -321,11 +326,11 @@ namespace NST
             
             // "Focus" button
 
-            if (Object is igEntity entity || Object is igSpline2 || Object is igSplineControlPoint2)
+            if (renderer.ArchiveRenderer.IsLevelArchive && (Object is igEntity || Object is CCameraBase))
             {
                 if (ImGui.SmallButton("Focus in editor"))
                 {
-                    App.FocusObject3D(renderer.ArchiveRenderer.Archive, Object);
+                    App.OpenLevelExplorer(renderer.ArchiveRenderer, Object);
                 }
             }
 
@@ -399,65 +404,32 @@ namespace NST
         {
             if (Object == null) return;
 
+            ImGui.TextDisabled(Object.ToString());
+
             if (ImGui.Selectable("Copy object name"))
             {
                 ImGui.SetClipboardText(GetDisplayName());
             }
-            
-            Dictionary<string, CloneMode> pasteModes = new()
+            if (ImGui.Selectable("Copy object"))
             {
-                { "shallow", CloneMode.Shallow },
-                { "deep", CloneMode.Deep | CloneMode.SkipComponents },
-                { "full", CloneMode.Deep },
-            };
-            foreach ((string modeStr, CloneMode mode) in pasteModes)
-            {
-                if (ImGui.Selectable($"Copy object ({modeStr})"))
-                {
-                    IgzRenderer.CopyObject = (igObject)Object.Clone(mode: CloneMode.Shallow);
-                    IgzRenderer.CopyRenderer = tree.Renderer;
-                    IgzRenderer.CopyMode = mode;
-                }
+                IgzRenderer.CopyObject = (igObject)Object.Clone(mode: CloneMode.Deep);
+                IgzRenderer.CopyRenderer = tree.Renderer;
             }
 
             if (IgzRenderer.CopyObject != null && IgzRenderer.CopyRenderer != null)
             {
                 ImGui.Separator();
-                
-                if (ImGui.Selectable($"Paste object ({IgzRenderer.CopyObject.GetType().Name})"))
-                {
-                    // Paste in the same file
-                    if(tree.Renderer == IgzRenderer.CopyRenderer)
-                    {
-                        igObject clone = tree.Renderer.Igz.AddClone(IgzRenderer.CopyObject, mode: IgzRenderer.CopyMode);
-                        IgzTreeNode newNode = tree.Add(clone, true)[0];
-                        tree.SetSelectedNode(newNode);
-                    }
-                    // Paste in a different file
-                    else if (tree.Renderer.ArchiveRenderer == IgzRenderer.CopyRenderer.ArchiveRenderer)
-                    {
-                        igObject clone = tree.Renderer.Igz.AddClone(IgzRenderer.CopyObject, IgzRenderer.CopyRenderer.Igz);
-                        IgzTreeNode newNode = tree.Add(clone, true)[0];
-                        tree.SetSelectedNode(newNode);
+                ImGui.TextDisabled(IgzRenderer.CopyObject.ToString());
 
-                        foreach (var tdep in IgzRenderer.CopyRenderer.Igz.Dependencies)
-                        {
-                            if (!tree.Renderer.Igz.Dependencies.Contains(tdep))
-                            {
-                                tree.Renderer.Igz.Dependencies.Add(tdep);
-                            }
-                        }
-                    }
-                    // Paste in a different archive
-                    else
-                    {
-                        igObject clone = IgzFile.Clone(IgzRenderer.CopyObject,
-                            IgzRenderer.CopyRenderer.ArchiveRenderer.Archive, tree.Renderer.ArchiveRenderer.Archive,
-                            IgzRenderer.CopyRenderer.Igz, tree.Renderer.Igz
-                        );
-                        IgzTreeNode newNode = tree.Add(clone, true)[0];
-                        tree.SetSelectedNode(newNode);
-                    }
+                if (tree.Renderer == IgzRenderer.CopyRenderer)
+                {
+                    if (ImGui.Selectable($"Paste object (shallow)")) PasteObject(tree, CloneMode.Shallow);
+                    if (ImGui.Selectable($"Paste object (deep)")) PasteObject(tree, CloneMode.Deep | CloneMode.SkipComponents);
+                    if (ImGui.Selectable($"Paste object (full)")) PasteObject(tree, CloneMode.Deep);
+                }
+                else if (ImGui.Selectable($"Paste object"))
+                {
+                    PasteObject(tree);
                 }
 
                 bool canPasteValues = Object.GetType().IsAssignableTo(IgzRenderer.CopyObject.GetType());
@@ -466,7 +438,7 @@ namespace NST
 
                 if (ImGui.Selectable("Paste object values"))
                 {
-                    IgzRenderer.CopyObject.Copy(Object);
+                    IgzRenderer.CopyObject.CopyTo(Object);
                     tree.RebuildNode(this);
                 }
 
@@ -491,18 +463,66 @@ namespace NST
             }
             if (ImGui.Selectable("Delete"))
             {
-                List<igObject> removed = tree.Renderer.Igz.Remove(Object).ToList();
+                RemoveFromTree(tree);
+            }
+        }
+        
+        private void PasteObject(IgzTreeView tree, CloneMode mode = CloneMode.Deep)
+        {
+            if (IgzRenderer.CopyObject == null || IgzRenderer.CopyRenderer == null) return;
 
-                foreach (igObject obj in removed)
-                {
-                    tree.Remove(this, false);
-                    tree.Renderer.SetUpdated(Object);
-                }
+            var AddClone = (IgzFile? source = null) =>
+            {
+                igObject clone = tree.Renderer.Igz.AddClone(IgzRenderer.CopyObject, IgzRenderer.CopyRenderer.Igz, mode: mode);
+                IgzTreeNode newNode = tree.Add(clone, true)[0];
+                tree.SetSelectedNode(newNode);
+            };
+            
+            // Paste in the same archive
+            if (tree.Renderer == IgzRenderer.CopyRenderer || tree.Renderer.ArchiveRenderer == IgzRenderer.CopyRenderer.ArchiveRenderer)
+            {
+                AddClone();
+            }
+            // Paste in a different archive
+            else
+            {
+                ModalRenderer.ShowConfirmationModal($"Automatically import all dependencies for\n{IgzRenderer.CopyObject}?", 
+                    () =>
+                    {
+                        AddClone();
+                    },
+                    () =>
+                    {
+                        igObject clone = tree.Renderer.ArchiveRenderer.Clone(IgzRenderer.CopyObject,
+                            IgzRenderer.CopyRenderer.ArchiveRenderer.Archive,
+                            IgzRenderer.CopyRenderer.Igz, tree.Renderer.Igz
+                        );
 
-                if (tree.SelectedNode == this)
-                {
-                    tree.SetSelectedNode(null);
-                }
+                        IgzTreeNode newNode = tree.Add(clone, true)[0];
+                        tree.SetSelectedNode(newNode);
+                    },
+                    "No", "Yes"
+                );
+            }
+        }
+
+        private void RemoveFromTree(IgzTreeView tree)
+        {
+            if (Object == null) return;
+
+            tree.Renderer.Igz.Remove(Object);
+                tree.Renderer.SetUpdated(Object);
+            tree.Remove(this, false);
+
+            // foreach (igObject obj in tree.Renderer.Igz.Remove(Object).ToList())
+            // {
+            //     tree.Remove(obj);
+            //     tree.Renderer.SetUpdated(Object);
+            // }
+
+            if (tree.SelectedNode == this)
+            {
+                tree.SetSelectedNode(null);
             }
         }
 

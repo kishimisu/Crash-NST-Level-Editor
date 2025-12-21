@@ -1,4 +1,5 @@
 using Alchemy;
+using Havok;
 using ImGuiNET;
 using System.Numerics;
 
@@ -14,21 +15,22 @@ namespace NST
 
         private IgArchiveTreeView _treeView;
         private IgArchiveFile? _selectedFile = null;
-        private Dictionary<HashedReference, int> _collisionData = [];
         private HashSet<IgArchiveFile> _includeInPackageFile = [];
 
+        public bool IsOpen = true;
+        public bool IsUpdated { get; set; } = false;
+        public bool ForceSaveAs { get; set; } = false;
+        public bool IsLevelArchive { get; private set; } = false;
+
         private uint _uuid;
-        private bool _isOpen = true;
-        private bool _isUpdated = false;
         private bool _showAudioPlayer = false; // Used for .snd files
         private bool _hasBackup = false;
         private bool _compressOnSave = true;
-        private bool _isLevelArchive = false;
+        private bool _rebuildPackageFile = true;
+        private bool _hasPackageFile = false;
 
         public string GetWindowName() => (string.IsNullOrEmpty(Archive.GetName()) ? "New Archive" : Archive.GetName()) + "###" + _uuid;
-        public int FindCollisionShapeIndex(HashedReference reference) => _collisionData.ContainsKey(reference) ? _collisionData[reference] : -1;
-        public int FindCollisionShapeIndex(NamedReference reference) => FindCollisionShapeIndex(reference.ToEXID());
-        public bool IncludeInPackageFile(IgArchiveFile file) => _includeInPackageFile.Contains(file);
+        public bool IncludeInPackageFile(IgArchiveFile file) => !_hasPackageFile || _includeInPackageFile.Contains(file);
 
         public IgArchiveRenderer(string archivePath) : this(IgArchive.Open(archivePath)) { }
 
@@ -45,19 +47,20 @@ namespace NST
 
             _treeView = new IgArchiveTreeView(this);
             
-            _collisionData = StaticCollisionsUtils.GetCollisionData(Archive);
+            IgArchiveFile? packageFile = Archive.FindPackageFile();
+
             _compressOnSave = LocalStorage.Get("compress_on_save_" + Archive.GetPath(), true);
             _hasBackup = File.Exists(Archive.GetPath() + ".backup");
+            _hasPackageFile = (packageFile != null);
+            _rebuildPackageFile = _hasPackageFile;
             _includeInPackageFile.Clear();
             _selectedFile = null;
             _showAudioPlayer = false;
 
-            IgArchiveFile? packageFile = Archive.FindPackageFile();
-
             if (packageFile == null) return;
-            
-            _isLevelArchive = true;
 
+            IsLevelArchive = packageFile.GetPath().Substring("packages/generated/".Length).StartsWith("maps/");
+            
             IgzFile packageIgz = packageFile.ToIgzFile();
             igStreamingChunkInfo? chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>();
 
@@ -81,10 +84,12 @@ namespace NST
         /// <summary>
         /// Adds a new file to the archive and updates the tree view
         /// </summary>
-        public void AddFile(IgArchiveFile file, bool addToPackageFile = true)
+        public void AddFile(IgArchiveFile file, bool addToPackageFile = true, bool focusFile = false)
         {
             Archive.AddFile(file);
             _treeView.AddFile(file);
+            
+            SetFileUpdated(file, focusFile, isNewFile: true);
 
             if (addToPackageFile) _includeInPackageFile.Add(file);
         }
@@ -94,7 +99,7 @@ namespace NST
         /// </summary>
         public void Render()
         {
-            if (!_isOpen)
+            if (!IsOpen)
             {
                 TryCloseArchive();
                 return;
@@ -104,17 +109,17 @@ namespace NST
             ImGui.SetNextWindowSize(displaySize * new Vector2(1, 0.5f), ImGuiCond.FirstUseEver);
             ImGui.SetNextWindowPos(Vector2.Zero, ImGuiCond.FirstUseEver);
 
-            ImGuiWindowFlags flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.MenuBar;
+            ImGuiWindowFlags flags = ImGuiWindowFlags.NoScrollbar | ImGuiWindowFlags.NoScrollWithMouse | ImGuiWindowFlags.MenuBar | ImGuiWindowFlags.NoSavedSettings;
 
-            if (_isUpdated) flags |= ImGuiWindowFlags.UnsavedDocument;
+            if (IsUpdated) flags |= ImGuiWindowFlags.UnsavedDocument;
 
-            if (ImGui.Begin(GetWindowName(), ref _isOpen, flags))
+            if (ImGui.Begin(GetWindowName(), ref IsOpen, flags))
             {
                 float columnWidth = ImGui.GetContentRegionAvail().X * 0.3f;
 
                 RenderMenuBar();
                 
-                if (_isLevelArchive && ImGui.Button("Open Level Editor"))
+                if (IsLevelArchive && ImGui.Button("Open Level Editor"))
                 {
                     App.OpenLevelExplorer(this);
                 }
@@ -125,8 +130,6 @@ namespace NST
                     ImGui.TableSetupColumn("igzRenderer", ImGuiTableColumnFlags.WidthStretch);
                     ImGui.TableNextRow();
                     ImGui.TableNextColumn();
-                    
-                    // ImGui.Text(FileManager.ToString());
 
                     // Render tree view
                     _treeView.Render();
@@ -140,6 +143,7 @@ namespace NST
                 // Shortcuts
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(true); // Save and run
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E)) App.OpenLevelExplorer(this); // Level Explorer
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(); // Restore backup
             }
@@ -150,21 +154,46 @@ namespace NST
             ImGui.End();
         }
 
-        private void RenderMenuBar()
+        public void RenderMenuBar(bool fromLevelEditor = false)
         {
             if (ImGui.BeginMenuBar())
             {
+                if (ImGui.MenuItem("\uE900"))
+                {
+                    App.OpenMainMenu();
+                }
                 if (ImGui.BeginMenu("File"))
                 {
-                    if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
-                    if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) SaveArchive(true);
-                    if (ImGui.MenuItem("Compress on save", null, _compressOnSave))
-                    { 
-                        _compressOnSave = !_compressOnSave;
-                        LocalStorage.Set("compress_on_save_" + Archive.GetPath(), _compressOnSave);
-                    }
+                    if (ImGui.MenuItem("Open", "Ctrl+O")) App.OnClickOpen(fromLevelEditor);
+                    App.RenderOpenRecent(fromLevelEditor: fromLevelEditor);
                     ImGui.Separator();
-                    if (ImGui.MenuItem("Close")) _isOpen = false;
+                    if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
+                    if (ImGui.MenuItem("Save as", "Ctrl+Shift+S")) SaveArchive(true);
+                    if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(true);
+
+                    ImGui.Separator();
+
+                    if (ImGui.BeginMenu("Archive"))
+                    {
+                        if (fromLevelEditor && ImGui.MenuItem("Open archive..."))
+                        {
+                            App.OpenArchiveRenderer(this);
+                        }
+                        ImGui.Separator();
+                        AudioPlayerInstance.RenderAudioMenu();
+                        if (ImGui.MenuItem("Compress on save", null, _compressOnSave))
+                        { 
+                            _compressOnSave = !_compressOnSave;
+                            LocalStorage.Set("compress_on_save_" + Archive.GetPath(), _compressOnSave);
+                        }
+                        if (ImGui.MenuItem("Rebuild package file", null, _rebuildPackageFile))
+                        {
+                            _rebuildPackageFile = !_rebuildPackageFile;
+                            LocalStorage.Set("rebuild_package_file", _rebuildPackageFile);
+                        }
+                        ImGui.EndMenu();
+                    }
+                    if (ImGui.MenuItem("Close")) IsOpen = false;
 
                     ImGui.EndMenu();
                 }
@@ -185,8 +214,39 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
+                if (fromLevelEditor || IsLevelArchive)
+                {
+                    RenderPlayCurrentLevel();
+                }
+
                 ImGui.EndMenuBar();
             }
+        }
+
+        private void RenderPlayCurrentLevel()
+        {
+            string name = Archive.GetName();
+            float w = ImGui.CalcTextSize("Play current level " + name).X + ImGui.GetStyle().FramePadding.X * 2;
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - w);
+
+            ImGui.Text(name);
+            ImGui.SameLine();
+
+            bool isButtonActive = ModManager.CanClickPlay;
+
+            if (!isButtonActive) ImGui.BeginDisabled();
+            if (ImGui.Button("Play current level"))
+            {
+                try
+                {
+                    Archive.RunLevel();
+                }
+                catch (Exception e)
+                {
+                    ModalRenderer.ShowMessageModal("Error", e.Message);
+                }
+            }
+            if (!isButtonActive) ImGui.EndDisabled();
         }
 
         private void CreateBackup()
@@ -214,7 +274,7 @@ namespace NST
 
             Setup();
 
-            _isUpdated = true;
+            IsUpdated = true;
         }
 
         /// <summary>
@@ -258,9 +318,9 @@ namespace NST
         /// <param name="focusFile">Whether to set the focus to the updated file.</param>
         /// <param name="isNewFile">Whether the updated file is a newly created file or an existing file</param>
         /// <param name="originalName">The original name of the file for rename operations</param>
-        public FileUpdateInfos SetFileUpdated(IgArchiveFile file, bool focusFile = true, bool isNewFile = false, string? originalPath = null)
+        public FileUpdateInfos SetFileUpdated(IgArchiveFile file, bool focusFile = true, bool isNewFile = false, string? originalPath = null, bool fromLevelEditor = false)
         {
-            FileUpdateInfos infos = FileManager.SetUpdated(file, isNewFile, originalPath);
+            FileUpdateInfos infos = FileManager.SetUpdated(file, isNewFile, originalPath, fromLevelEditor);
             
             if (focusFile)
             {
@@ -271,7 +331,7 @@ namespace NST
                 }
             }
 
-            _isUpdated = true;
+            IsUpdated = true;
 
             return infos;
         }
@@ -281,9 +341,9 @@ namespace NST
         /// </summary>
         /// <param name="file">The parent file</param>
         /// <param name="obj">The object that has been updated</param>
-        public FileUpdateInfos SetObjectUpdated(IgArchiveFile file, object? obj)
+        public FileUpdateInfos SetObjectUpdated(IgArchiveFile file, object? obj, bool fromLevelEditor = false)
         {
-            FileUpdateInfos infos = SetFileUpdated(file, false);
+            FileUpdateInfos infos = SetFileUpdated(file, false, fromLevelEditor: fromLevelEditor);
 
             if (obj != null) {
                 infos.updatedObjects.Add(obj);
@@ -295,27 +355,27 @@ namespace NST
         /// <summary>
         /// Marks an igEntity as updated with its collision data. Also marks the archive and file as updated
         /// </summary>
-        /// <param name="file">The parent file</param>
-        /// <param name="obj">The entity that has been updated</param>
-        /// <param name="shapeIndex">The Havok shape index in the archive's StaticCollision.hkx</param>
-        /// <param name="shapeInstance">The Havok shape instance (not required if shapeIndex is set)</param>
-        public void SetEntityUpdated(IgArchiveFile file, igEntity entity, int? shapeIndex = null, Havok.hknpShapeInstance? shapeInstance = null)
+        /// <param name="entity">The entity that has been updated</param>
+        /// <param name="shapeInstance">The corresponding shape instance if not in the same archive</param>
+        public void SetEntityUpdated(NSTEntity entity, hknpShapeInstance? shapeInstance = null, bool removed = false)
         {
-            FileUpdateInfos infos = SetObjectUpdated(file, entity);
+            FileUpdateInfos infos = SetObjectUpdated(entity.ArchiveFile, entity.Object);
 
-            if (shapeIndex == -1 || infos.updatedCollisions.Keys.Contains(entity)) return;
-            if (shapeIndex == null && shapeInstance == null) return;
-            
-            string namespaceName = file.GetName(false);
-            NamedReference reference = entity.ToNamedReference(namespaceName);
+            if (entity.CollisionShapeIndex == -1 && shapeInstance == null) return;
 
-            var updateInfos = new CollisionUpdateInfos() { 
-                entity = entity, 
-                shapeIndex = shapeIndex ?? FindCollisionShapeIndex(reference.ToEXID()), 
-                shapeInstance = shapeInstance,
-                namespaceName = namespaceName
-            };
-            infos.updatedCollisions.Add(updateInfos.entity, updateInfos);
+            if (infos.updatedCollisions.TryGetValue(entity.Object, out CollisionUpdateInfos? collisionInfos))
+            {
+                collisionInfos.removed |= removed;
+            }
+            else
+            {
+                infos.updatedCollisions[entity.Object] = new CollisionUpdateInfos()
+                {
+                    entity = entity,
+                    removed = removed,
+                    shapeInstance = shapeInstance,
+                };
+            }
         }
 
         /// <summary>
@@ -449,12 +509,12 @@ namespace NST
             }
         }
 
-        public void TryCloseArchive()
+        private void TryCloseArchive()
         {
-            if (_isUpdated)
+            if (!App.CanCloseArchive(this))
             {
-                ModalRenderer.ShowWarningModal("Are you sure you want to close the archive without saving?", () => { _isUpdated = false; _isOpen = false; });
-                _isOpen = true;
+                ModalRenderer.ShowWarningModal($"Are you sure you want to close {Archive.GetName()} without saving?", () => { IsUpdated = false; IsOpen = false; });
+                IsOpen = true;
             }
             else
             {
@@ -466,21 +526,28 @@ namespace NST
         /// Try to save the current archive to disk.
         /// Will show a confirmation modal if it's a game archive.
         /// </summary>
-        public void TrySaveArchive()
+        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false)
         {
-            if (!_isUpdated) return;
+            if (!IsUpdated)
+            {
+                if (launchGame) Archive.RunLevel();
+                return;
+            }
 
-            if (LocalStorage.GamePath != null && Archive.GetPath().StartsWith(LocalStorage.GamePath) && !_hasBackup) // Check if overwriting a game file
+            // Check if overwriting a game file
+            if (!_hasBackup && Archive.FindCustomZoneInfoFile() == null && LocalStorage.GamePath != null && Archive.GetPath().StartsWith(LocalStorage.GamePath))
             {
                 ModalRenderer.ShowConfirmationModal(
-                    "Warning: you're about to overwrite a game file with no backup!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.", 
-                    () =>  SaveArchive(true), // Save as...
-                    () =>  SaveArchive(false) // Overwrite
+                    fromLevelEditor
+                        ? "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to create a copy of the original level\n(Save as...)."
+                        : "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.",
+                    () =>  SaveArchive(true, launchGame), // Save as...
+                    () =>  SaveArchive(false, launchGame) // Overwrite
                 );
             }
             else
             {
-                SaveArchive();
+                SaveArchive(false, launchGame);
             }
         }
 
@@ -488,9 +555,15 @@ namespace NST
         /// Save the current archive to disk
         /// </summary>
         /// <param name="saveAs">If true will open the file saving explorer, otherwise will overwrite the current file</param>
-        private void SaveArchive(bool saveAs = false)
+        public void SaveArchive(bool saveAs = false, bool launchGame = false)
         {
             string? path = Archive.GetPath();
+
+            if (!string.IsNullOrEmpty(path) && LocalStorage.IsFileLocked(path))
+            {
+                ModalRenderer.ShowMessageModal("Could not save the archive", "This file is currently being used by the game.");
+                return;
+            }
 
             // Check that all object names are unique
             foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
@@ -509,11 +582,12 @@ namespace NST
                 }
             }
 
-            if (saveAs || string.IsNullOrEmpty(path))
+            if (saveAs || ForceSaveAs || string.IsNullOrEmpty(path))
             {
                 path = FileExplorer.SaveFile("", FileExplorer.EXT_ARCHIVES, Archive.GetName());
                 if (path == null) return;
-                LocalStorage.AddRecentFile(path);
+                LocalStorage.AddRecentFile(path, IsLevelArchive);
+                ForceSaveAs = false;
 
                 if (!_compressOnSave)
                 {
@@ -521,40 +595,67 @@ namespace NST
                 }
             }
 
-            List<CollisionUpdateInfos> updatedCollisions = [];
+            ModalRenderer.ShowLoadingModal("Saving archive...");
 
-            // Loop through all updated files
-            foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
+            Task.Run(() =>
             {
-                // Add updated collisions
-                updatedCollisions.AddRange(infos.updatedCollisions.Values);
+                List<CollisionUpdateInfos> updatedCollisions = [];
 
-                // Save file
-                FileManager.ApplyChanges(infos, _selectedFile != archiveFile);
-            }
+                // Loop through all updated files
+                foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
+                {
+                    // Add updated collisions
+                    updatedCollisions.AddRange(infos.updatedCollisions.Values);
 
-            // Rebuild collisions if needed
-            if (updatedCollisions.Count > 0)
-            {
-                StaticCollisionsUtils.RebuildCollisions(Archive, updatedCollisions);
-            }
+                    // Save file
+                    bool isFileEmpty = FileManager.ApplyChanges(infos, _selectedFile != archiveFile);
 
-            // Rebuild package file if needed
-            List<IgArchiveFile> includedFiles = Archive.GetFiles().Where(e => _includeInPackageFile.Contains(e)).ToList();
-            Archive.RebuildPackageFile(includedFiles);
+                    if (isFileEmpty) 
+                    {
+                        Console.WriteLine("Removing empty file: " + archiveFile.GetName());
+                        RemoveFile(archiveFile);
+                    }
+                }
 
-            if (_compressOnSave)
-            {
-                Archive.CompressAll();
-            }
-            else
-            {
-                Archive.UncompressAll();
-            }
+                // Rebuild collisions if needed
+                if (updatedCollisions.Count > 0)
+                {
+                    StaticCollisionsUtils.RebuildCollisions(Archive, updatedCollisions);
+                }
 
-            // Save archive
-            Archive.Save(path, true);
-            _isUpdated = false;
+                if (IsLevelArchive && Archive.FindCustomZoneInfoFile() == null)
+                {
+                    LevelBuilder.ConvertToCustomLevel(Archive);
+                }
+
+                // Rebuild package file if needed
+                if (_rebuildPackageFile)
+                {
+                    List<IgArchiveFile> includedFiles = Archive.GetFiles().Where(e => _includeInPackageFile.Contains(e)).ToList();
+                    Archive.RebuildPackageFile(includedFiles, out IgArchiveFile? newPackageFile);
+                    if (newPackageFile != null) _treeView.AddFile(newPackageFile);
+                }
+
+                if (_compressOnSave)
+                {
+                    Archive.CompressAll();
+                }
+                else
+                {
+                    Archive.UncompressAll();
+                }
+
+                // Save archive
+                Archive.Save(path, true);
+                IsUpdated = false;
+
+                ModalRenderer.CloseLoadingModal();
+
+                if (launchGame)
+                {
+                    Archive.RunLevel();
+                }
+            });
         }
 
         /// <summary>
@@ -594,19 +695,16 @@ namespace NST
         }
 
         /// <summary>
-        /// Open the delete modal for a file
+        /// Remove a file from the archive and the tree
         /// </summary>
-        private void DeleteFile(IgArchiveFile file)
+        public void RemoveFile(IgArchiveFile file)
         {
-            ModalRenderer.ShowDeleteModal("Are you sure you want to delete " + file.GetName() + "?", () =>
-            {
-                FileManager.Remove(file, true);
-                Archive.RemoveFile(file);
-                _treeView.RemoveFile(file);
-                _includeInPackageFile.Remove(file);
-                _isUpdated = true;
-                FocusNode(null);
-            });
+            FileManager.Remove(file, true);
+            Archive.RemoveFile(file);
+            _treeView.RemoveFile(file);
+            _includeInPackageFile.Remove(file);
+            IsUpdated = true;
+            FocusNode(null);
         }
 
         /// <summary>
@@ -655,6 +753,36 @@ namespace NST
         }
 
         /// <summary>
+        /// Display a modal to create a new empty IGZ file
+        /// </summary>
+        /// <param name="baseName">Base file name</param>
+        /// <param name="basePath">Base file path</param>
+        public void CreateFile(string baseName, string basePath = "")
+        {
+            ModalRenderer.ShowRenameModal(baseName, (fileName) => 
+            {
+                if (!fileName.Contains("."))
+                {
+                    fileName += ".igz";
+                }
+                else if (!fileName.EndsWith(".igz") && !fileName.EndsWith(".lng"))
+                {
+                    ModalRenderer.ShowMessageModal("Error", "Invalid extension: ." + fileName.Split('.')[1]);
+                    return;
+                }
+                
+                string path = basePath + fileName;
+
+                IgzFile igz = new IgzFile(path, [ new igObject() { ObjectName = "DummyObject" } ]);
+                IgArchiveFile file = new IgArchiveFile(path);
+                file.SetData(igz.Save());
+
+                AddFile(file, focusFile: true);
+                _treeView.SetSelectedNode(_treeView.FindNode(file));
+            });
+        }
+
+        /// <summary>
         /// Render the right-click context menu for a tree node
         /// </summary>
         public void RenderNodePopup(IgArchiveFile file)
@@ -663,7 +791,7 @@ namespace NST
 
             if (!file.GetPath().StartsWith("packages/") && ImGui.Checkbox("Include in package file", ref includeInPkg))
             {
-                _isUpdated = true;
+                IsUpdated = true;
 
                 if (includeInPkg) _includeInPackageFile.Add(file);
                 else _includeInPackageFile.Remove(file);
@@ -676,26 +804,49 @@ namespace NST
             if (ImGui.Selectable("Rename"))    RenameFile(file);
             if (ImGui.Selectable("Duplicate")) DuplicateFile(file);
             if (ImGui.Selectable("Extract"))   ExtractFile(file);
-            if (ImGui.Selectable("Delete"))    DeleteFile(file);
+            if (ImGui.Selectable("Delete"))    RemoveFile(file);
         }
 
+        /// <summary>
+        /// Clone an object from an external archive, including all its dependencies
+        /// </summary>
         public T Clone<T>(T sourceObject, IgArchive sourceArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null) where T : igObject
         {
-            List<IgArchiveFile> prevFiles = Archive.GetFiles().ToList();
+            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out List<IgArchiveFile> newFiles, clones);
 
-            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, clones);
-
-            foreach (IgArchiveFile file in Archive.GetFiles().ToList().Except(prevFiles))
+            foreach (IgArchiveFile file in newFiles)
             {
-                if (!file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/"))
-                {
-                    _includeInPackageFile.Add(file);
-                }
-
-                _treeView.AddFile(file);
+                bool addToPkg = !file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/");
+                AddFile(file, addToPkg);
             }
 
             return clone;
+        }
+
+        /// <summary>
+        /// Add a file and all its dependencies to the archive
+        /// </summary>
+        public void AddFileWithDependencies(IgArchive sourceArchive, IgArchiveFile file, bool focus = false)
+        {
+            bool addToPkg = !file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/");
+            
+            AddFile(file, addToPkg, focus);
+
+            if (!file.IsIGZ())
+            {
+                return;
+            }
+
+            HashSet<string> dependencies = file.ToIgzFile().GetDependencies().ToHashSet();
+
+            List<IgArchiveFile> added = IgArchiveExtensions.FindDependencies(sourceArchive, Archive, dependencies);
+
+            for (int i = 0; i < added.Count; i++)
+            {
+                IgArchiveFile newFile = added[i];
+                addToPkg = !newFile.GetPath().StartsWith("maps/") || newFile.GetPath().StartsWith("maps/Custom/");
+                AddFile(newFile, addToPkg);
+            }
         }
     }
 }

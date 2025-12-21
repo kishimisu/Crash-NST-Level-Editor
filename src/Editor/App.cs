@@ -1,6 +1,5 @@
 using Alchemy;
 using ImGuiNET;
-using Silk.NET.Windowing;
 using System.Diagnostics;
 
 namespace NST
@@ -25,16 +24,16 @@ namespace NST
             _mainMenu.Initialize();
         }
 
+        /// <summary>
+        /// Render the application
+        /// </summary>
         public static void Render(double deltaTime)
         {
-            // Render top bar
-            RenderMenuBar();
-
             // Create fullscreen dockspace
             ImGui.DockSpaceOverViewport();
 
             // Render main menu
-            if (_archives.Count == 0 && _editors.Count == 0 && !_mainMenu.IsOpen)
+            if (!_mainMenu.IsOpen && !_archives.Any(e => e.IsOpen) && !_editors.Any(e => e.IsOpen))
             {
                 _mainMenu.IsOpen = true;
             }
@@ -49,14 +48,7 @@ namespace NST
             // Render level explorers
             foreach (LevelExplorer viewer in _editors.ToList())
             {
-                if (!viewer.IsOpen)
-                {
-                    _editors.Remove(viewer);
-                }
-                else 
-                {
-                    viewer.Render(deltaTime);
-                }
+                viewer.Render(deltaTime);
             }
 
             // Render modals if any
@@ -65,23 +57,21 @@ namespace NST
             if (_showDemo) ImGui.ShowDemoWindow();
         }
 
-        private static void RenderMenuBar()
+        /// <summary>
+        /// Render the main menu bar
+        /// </summary>
+        public static void RenderHomeMenuBar()
         {
-            if (ImGui.BeginMainMenuBar())
+            if (ImGui.BeginMenuBar())
             {
                 if (ImGui.BeginMenu("File"))
                 {
-                    if (ImGui.MenuItem("New...", "Ctrl+N")) OnClickNew();
-                    if (ImGui.MenuItem("Open...", "Ctrl+O")) OnClickOpen();
+                    if (ImGui.MenuItem("New mod")) OnClickNew();
+                    if (ImGui.MenuItem("Open archive")) OnClickOpen();
+                    RenderOpenRecent(true);
                     ImGui.Separator();
-                    if (ImGui.MenuItem("Main Menu"))
-                    {
-                        _mainMenu.IsOpen = true;
-                        ImGui.SetWindowFocus("Main Menu");
-                    }
                     if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
-                    if (ImGui.MenuItem("Demo Window")) _showDemo = !_showDemo;
-                    // if (ImGui.MenuItem("Run Tests")) Tests.TestEditor();
+                    if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
                     if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                     ImGui.EndMenu();
                 }
@@ -92,33 +82,58 @@ namespace NST
                     }
                     ImGui.EndMenu();
                 }
-
-                _mainMenu.ModManager.RenderLevelSelect(400.0f);
                 
-                ImGui.EndMainMenuBar();
+                ImGui.EndMenuBar();
             }
         }
 
-        public static void FocusRenderer(FileRenderer renderer)
+        /// <summary>
+        /// Render the recent files submenu
+        /// </summary>
+        public static void RenderOpenRecent(bool fromMainMenu = false, bool fromLevelEditor = false)
         {
-            foreach (IgArchiveRenderer archive in _archives)
+            if (ImGui.BeginMenu("Open recent"))
             {
-                if (archive.FileManager.HasRenderer(renderer))
-                {
-                    ImGui.SetWindowFocus(archive.GetWindowName());
-                    archive.FocusFile(renderer.ArchiveFile);
-                    return;
-                }
-            }
+                ImGui.SeparatorText(fromLevelEditor ? "Recent Levels" : "Recent Archives");
+                List<string> recent = fromLevelEditor ? LocalStorage.RecentLevels : LocalStorage.RecentFiles;
 
-            Console.WriteLine($"WARNING: Renderer was not found in any archive ! ({renderer.GetWindowName()})");
+                foreach (string path in recent.ToList())
+                {
+                    if (ImGui.MenuItem(Path.GetFileName(path)))
+                    {
+                        try
+                        {
+                            OpenArchive(path, fromLevelEditor);
+                            if (fromMainMenu) _mainMenu.IsOpen = false;
+                        }
+                        catch (Exception e)
+                        {
+                            ModalRenderer.ShowMessageModal("Error", e.Message);
+                        }
+                    }
+                    if (ImGui.IsItemHovered()) ImGui.SetTooltip(path);
+                }
+                ImGui.EndMenu();
+            }
+        }
+        
+        /// <summary>
+        /// Open the main menu
+        /// </summary>
+        public static void OpenMainMenu()
+        {
+            _mainMenu.IsOpen = true;
+            ImGui.SetWindowFocus("Main Menu");
         }
 
-        public static IgArchiveRenderer OpenArchive(string path)
+        /// <summary>
+        /// Open an archive from its path
+        /// </summary>
+        /// <param name="path">Path to the archive</param>
+        /// <param name="openLevelEditor">Whether to open the level editor or archive renderer</param>
+        public static IgArchiveRenderer OpenArchive(string path, bool openLevelEditor = false)
         {
             IgArchiveRenderer? renderer = _archives.Find(a => a.Archive.GetPath() == path);
-
-            LocalStorage.AddRecentFile(path);
 
             if (renderer != null)
             {
@@ -128,63 +143,87 @@ namespace NST
             else
             {
                 renderer = new IgArchiveRenderer(path);
-                
-                _archives.Add(renderer);
+
+                if (openLevelEditor)
+                {
+                    if (!renderer.IsLevelArchive)
+                    {
+                        throw new Exception("This archive is not a level archive.");
+                    }
+                    renderer.IsOpen = false;
+                    OpenLevelExplorer(renderer);
+                }
+                else OpenArchiveRenderer(renderer);
             }
+
+            LocalStorage.AddRecentFile(path, openLevelEditor && renderer.IsLevelArchive);
 
             return renderer;
         }
 
-        public static void CloseArchive(IgArchiveRenderer archive)
+        /// <summary>
+        /// Set focus on an existing archive renderer
+        /// </summary>
+        public static void OpenArchiveRenderer(IgArchiveRenderer archiveRenderer)
         {
-            _archives.Remove(archive);
-
-            LevelExplorer? explorer = _editors.Find(e => e.ArchiveRenderer == archive);
-
-            if (explorer != null)
+            if (!_archives.Contains(archiveRenderer))
             {
-                _editors.Remove(explorer);
+                _archives.Add(archiveRenderer);
             }
+
+            archiveRenderer.IsOpen = true;
+
+            ImGui.SetWindowFocus(archiveRenderer.GetWindowName());
+            LocalStorage.AddRecentFile(archiveRenderer.Archive.GetPath());
         }
 
-        public static IgArchiveFile? FindFile(string name, FileSearchType searchType = FileSearchType.NameWithExtension)
+        /// <summary>
+        /// Set focus on a level editor, creating it if necessary
+        /// </summary>
+        public static void OpenLevelExplorer(IgArchiveRenderer archiveRenderer, igObject? objToFocus = null)
         {
-            foreach (IgArchiveRenderer archiveRenderer in _archives)
+            foreach (LevelExplorer editor in _editors)
             {
-                IgArchiveFile? file = archiveRenderer.Archive.FindFile(name, searchType);
-                if (file != null) return file;
+                if (editor.ArchiveRenderer == archiveRenderer)
+                {
+                    editor.IsOpen = true;
+                    if (objToFocus != null) editor.Focus(objToFocus);
+                    ImGui.SetWindowFocus(editor.GetWindowName());
+                    return;
+                }
             }
 
-            NamespaceInfos? infos = NamespaceUtils.GetInfos(name);
+            LevelExplorer newEditor = new LevelExplorer(archiveRenderer, objToFocus);
+            LocalStorage.AddRecentFile(archiveRenderer.Archive.GetPath(), true);
+            _editors.Add(newEditor);
+        }
 
-            if (infos == null)
+        public static void AddLevelExplorer(LevelExplorer explorer) => _editors.Add(explorer);
+        public static void CloseArchive(IgArchiveRenderer archive) => _archives.Remove(archive);
+        public static bool CanCloseArchive(IgArchiveRenderer archive)
+        {
+            return !archive.IsUpdated || _editors.Find(e => e.ArchiveRenderer == archive)?.IsOpen == true;
+        }
+        public static void CloseExplorer(LevelExplorer explorer)
+        {
+            explorer.Dispose();
+            _editors.Remove(explorer);
+        }
+
+        /// <summary>
+        /// Focus an existing file renderer
+        /// </summary>
+        public static void FocusRenderer(FileRenderer renderer)
+        {
+            if (renderer is IgzRenderer igzRenderer)
             {
-                Console.WriteLine($"WARNING: Failed to find namespace infos for {name}.");
-                return null;
+                OpenArchiveRenderer(igzRenderer.ArchiveRenderer);
+                igzRenderer.ArchiveRenderer.FocusFile(renderer.ArchiveFile);
             }
-            if (infos.pak == null)
+            else
             {
-                Console.WriteLine($"WARNING: NamespaceInfos {name} has no archive set.");
-                return null;
+                Console.WriteLine($"Warning: Renderer was not found in any archive ! ({renderer.GetWindowName()})");
             }
-            if (LocalStorage.GamePath == null)
-            {
-                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
-                return null;
-            }
-
-            string pakName = infos.pak;
-            string pakPath = Path.Join(LocalStorage.GamePath, "archives", pakName);
-
-            if (!File.Exists(pakPath))
-            {
-                Console.WriteLine($"WARNING: Failed to find archive {pakPath} for {name}.");
-                return null;
-            }
-
-            IgArchive archive = new IgArchive(pakPath);
-
-            return archive.FindFile(name, searchType);
         }
 
         /// <summary>
@@ -199,6 +238,14 @@ namespace NST
             // Try to find file in the parent archive if provided
             if (parentArchive?.FocusObject(reference, renderer) == true)
             {
+                if (!parentArchive.IsOpen)
+                {
+                    OpenArchiveRenderer(parentArchive);
+                }
+                else
+            {
+                ImGui.SetWindowFocus(parentArchive.GetWindowName());
+                }
                 return;
             }
 
@@ -241,47 +288,59 @@ namespace NST
             }
         }
 
-        public static void OpenLevelExplorer(IgArchiveRenderer archiveRenderer)
+        public static IgArchiveFile? FindFile(string name, out IgArchive? archive, FileSearchType searchType = FileSearchType.NameWithExtension)
         {
-            foreach (LevelExplorer viewer in _editors)
+            HashSet<IgArchiveRenderer> renderers = [];
+
+            foreach (var a in _archives) renderers.Add(a);
+            foreach (var e in _editors)  renderers.Add(e.ArchiveRenderer);
+
+            archive = null;
+
+            foreach (IgArchiveRenderer r in renderers)
             {
-                if (viewer.ArchiveRenderer == archiveRenderer)
+                IgArchiveFile? file = r.Archive.FindFile(name, searchType);
+                if (file != null)
                 {
-                    viewer.IsOpen = true;
-                    ImGui.SetWindowFocus(viewer.GetWindowName());
-                    return;
+                    archive = r.Archive;
+                    return file;
                 }
             }
-            
-            _editors.Add(new LevelExplorer(archiveRenderer));
-        }
 
-        public static void FocusObject3D(IgArchive archive, igObject obj)
-        {
-            foreach (LevelExplorer explorer in _editors)
+            try 
             {
-                if (explorer.Archive.GetPath() == archive.GetPath())
-                {
-                    explorer.FocusObject(obj);
-                    ImGui.SetWindowFocus(explorer.GetWindowName());
-                    return;
-                }
+            return AlchemyUtils.FindFileInArchives(Path.GetFileNameWithoutExtension(name), out archive);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e.Message);
+                return null;
             }
         }
 
-        public static void OnClickOpen()
+        public static void OnClickOpen(bool fromLevelEditor = false)
         {
-            List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ALCHEMY, false);
+            List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ARCHIVES, false);
 
             if (files.Count == 0) return;
 
-            OpenArchive(files[0]);
+            try
+            {
+                OpenArchive(files[0], fromLevelEditor);
+            }
+            catch (Exception e)
+            {
+                ModalRenderer.ShowMessageModal("Error", e.Message);
+            }
+
+            _mainMenu.IsOpen = false;
         }
 
         public static void OnClickNew()
         {
             IgArchive archive = new IgArchive("");
             _archives.Add(new IgArchiveRenderer(archive));
+            _mainMenu.IsOpen = false;
         }
 
         private static void OpenURL(string url)

@@ -20,24 +20,34 @@ namespace NST
         public IgzTreeView(IgzRenderer renderer) => Renderer = renderer;
 
         /// <summary>
-        /// Sets the current IGZ file and rebuilds the tree
-        /// </summary>
-        public void SetIgz(IgzFile igz)
-        {
-            ObjectNodes = BuildNodes(igz);
-
-            UpdateTypeCount(ObjectNodes);
-            RebuildTree();
-        }
-
-        /// <summary>
         /// Build the tree based on the current object nodes and hierarchy mode
         /// </summary>
-        protected override void RebuildTree()
+        public override void RebuildTree()
         {
+            FileUpdateInfos? infos = Renderer.ArchiveRenderer.FileManager.GetInfos(Renderer.ArchiveFile);
+
+            ObjectNodes = BuildNodes(Renderer.Igz);
+
+            if (infos != null)
+            {
+                // Flag updated nodes
+                if (infos.updatedObjects.Count > 0)
+                {
+                    ObjectNodes.ForEach(node => 
+                    {
+                        if (node.Object != null && infos.updatedObjects.Contains(node.Object)) 
+                            node.IsUpdated = true;
+                    });
+                }
+            }
+
+            UpdateTypeCount(ObjectNodes);
+
             _rootNodes = BuildRootNodes(ObjectNodes, _hierarchyMode);
 
             AllNodes = _rootNodes.Union(ObjectNodes).ToList();
+
+            NeedsRebuild = false;
         }
 
         /// <summary>
@@ -380,7 +390,10 @@ namespace NST
                 {
                     _rootNodes.Add(new IgzTreeNode($"{newNode.Object.GetType().Name} (1)", [ newNode ]));
                 }
-            }
+            }            
+            
+            // Update children
+            // RebuildNode(newNode);
 
             // Update the renderer
             if (updateRenderer) Renderer.SetUpdated(newNode.Object);
@@ -389,19 +402,19 @@ namespace NST
         /// <summary>
         /// Remove an object from the tree
         /// </summary>
-        public void Remove(igObject toRemove)
-        {
-            IgzTreeNode? node = ObjectNodes.Find(e => e.Object == toRemove);
+        // public void Remove(igObject toRemove)
+        // {
+        //     IgzTreeNode? node = ObjectNodes.Find(e => e.Object == toRemove);
 
-            if (node == null)
-            {
-                Console.Error.WriteLine($"Warning: No node found for {toRemove} to remove");
-            }
-            else
-            {
-                Remove(node, false);
-            }
-        }
+        //     if (node == null)
+        //     {
+        //         Console.Error.WriteLine($"Warning: No node found for {toRemove} to remove");
+        //     }
+        //     else
+        //     {
+        //         Remove(node, false);
+        //     }
+        // }
 
         /// <summary>
         /// Remove a node from the tree

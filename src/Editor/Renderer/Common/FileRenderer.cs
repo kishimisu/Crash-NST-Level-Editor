@@ -14,6 +14,7 @@ namespace NST
 
         public FileRenderer? LastRenderer { get; set; } = null; // Used when the file was opened through another file to render a back button
         protected IgzPreviewManager? _previewManager; // Manages previews for models, textures, audio...
+        public event Action OnUpdate; // Used by the LevelExplorer's ComponentManager to listen to file updates
 
         public abstract ITreeView TreeView { get; } // Object tree
 
@@ -55,6 +56,7 @@ namespace NST
         public virtual void SetUpdated(object? obj = null)
         {
             ArchiveRenderer.SetObjectUpdated(ArchiveFile, obj);
+            OnUpdate?.Invoke();
         }
 
         /// <summary>
@@ -135,6 +137,16 @@ namespace NST
         /// </summary>
         private void RenderTreeView()
         {
+            if (TreeView.NeedsRebuild)
+            {
+                ImGui.TextColored(new Vector4(1, 0.9f, 0, 1), "This file has been modified externally!");
+                ImGui.SameLine();
+                if (ImGui.Button("Rebuild tree"))
+                {
+                    TreeView.RebuildTree();
+                }
+            }
+
             ImGui.BeginChild("TreeView");
             TreeView.Render();
             ImGui.EndChild();
@@ -154,7 +166,7 @@ namespace NST
         /// <summary>
         /// Render the fields of an object
         /// </summary>
-        public void RenderObject(object? obj)
+        public void RenderObject(object? obj, IReadOnlyList<CachedFieldAttr>? fields = null)
         {
             if (obj == null) return;
 
@@ -164,26 +176,22 @@ namespace NST
                 | ImGuiTableFlags.RowBg
                 | ImGuiTableFlags.BordersInner
                 | ImGuiTableFlags.Hideable
-                | ImGuiTableFlags.NoPadOuterX
-                // | ImGuiTableFlags.SizingStretchProp
+                | ImGuiTableFlags.SizingFixedFit
                 | ImGuiTableFlags.NoSavedSettings
             )) {
                 float totalWidth = ImGui.GetContentRegionAvail().X;
-                float[] ratios = { 0.4f, 0.2f, 0.4f };
 
-                ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, ratios[0] * totalWidth);
-                ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, ratios[1] * totalWidth);
-                ImGui.TableSetupColumn("Value", ImGuiTableColumnFlags.WidthFixed, ratios[2] * totalWidth);
+                ImGui.TableSetupColumn("Name", ImGuiTableColumnFlags.WidthFixed, 0.3f * totalWidth);
+                ImGui.TableSetupColumn("Type", ImGuiTableColumnFlags.WidthFixed, 0.2f * totalWidth);
+                ImGui.TableSetupColumn("Value", ImGuiTableColumnFlags.WidthStretch);
                 ImGui.TableHeadersRow();
                 ImGui.PushItemWidth(-1);
 
-                FieldRenderer.RenderFields(this, obj);
+                fields ??= AttributeUtils.GetAttributes(obj.GetType()).GetFields();
 
-                while (_popStylesOnNextRow > 0)
-                {
-                    _popStylesOnNextRow--;
-                    ImGui.PopStyleColor();
-                }
+                FieldRenderer.RenderFields(this, obj, fields);
+
+                PopStyles();
 
                 ImGui.PopItemWidth();
                 ImGui.EndTable();

@@ -69,6 +69,11 @@ namespace NST
             // Create the tree node with no name
             IsOpen = ImGui.TreeNodeEx("##" + GetHashCode(), flags);
 
+            if (File != null && ImGui.IsItemFocused() && (ImGui.IsKeyPressed(ImGuiKey.Backspace) | ImGui.IsKeyPressed(ImGuiKey.Delete)))
+            {
+                tree.Renderer.RemoveFile(File);
+            }
+
             // Handle tree node events
             HandleItemEvents(tree);
 
@@ -162,27 +167,7 @@ namespace NST
         {
             if (ImGui.Selectable("New file..."))
             {
-                ModalRenderer.ShowRenameModal("name.igz", (fileName) => 
-                {
-                    if (!fileName.Contains("."))
-                    {
-                        fileName += ".igz";
-                    }
-                    else if (!fileName.EndsWith(".igz") && !fileName.EndsWith(".lng"))
-                    {
-                        ModalRenderer.ShowMessageModal("Error", "Invalid extension: ." + fileName.Split('.')[1]);
-                        return;
-                    }
-                    
-                    string path = NodePath + fileName;
-
-                    IgzFile igz = new IgzFile(path);
-                    IgArchiveFile file = new IgArchiveFile(path);
-                    file.SetData(igz.Save());
-
-                    tree.Renderer.AddFile(file);
-                    tree.SetSelectedNode(tree.FindNode(file));
-                });
+                tree.Renderer.CreateFile("New_File.igz", NodePath);
             }
             if (ImGui.Selectable("New folder..."))
             {

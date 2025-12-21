@@ -7,13 +7,13 @@ namespace Alchemy
     [ObjectAttr(64, 8)]
     public abstract class igHashTable<K, V> : igHashTable where K : notnull
     {
-        [FieldAttr(16)] public igMemoryRef<V?> _values = new();
-        [FieldAttr(32)] public igMemoryRef<K?> _keys = new();
+        [FieldAttr(16)] public igMemoryRef<V?> _values = [];
+        [FieldAttr(32)] public igMemoryRef<K?> _keys = [];
         [FieldAttr(48)] public int _hashItemCount = 0;
         [FieldAttr(52)] public bool _autoRehash = true;
         [FieldAttr(56)] public float _loadFactor = 0.5f;
 
-        public Dictionary<K, V> Dict { get; } = new();
+        public Dictionary<K, V> Dict { get; private set; } = [];
         public bool RebuildDict { get; set; } = false;
 
         public V this[K key]
@@ -24,6 +24,47 @@ namespace Alchemy
         public List<K> Keys => Dict.Keys.ToList();
         public List<V> Values => Dict.Values.ToList();
 
+        /// <summary>
+        /// Add a new entry to the table
+        /// </summary>
+        public void Add(K key, V value)
+        {
+            _keys.Add(key);
+            _values.Add(value);
+
+            Dict.Add(key, value);
+            RebuildDict = true;
+        }
+
+        /// <summary>
+        /// Remove the entry with the given key from the table
+        /// </summary>
+        public void Remove(K key)
+        {
+            int idx = _keys.IndexOf(key);
+
+            if (idx == -1)
+            {
+                Console.WriteLine($"Warning: key {key} not found in hash table.");
+            }
+            else
+            {
+                _keys[idx] = GetInvalidKey();
+                _values[idx] = default;
+            }
+
+            Dict.Remove(key);
+            RebuildDict = true;
+        }
+
+        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null)
+        {
+            igHashTable<K, V> clone = (igHashTable<K, V>)base.Clone(igz, dst, mode, clones);
+            clone.Dict = new Dictionary<K, V>();
+            clone.BuildDict();
+            return clone;
+        }
+        
         public override void Parse(IgzReader reader)
         {
             base.Parse(reader);
@@ -63,9 +104,9 @@ namespace Alchemy
 
         public override void Write(IgzWriter writer)
         {
-            if (RebuildDict && typeof(K) == typeof(u64))
+            if (RebuildDict && (typeof(K) == typeof(u64) || typeof(K) == typeof(string) || typeof(K) == typeof(igObject)))
             {
-                Console.WriteLine($"[igHashTable] Rebuilding key type: {typeof(K)}");
+                Console.WriteLine($"[igHashTable] Rebuilding key type: {typeof(K)} for {this}");
                 
                 int capacity = int.Max(_keys.Count, Dict.Count * 2);
                 
@@ -87,6 +128,8 @@ namespace Alchemy
                     _keys[index] = key;
                     _values[index] = value;
                 }
+
+                RebuildDict = false;
             }
 
             base.Write(writer);
@@ -107,13 +150,25 @@ namespace Alchemy
         private static uint GetKeyHash(K key)
         {
             if (typeof(K) == typeof(string)) 
-                return NamespaceUtils.ComputeHash(Convert.ToString(key)!);
+                return NamespaceUtils.ComputeHash((string)(object)key);
             
             if (typeof(K) == typeof(u64))
                 return HashLong((ulong)(object)key);
 
+            if (typeof(K) == typeof(igObject))
+                return HashInt(key.GetHashCode());
+
             throw new Exception($"Unsupported key type: {typeof(K)}");
         }
+
+        private static uint HashInt(int integer)
+		{
+			uint hash = (uint)(integer + (integer << 0xf));
+			hash = (hash >> 10 ^ hash) * 9;
+			hash = hash ^ hash >> 6;
+			hash = hash + ~(hash << 0xb);
+			return hash >> 0x10 ^ hash;
+		}
 
         private static uint HashLong(ulong integer)
 		{

@@ -18,7 +18,7 @@ namespace Havok
 
         public HavokFile(byte[] data)
         {
-            using MemoryStream stream = new MemoryStream(data.ToArray()); // todo: check when "using" is needed
+            using MemoryStream stream = new MemoryStream(data.ToArray());
             using BinaryReader reader = new BinaryReader(stream);
             using BinaryWriter writer = new BinaryWriter(stream);
 
@@ -40,7 +40,6 @@ namespace Havok
             {
                 section.Fixup(reader, writer, sections);
             }
-            // writer.Flush(); // todo: check if should be used
 
             // Initialize root objects
             HavokSection dataSection = sections[_header.contentSectionIndex];

@@ -15,13 +15,14 @@ namespace NST
         /// <param name="searchType">How the fileName should be matched against other file names</param>
         /// <returns>The archive file matching the fileName</returns>
         /// <exception cref="FileNotFoundException">Thrown if the file could not be found in any archive</exception>
-        public static IgArchiveFile FindFileInArchives(string fileName, IgArchive? currentArchive = null, FileSearchType searchType = FileSearchType.Name)
+        public static IgArchiveFile FindFileInArchives(string fileName, out IgArchive outArchive, IgArchive? currentArchive = null, FileSearchType searchType = FileSearchType.Name)
         {
             // Try to find the file in the current archive
             IgArchiveFile? file = currentArchive?.FindFile(fileName, searchType);
 
-            if (file != null)
+            if (file != null && currentArchive != null)
             {
+                outArchive = currentArchive;
                 return file;
             }
 
@@ -34,6 +35,7 @@ namespace NST
             Console.WriteLine($"Searching for {fileName} in archive {archivePath}...");
 
             file = archive.FindFile(fileName, searchType);
+            outArchive = archive;
 
             if (file == null)
             {
@@ -44,31 +46,48 @@ namespace NST
         }
 
         /// <summary>
-        /// Find an igObject in the game archives
+        /// Find an igObject in the currently open files or in the game archives
         /// </summary>
         /// <param name="reference">The object reference</param>
-        /// <param name="currentArchive">The current archive, if any (searched first to improve performance)</param>
         /// <returns>The igObject corresponding to the reference</returns>
         /// <exception cref="FileNotFoundException">Thrown if the object could not be found in any archive</exception>
-        public static igObject FindObjectInArchives(NamedReference reference, IgArchive? currentArchive = null)
+        public static igObject FindObjectInArchives(NamedReference reference, IgArchive? archive = null, LevelExplorer? explorer = null, IgzFile? igz = null)
         {
-            // Try to find the object in the current archive
-            igObject? obj = currentArchive?.FindObject(reference);
-
-            if (obj != null)
+            // Hashed namespace
+            if (reference.namespaceName.All(char.IsDigit))
             {
-                return obj;
+                IgArchiveFile? file = archive?.FindFile(reference.namespaceName, FileSearchType.NamespaceHash);
+                if (file != null)
+                {
+                    reference = reference.Clone();
+                    reference.namespaceName = file.GetName(false);
+                }
             }
 
-            // Find the object in its original archive
-            string archivePath = NamespaceUtils.GetInfos(NamespaceUtils.ComputeHash(reference.namespaceName))?.pak
-                                 ?? throw new Exception($"Failed to find archive for {reference.namespaceName}.");
+            // Try to find the object in the current igz
+            igObject? obj = igz?.FindObject(reference);
 
-            IgArchive archive = IgArchive.Open(Path.Join(LocalStorage.GamePath, "archives", archivePath));
+            if (obj != null) return obj;
+
+            // Try to find the object in the current open files
+            obj = explorer?.FileManager.FindObjectInOpenFiles(reference, out _);
+
+            if (obj != null) return obj;
+            
+            // Try to find the object in the current archive
+            obj = archive?.FindObject(reference);
+
+            if (obj != null) return obj;
+
+            // Find the object in its original archive
+            string archivePath = NamespaceUtils.GetInfos(reference)?.pak
+                                 ?? throw new FileNotFoundException($"Failed to find archive for {reference.namespaceName}.");
+
+            IgArchive originalArchive = IgArchive.Open(Path.Join(LocalStorage.GamePath, "archives", archivePath));
 
             Console.WriteLine($"Searching for {reference} in archive {archivePath}...");
 
-            obj = archive.FindObject(reference);
+            obj = originalArchive.FindObject(reference);
 
             if (obj != null)
             {

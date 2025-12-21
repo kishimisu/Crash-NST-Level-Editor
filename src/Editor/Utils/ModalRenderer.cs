@@ -22,15 +22,17 @@ namespace NST
         protected TAction? _callback; // Confirm callback
         protected bool _isOpen = false; // Whether the modal is currently visible
         private bool _requestOpen = false;
+        private bool _requestClose = false;
 
         public bool IsOpen() => _isOpen;
+        public bool Close() => _requestClose = _isOpen;
 
         public ModalBase(string title) => _title = title;
 
         /// <summary>
         /// Show the modal
         /// </summary>
-        public void Open(string text, TAction? callback)
+        public void Open(string text, TAction? callback = null)
         {
             _text = text;
             _callback = callback;
@@ -81,7 +83,15 @@ namespace NST
                 _requestOpen = false;
             }
 
-            return ImGui.BeginPopupModal(_title, ImGuiWindowFlags.AlwaysAutoResize);
+            bool open = ImGui.BeginPopupModal(_title, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings);
+
+            if (_requestClose)
+            {
+                ImGui.CloseCurrentPopup();
+                _requestClose = false;
+            }
+
+            return open;
         }
     }
 
@@ -168,7 +178,6 @@ namespace NST
     {
         public override bool Render()
         {
-
             if (!base.Render()) return false;
 
             ImGui.Text(_text);
@@ -218,6 +227,19 @@ namespace NST
         }
     }
 
+    public class LoadingModal() : ModalBase<Action>("In Progress...")
+    {
+        public override bool Render()
+        {
+            if (!base.Render()) return false;
+
+            ImGui.ProgressBar(-1.0f * (float)ImGui.GetTime(), new Vector2(400, 15), _text);
+
+            ImGui.EndPopup();
+            return true;
+        }
+    }
+
     /// <summary>
     /// Handles rendering of blocking modals/popups
     /// </summary>
@@ -228,7 +250,8 @@ namespace NST
         private static DeleteModal _deleteModal = new DeleteModal();
         private static RenameModal _renameModal = new RenameModal();
         private static WarningModal _warningModal = new WarningModal();
-        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal, _warningModal ];
+        private static LoadingModal _loadingModal = new LoadingModal();
+        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal, _warningModal, _loadingModal ];
 
         /// <summary>
         /// Show a message modal (OK button)
@@ -268,6 +291,16 @@ namespace NST
         public static void ShowRenameModal(string fileName, Action<string> action)
         {
             _renameModal.Open(fileName, action);
+        }
+
+        public static void ShowLoadingModal(string message)
+        {
+            _loadingModal.Open(message);
+        }
+
+        public static void CloseLoadingModal()
+        {
+            _loadingModal.Close();
         }
 
         /// <summary>

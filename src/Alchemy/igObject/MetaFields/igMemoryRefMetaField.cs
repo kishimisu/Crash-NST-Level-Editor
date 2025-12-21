@@ -4,7 +4,9 @@ namespace Alchemy
 {
     public interface IMemoryRef
     {
+        public MemoryPool MemoryPool { get; set; }
         public int Count { get; }
+        public void Clear();
     }
 
     public class igMemoryRef() : igMemoryRef<byte>() { }
@@ -56,7 +58,7 @@ namespace Alchemy
         public bool IsActive() => ((_bitfield >> 0x18) & 1) != 0;
         public void SetActive(bool active) => _bitfield = (_bitfield & ~(1 << 0x18)) | ((active ? 1 : 0) << 0x18);
         public int GetMemoryAlignment() => 1 << (((_bitfield >> 0x14) & 0xF) + 2);
-        private void SetMemoryAlignment(int alignment)
+        public void SetMemoryAlignment(int alignment)
         {
             int packedAlignment = int.Log2(int.Max(alignment, 4));
             _bitfield = (int)(_bitfield & 0xFF0FFFFF) | ((packedAlignment - 2 & 0xF) << 0x14);

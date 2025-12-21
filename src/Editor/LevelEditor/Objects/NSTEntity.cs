@@ -1,0 +1,524 @@
+using Alchemy;
+using ImGuiNET;
+
+namespace NST
+{
+    public class NSTEntity : NSTObject<igEntity>
+    {
+        public NSTModel? Model { get; set; } = null;
+
+        public int CollisionShapeIndex { get; set; } = -1;
+        public uint CollisionPrefabHash { get; set; } = 0;
+        public THREE.Vector3 Position => Object._parentSpacePosition.ToVector3();
+
+        public InstanceManager? InstanceManager;
+        public ComponentManager? Components;
+
+        // Prefab parent
+        public bool IsPrefabInstance { get; private set; } = false; // Instance of a prefab (contains a group of prefab child)
+
+        // Prefab child instance
+        public bool IsPrefabChild => ParentPrefabInstance != null; // Child instance of a prefab instance
+        public NSTEntity? ParentPrefabInstance { get; private set; } = null; // (Prefab child) Parent prefab instance
+        public NSTEntity? PrefabTemplate { get; private set; } = null; // (Prefab child) Original prefab template
+
+        // Prefab child template
+        public bool IsPrefabTemplate { get; private set; } = false; // Original template of a child instance (not instanciated in the scene)
+        public List<NSTEntity> PrefabTemplateInstances { get; private set; } = []; // (Prefab template) List of instances of this template
+
+        public bool IsTemplate { get; set; } = false;
+        public bool IsHidden { get; set; } = false;
+        public bool IsSpawned => !IsPrefabTemplate && !IsTemplate && !IsHidden;
+
+        public NSTSpline? Spline { get; private set; }
+
+        public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
+        {
+            Object = obj;
+            ArchiveFile = archiveFile;
+
+            InitSpline();
+
+            if (!Object._bitfield._canSpawn || Object._bitfield._isArchetype)
+            {
+                if (Object.GetType() != typeof(igEntity) || Object.GetComponent<CModelComponentData>() == null)
+                {
+                    IsTemplate = true;
+                }
+                else
+                {
+                    IsHidden = true;
+                }
+            }
+            else if (Object.GetComponent<CStaticComponentData>()?._flagsBitfield._disableVisual == true)
+            {
+                IsHidden = true;
+            }
+        }
+
+        public override THREE.Object3D CreateObject3D(bool selected = false)
+        {
+            THREE.Object3D group = Model?.CreateObject() ?? new THREE.Object3D();
+
+            if (Model == null)
+            {
+                var geo = new THREE.BoxGeometry(20, 20, 20);
+                var mat = new THREE.MeshPhongMaterial() { Color = MathUtils.FromImGuiColor(Object.GetType().GetUniqueColor()) };
+                group.Add(new THREE.Mesh(geo, mat));
+            }
+
+            group.ApplyMatrix4(ObjectToWorld());
+
+            group.Traverse(e => e.UserData["entity"] = this);
+
+            if (IsTemplate || IsHidden)
+            {
+                THREE.Color color = new THREE.Color(IsTemplate ? 0xffff00 : 0xff00ff);
+                group.Traverse(e =>
+                {
+                    if (e.Material != null)
+                        e.Material = new THREE.MeshPhongMaterial() { Shininess = NSTMaterial.DefaultShininess, Color = color };
+                });
+            }
+
+            foreach (THREE.Object3D child in CreateChildrenObject3D(selected))
+            {
+                group.Attach(child);
+            }
+
+            if (!selected)
+            {
+                LevelExplorer.CameraLayer layer = LevelExplorer.CameraLayer.Default;
+
+                if (IsTemplate) layer = LevelExplorer.CameraLayer.Templates;
+                else if (IsHidden) layer = LevelExplorer.CameraLayer.Hidden;
+                else if (Model == null) layer = LevelExplorer.CameraLayer.AllEntities;
+
+                group.Traverse(e => e.Layers.Set((int)layer));
+            }
+
+            if (Object3D != null)
+            {
+                Object3D.Parent?.Remove(Object3D);
+            }
+
+            Object3D = group;
+
+            return group;
+        }
+
+        public List<THREE.Object3D> CreateChildrenObject3D(bool selected = false)
+        {
+            List<THREE.Object3D> group = [];
+
+            THREE.Mesh? special = CreateSpecialObject3D(selected);
+            if (special != null) group.Add(special);
+
+            foreach (NSTObject child in Children)
+            {
+                if (child.IsSelected) continue;
+                if (child is NSTEntity) continue;
+                if (child.GetObject() is CScriptTriggerEntity) continue;
+
+                group.Add(child.CreateObject3D(selected));
+            }
+
+            return group;
+        }
+
+        private THREE.Mesh? CreateSpecialObject3D(bool focused = false)
+        {
+            if (Object is CEntity entity && (Object is CScriptTriggerEntity || Object is CDynamicClipEntity))
+            {
+                THREE.Vector3 size = entity._max.ToVector3() - entity._min.ToVector3();
+                THREE.Color color = new THREE.Color(Object is CScriptTriggerEntity ? 0xFFA500 : 0xFF0000);
+                THREE.Mesh mesh = CreateBoxHelper(size, color, focused, LevelExplorer.CameraLayer.Triggers);
+                mesh.ApplyMatrix4(ObjectToWorld());
+                return mesh;
+            }
+
+            return null;
+        }
+
+        public List<igEntity> GetPrefabChildren()
+        {
+            igPrefabComponentData? prefabComponent = Object.GetComponent<igPrefabComponentData>();
+
+            if (prefabComponent?._prefabEntities == null) return [];
+
+            return prefabComponent._prefabEntities._data.ToList();
+        }
+
+        public NSTSpline? InitSpline()
+        {
+            CSplineComponentData? splineComponent = Object.GetComponent<CSplineComponentData>();
+
+            if (splineComponent?._spline?._data?._data.Count > 0)
+            {
+                Spline = new NSTSpline(this, splineComponent._spline);
+                Children.Add(Spline);
+                return Spline;
+            }
+
+            return null;
+        }
+
+        public void InitChildren(LevelExplorer explorer, List<NSTObject> objects)
+        {
+            foreach (NamedReference reference in Object.GetComponents().SelectMany(c => c.GetHandles()))
+            {
+                NSTObject? link = objects.Find(o => o.GetObject().ObjectName == reference.objectName && o.FileNamespace == reference.namespaceName);
+
+                if (link != null)
+                {
+                    link.Parents.Add(this);
+                    Children.Add(link);
+                }
+                else if (explorer.FileManager.FindObjectInOpenFiles(reference, out _) is CEntityHandleList handleList)
+                {
+                    foreach (var handleMetaField in handleList._data)
+                    {
+                        if (handleMetaField.Reference == null) continue;
+
+                        link = objects.Find(o => o.GetObject().ObjectName ==  handleMetaField.Reference.objectName && o.FileNamespace == handleMetaField.Reference.namespaceName);
+
+                        if (link != null)
+                        {
+                            link.Parents.Add(this);
+                            Children.Add(link);
+                        }
+                    }
+                }
+            }
+        }
+
+        public List<NSTEntity> InitPrefabChildren(InstancedMeshManager instanceManager)
+        {
+            igPrefabComponentData? prefabComponent = Object.GetComponent<igPrefabComponentData>();
+
+            if (prefabComponent?._prefabEntities == null) return [];
+
+            List<igEntity> prefabEntities = prefabComponent._prefabEntities._data.ToList();
+            List<NSTEntity> newEntities = [];
+
+            foreach (igEntity entity in prefabEntities)
+            {
+                if (entity == null) continue;
+
+                if (!instanceManager.PrefabTemplates.TryGetValue(entity, out NSTEntity? prefabTemplate))
+                {
+                    prefabTemplate = instanceManager.AllEntities.Find(e => e.Object == entity);
+
+                    if (prefabTemplate == null)
+                    {
+                        Console.WriteLine("Warning: Could not find prefab template for " + entity);
+                        continue;
+                    }
+
+                    instanceManager.PrefabTemplates[entity] = prefabTemplate;
+                    instanceManager.Unregister(prefabTemplate);
+                }
+
+                NSTEntity prefabChild = prefabTemplate.CloneAsPrefabChild(this);
+
+                newEntities.Add(prefabChild);
+                instanceManager.Register(prefabChild);
+            }
+
+            return newEntities;
+        }
+
+        public void InitScriptTriggerEntity(LevelExplorer explorer, List<NSTEntity> entities)
+        {
+            if (Object is not CScriptTriggerEntity trigger) return;
+
+            Spawner_Trigger_LogicData? spawner = trigger.GetComponent<Spawner_Trigger_LogicData>();
+            NamedReference? reference = spawner?._SpawnerActivationList.Reference;
+
+            if (reference == null) return;
+
+            CEntityHandleList? handleList = (CEntityHandleList?)explorer.FileManager.FindObjectInOpenFiles(reference, out _);
+
+            if (handleList == null) return;
+
+            foreach (var handleMetaField in handleList._data)
+            {
+                NamedReference? handle = handleMetaField?.Reference;
+
+                NSTEntity? entity = entities.FirstOrDefault(e =>
+                    e.Object.ObjectName == handle?.objectName &&
+                    e.FileNamespace == handle?.namespaceName
+                );
+
+                if (entity == null)
+                {
+                    Console.WriteLine($"WARNING: Could not find spawned entity {handle?.objectName} for trigger {Object.ObjectName}");
+                    continue;
+                }
+
+                entity.Children.Add(this);
+            }
+        }
+
+        public THREE.Matrix4 ObjectToWorld()
+        {
+            THREE.Matrix4 modelMatrix = Object.GetTransformMatrix();
+
+            if (ParentPrefabInstance == null)
+            {
+                return modelMatrix;
+            }
+            else
+            {
+                return ParentPrefabInstance.ObjectToWorld() * modelMatrix;
+            }
+        }
+
+        public NSTEntity Clone(igEntity newObject, IgArchiveFile? newArchiveFile = null)
+        {
+            return new NSTEntity(newObject, newArchiveFile ?? ArchiveFile)
+            {
+                Model = Model,
+                CollisionShapeIndex = IsPrefabChild ? -1 : CollisionShapeIndex,
+                CollisionPrefabHash = CollisionPrefabHash,
+                IsTemplate = IsTemplate,
+                IsHidden = IsHidden
+            };
+        }
+
+        public NSTEntity CloneAsPrefabChild(NSTEntity parentPrefabInstance)
+        {
+            NSTEntity childInstance = Clone(Object);
+
+            childInstance.Parents = Parents;
+            childInstance.PrefabTemplate = this;
+            childInstance.ParentPrefabInstance = parentPrefabInstance;
+
+            if (Object._bitfield._canSpawn)
+            {
+                childInstance.IsTemplate = false;
+                childInstance.IsHidden = false;
+            }
+
+            Parents.Add(parentPrefabInstance);
+
+            IsPrefabTemplate = true;
+            PrefabTemplateInstances.Add(childInstance);
+
+            parentPrefabInstance.IsPrefabInstance = true;
+            parentPrefabInstance.Children.Add(childInstance);
+
+            return childInstance;
+        }
+
+        /// <summary>
+        /// Clone the object's entity data to make it unique if it is referenced by multiple entities
+        /// </summary>
+        public void MakeUnique(LevelExplorer explorer)
+        {
+            if (Object._entityData == null || !explorer.InstanceManager.AllEntities.Any(e => e.Object._entityData == Object._entityData && e != this)) return;
+
+            Dictionary<igObject, igObject> clones = [];
+
+            // Clone entity data
+            IgzFile igz = explorer.FileManager.GetIgz(ArchiveFile)!;
+            igEntityData clone = igz.AddClone(Object._entityData, clones: clones, mode: CloneMode.ShallowAndChildren);
+
+            Object._entityData = clone;
+
+            // Mark objects as updated
+            foreach (igObject c in clones.Values)
+            {
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, c, true);
+            }
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, clone, true);
+        }
+
+        public void RefreshModel(LevelExplorer explorer, NSTModel? model = null)
+        {
+            string? fileName = Object.GetComponent<CModelComponentData>()?._fileName;
+
+            if (fileName == null)
+            {
+                Console.WriteLine("[RefreshModel] Could not refresh model, CModelComponentData not found or file name is null");
+                return;
+            }
+
+            model ??= LevelExplorer._cachedModels.Values.FirstOrDefault(v => v.OriginalPath == fileName);
+
+            if (model == null)
+            {
+                Console.WriteLine("[RefreshModel] Could not refresh model, file not found: " + fileName);
+                return;
+            }
+
+            if (explorer.Archive.FindFile(model.FilePath, FileSearchType.Path) == null)
+            {
+                Console.WriteLine("Model not found in current explorer: " + model.Name);
+                
+                IgArchiveFile? modelFile = App.FindFile(model.FilePath, out IgArchive? parentArchive, FileSearchType.Path);
+
+                if (modelFile != null && parentArchive != null)
+                {
+                    Console.WriteLine("Model file found: " + modelFile.GetPath());
+                    explorer.ArchiveRenderer.AddFileWithDependencies(parentArchive, modelFile);
+                }
+                else
+                {
+                    Console.WriteLine("Error: Model not found in any explorer !");
+                    return;
+                }
+            }
+
+            explorer.InstanceManager.RefreshModel(this, model);
+        }
+
+        public override void Render(LevelExplorer explorer)
+        {
+            base.Render(explorer);
+
+            // Render transform header
+
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
+            ImGui.SeparatorText("Transform");
+            ImGui.PopStyleColor();
+
+            ImGui.Spacing();
+
+            igEntityTransform transform = Object._transform ?? new igEntityTransform();
+            THREE.Vector3 previousPosition = Object._parentSpacePosition.ToVector3();
+
+            // Render position input
+
+            if (RenderVector3("Position", ref Object._parentSpacePosition))
+            {
+                explorer.ArchiveRenderer.SetEntityUpdated(this);
+
+                explorer.SelectionManager._selectionContainer.Position += Object._parentSpacePosition.ToVector3() - previousPosition;
+                explorer.RenderNextFrame = true;
+            }
+
+            // Render rotation input
+
+            if (RenderVector3("Rotation", ref transform._parentSpaceRotation, 0.01f))
+            {
+                if (Object._transform == null)
+                {
+                    Object._transform = transform;
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
+                }
+                explorer.ArchiveRenderer.SetEntityUpdated(this);
+
+                Object3D?.Quaternion.SetFromEuler(Object._transform._parentSpaceRotation.ToEuler());
+                explorer.RenderNextFrame = true;
+            }
+
+            // Render scale input
+
+            if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, 0.01f))
+            {
+                if (Object._transform == null)
+                {
+                    Object._transform = transform;
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
+                }
+                explorer.ArchiveRenderer.SetEntityUpdated(this);
+
+                Object3D?.Scale.Set(transform._nonUniformPersistentParentSpaceScale._x, transform._nonUniformPersistentParentSpaceScale._y, transform._nonUniformPersistentParentSpaceScale._z);
+                explorer.RenderNextFrame = true;
+            }
+
+            // Render bounds min/max
+
+            if (Object is CScriptTriggerEntity cs)
+            {
+                RenderBounds(ref cs._min, ref cs._max, explorer);
+            }
+            else if (Object is CDynamicClipEntity cd)
+            {
+                RenderBounds(ref cd._min, ref cd._max, explorer);
+            }
+
+            // Render _canSpawn
+
+            ImGui.Text("Can Spawn");
+            ImGui.SameLine();
+            ImGui.Checkbox("##_canSpawn", ref Object._bitfield._canSpawn);
+
+            RenderEntityData(explorer);
+        }
+
+        public override void RenderEntityData(LevelExplorer explorer)
+        {
+            if (Object._entityData == null) return;
+
+            ImGui.PushID("EntityData" + Object.ObjectName);
+
+            ImGui.BeginChild("EntityData", new System.Numerics.Vector2(0, 0), ImGuiChildFlags.AutoResizeY);
+
+            var renderEntityDataSeparator = () =>
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
+                ImGui.SeparatorText("Properties");
+                ImGui.PopStyleColor();
+            };
+
+            // Render tags
+
+            // if (Object._entityData is CEntityData entityData && entityData._tags != null)
+            // {
+            //     ImGui.SeparatorText("Tags");
+
+            //     foreach (var tag in entityData._tags.Dict)
+            //     {
+            //         string name = tag.Key.Reference?.ToString() ?? "<Error>";
+            //         bool enabled = tag.Value;
+            //         ImGui.Checkbox(name, ref enabled);
+            //     }
+            //     ImGui.Spacing();
+            // }
+
+            if (Object is CPlayerStartEntity playerStart)
+            {
+                renderEntityDataSeparator();
+                ComponentRenderer.RenderObjectReference("Camera:", playerStart._camera?.Reference, typeof(CCameraBase), explorer, (value) =>
+                {
+                    if (playerStart._camera == null) playerStart._camera = new CCameraBase();
+                    playerStart._camera.Reference = value;
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, playerStart, true);
+                });
+            }
+            else if (Object._entityData is CWorldEntityData worldEntityData)
+            {
+                renderEntityDataSeparator();
+                ImGuiUtils.Prefix("Death plane height:");
+                if (ImGui.InputFloat("##deathPlaneHeight", ref worldEntityData._killz))
+                {
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, worldEntityData);
+                }
+            }
+
+            if (Components == null)
+            {
+                Components = new ComponentManager(this);
+            }
+
+            // Render component list
+            
+            Components.RenderComponents(explorer);
+
+            ImGui.EndChild();
+
+            // Render selected component
+
+            if (ImGui.BeginChild("SelectedComponent" + Components.GetID(), System.Numerics.Vector2.Zero, ImGuiChildFlags.AutoResizeY))
+            {
+                Components.RenderSelectedComponent(explorer);
+            }
+            ImGui.EndChild();
+
+            ImGui.PopID();
+        }
+    }
+}

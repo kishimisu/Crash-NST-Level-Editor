@@ -18,10 +18,11 @@ namespace NST
         protected EffectComposer _composer;
         protected OutlinePass _outlinePass;
     
-        private int _width;
-        private int _height;
-        private bool _firstFrame = true;
+        protected int _width;
+        protected int _height;
         private bool _alwaysRender = false;
+
+        public bool RenderNextFrame { get; set; } = true;
 
         public override THREE.Rectangle GetClientRectangle() => new THREE.Rectangle(0, 0, _width, _height);
 
@@ -80,6 +81,8 @@ namespace NST
             
             _composer?.Reset(_renderTarget);
 
+            RenderNextFrame = true;
+
             base.OnResize(new ResizeEventArgs(width, height));
         }
 
@@ -88,7 +91,7 @@ namespace NST
         /// </summary>
         public virtual void Render(double? deltaTime = null)
         {
-            // if (!_alwaysRender && !_firstFrame && !_controls.Focused()) return;
+            if (!_alwaysRender && !RenderNextFrame && !_controls.Focused()) return;
 
             SilkWindow.instance.SetViewport(0, 0, _width, _height);
 
@@ -108,7 +111,7 @@ namespace NST
                 _renderer.SetRenderTarget(null!);
             }
 
-            _firstFrame = false;
+            RenderNextFrame = false;
 
             SilkWindow.instance.RestoreViewport();
         }
@@ -127,15 +130,8 @@ namespace NST
 
         public override void Dispose()
         {
-            OnDispose();
-        }
-        public virtual void OnDispose()
-        {
-            Unload();
-        }
-        public virtual void Unload()
-        {
-            _renderer.Dispose();
+            base.Dispose();
+            // _renderer.Dispose();
             _renderTarget.Dispose();
         }
     }

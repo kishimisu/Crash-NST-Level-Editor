@@ -8,12 +8,13 @@ namespace NST
         static List<NSTEntity> _copyPaste = [];
         static LevelExplorer _copyExplorer;
 
-        THREE.Silk.TransformControls _gizmos;
-        THREE.OutlinePass _outlinePass;
-
         public List<NSTObject> _selection = [];
         public THREE.Group _selectionContainer = new THREE.Group();
         public LevelExplorer _explorer;
+
+        private readonly THREE.Silk.TransformControls _gizmos;
+        private readonly THREE.OutlinePass _outlinePass;
+        private bool _revertGizmos = false;
 
         public SelectionManager(THREE.Object3D rootObject, THREE.Silk.TransformControls gizmos, THREE.OutlinePass outlinePass, LevelExplorer explorer)
         {
@@ -45,6 +46,7 @@ namespace NST
             var removedObjects = previousSelection.Except(_selection);
 
             _explorer.InstanceManager.RefreshInstances(newObjects.Union(removedObjects).ToList());
+            _explorer.RenderNextFrame = true;
 
             if (_selection.Count == 0) _gizmos.Visible = false;
         }
@@ -65,11 +67,23 @@ namespace NST
         {
             THREE.Object3D object3D = obj.CreateObject3D(true);
 
+            if (_revertGizmos)
+            {
+                _gizmos.mode = "translate";
+                _revertGizmos = false;
+            }
+
             if (_selection.Count == 0)
             {
                 _selectionContainer.Position.Copy(object3D.Position);
                 _selectionContainer.Quaternion.Copy(THREE.Quaternion.Identity());
                 _selectionContainer.Scale.Copy(THREE.Vector3.One());
+
+                if (obj is NSTSplineRotationKeyFrame && _gizmos.mode != "rotate")
+                {
+                    _gizmos.mode = "rotate";
+                    _revertGizmos = true;
+                }
             }
 
             obj.IsSelected = true;
@@ -87,7 +101,7 @@ namespace NST
                 return;
             }
             
-            _explorer.InstanceManager.ConvertToInstanced([obj]);
+            RemoveObjectsFromScene([obj]);
 
             _selectionContainer.Remove(obj.Object3D!);
             _selection.Remove(obj);
@@ -96,7 +110,7 @@ namespace NST
 
         public void ClearSelection(bool refreshInstances = false)
         {
-            _explorer.InstanceManager.ConvertToInstanced(_selection);
+            RemoveObjectsFromScene(_selection);
 
             if (refreshInstances)
             {
@@ -107,23 +121,71 @@ namespace NST
             _outlinePass.selectedObjects.Clear();
         }
 
+        private static void RemoveObjectsFromScene(List<NSTObject> objects)
+        {
+            foreach (NSTObject obj in objects)
+            {
+                if (obj.Object3D != null)
+                {
+                    obj.Object3D.Parent.Remove(obj.Object3D);
+                    obj.Object3D = null;
+                }
+
+                obj.IsSelected = false;
+            }
+        }
+
         public void ApplyChanges(ActiveFileManager fileManager, IgArchiveRenderer archiveRenderer)
         {
+            HashSet<NSTSpline> refreshSplines = [];
+
             foreach (NSTObject obj in _selection)
             {
+                // Get world transform
+                THREE.Vector3 worldPos = obj.Object3D!.GetWorldPosition(new THREE.Vector3());
+                THREE.Quaternion worldQuaternion = obj.Object3D.GetWorldQuaternion(new THREE.Quaternion());
+                THREE.Vector3 worldScale = obj.Object3D.GetWorldScale();
+                THREE.Euler worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
+                THREE.Vector3 worldEulerDegrees = worldEuler.ToVector3() * THREE.MathUtils.RAD2DEG;
+
                 if (obj is NSTSplineControlPoint controlPoint)
                 {
                     THREE.Vector3 wp = controlPoint.Object3D!.GetWorldPosition(new THREE.Vector3());
-                    THREE.Vector3 localPos = wp - controlPoint._parent._parent.Position;
-                    controlPoint.Object._position._x = localPos.X;
-                    controlPoint.Object._position._y = localPos.Y;
-                    controlPoint.Object._position._z = localPos.Z;
-                    _explorer.InstanceManager.RefreshInstances([controlPoint._parent._parent]);
-                    fileManager.GetOrCreateRenderer(controlPoint.ArchiveFile, archiveRenderer).SetUpdated(controlPoint.Object);
+                    THREE.Vector3 localPos = wp.ApplyMatrix4(controlPoint.Parent.Parent.ObjectToWorld().Inverted());
+                    controlPoint.Object._position = new igVec3fMetaField(localPos.X, localPos.Y, localPos.Z);
+                    refreshSplines.Add(controlPoint.Parent);
+                    archiveRenderer.SetObjectUpdated(controlPoint.ArchiveFile, controlPoint.Object);
+                    continue;
+                }
+                if (obj is NSTSplineRotationKeyFrame keyframe)
+                {
+                    THREE.Quaternion quaternion = keyframe.Object3D!.GetWorldQuaternion(new THREE.Quaternion());
+                    THREE.Euler euler = new THREE.Euler().SetFromQuaternion(quaternion, THREE.RotationOrder.ZYX);
+                    THREE.Vector3 rotation = euler.ToVector3() * THREE.MathUtils.RAD2DEG;
+                    keyframe.Object._value = new igVec3fMetaField(rotation.X, rotation.Y, rotation.Z - 90);
+                    archiveRenderer.SetObjectUpdated(keyframe.ArchiveFile, keyframe.Object);
+                    continue;
+                }
+                if (obj is NSTCameraBox cameraBox)
+                {
+                    cameraBox.Object._position = worldPos.ToVec3MetaField();
+                    cameraBox.Object._rotation = worldEulerDegrees.ToVec3MetaField();
+                    archiveRenderer.SetObjectUpdated(cameraBox.ArchiveFile, cameraBox.Object);
+                    continue;
+                }
+                if (obj is NSTCamera camera)
+                {
+                    camera.Object._position = worldPos.ToVec3MetaField();
+                    camera.Object._rotation = worldEulerDegrees.ToVec3MetaField();
+                    archiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
                     continue;
                 }
 
-                if (obj is not NSTEntity entity3D) continue;
+                if (obj is not NSTEntity entity3D)
+                {
+                    Console.WriteLine("[ApplyChanges] Warning: Unknown object type: " + obj.GetObject());
+                    continue;
+                }
 
                 if (entity3D.IsPrefabChild) // Skip prefab children
                 {
@@ -137,11 +199,6 @@ namespace NST
 
                 igEntity entity = entity3D.Object;
 
-                // Get world transform
-                THREE.Vector3 worldPos = entity3D.Object3D!.GetWorldPosition(new THREE.Vector3());
-                THREE.Quaternion worldQuaternion = entity3D.Object3D.GetWorldQuaternion(new THREE.Quaternion());
-                THREE.Vector3 worldScale = entity3D.Object3D.GetWorldScale();
-
                 // If prefab child, the transform needs to be converted to local space
                 if (entity3D.IsPrefabChild && entity3D.ParentPrefabInstance != null)
                 {
@@ -150,11 +207,11 @@ namespace NST
                     THREE.Matrix4 localMatrix = parentMatrixInverse * worldMatrix;
 
                     localMatrix.Decompose(worldPos, worldQuaternion, worldScale);
+
+                    worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
                 }
 
-                THREE.Euler worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
-
-                Console.WriteLine($"Apply changes for {entity.ObjectName}: {entity._parentSpacePosition._x}, {entity._parentSpacePosition._y}, {entity._parentSpacePosition._z} => {worldPos.X}, {worldPos.Y}, {worldPos.Z}");
+                Console.WriteLine($"Apply changes for {entity.ObjectName}");
 
                 entity._parentSpacePosition._x = worldPos.X;
                 entity._parentSpacePosition._y = worldPos.Y;
@@ -177,12 +234,29 @@ namespace NST
                     entity._transform._nonUniformPersistentParentSpaceScale._z = worldScale.Z;
                 }
 
-                archiveRenderer.SetEntityUpdated(entity3D.ArchiveFile, entity, entity3D.CollisionShapeIndex);
+                archiveRenderer.SetEntityUpdated(entity3D);
 
                 if (entity3D.IsPrefabInstance)
                 {
-                    _explorer.InstanceManager.RefreshInstances(entity3D.Children.Where(e => e is NSTEntity entity && entity.IsPrefabChild).ToList());
+                    List<NSTObject> prefabChildren = entity3D.Children.Where(e => e is NSTEntity entity && entity.ParentPrefabInstance == entity3D).ToList();
+
+                    foreach (NSTObject child in prefabChildren)
+                    {
+                        if (child is NSTEntity childEntity && childEntity.CollisionShapeIndex != -1)
+                        {
+                            archiveRenderer.SetEntityUpdated(childEntity);
+                        }
+                    }
+
+                    _explorer.InstanceManager.RefreshInstances(prefabChildren);
                 }
+            }
+
+            foreach (NSTSpline spline in refreshSplines)
+            {
+                spline.RefreshDistances(_explorer);
+                spline.ComputeDistances();
+                spline.RefreshSpline();
             }
         }
 
@@ -192,9 +266,9 @@ namespace NST
             _copyExplorer = explorer;
         }
 
-        public NSTObject? Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint)
+        public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint, Action<NSTObject?>? callback = null)
         {
-            if (_copyPaste.Count == 0) return null;
+            if (_copyPaste.Count == 0) return;
 
             bool copyToSameFile = (_explorer == _copyExplorer);
 
@@ -202,161 +276,221 @@ namespace NST
                     .GroupBy(x => x.ArchiveFile)
                     .ToDictionary(x => x.Key, x => x.ToList());
 
-            Dictionary<NSTEntity, NSTEntity> newEntities = [];
+            List<NSTObject> newObjects = new List<NSTObject>();
+            Dictionary<NSTEntity, NSTEntity> newEntities = new Dictionary<NSTEntity, NSTEntity>();
+            Dictionary<NSTEntity, NSTEntity> newCollisionEntities = new Dictionary<NSTEntity, NSTEntity>();
 
             ClearSelection(true);
 
-            foreach ((IgArchiveFile file, List<NSTEntity> entities) in instances)
+            if (!copyToSameFile)
             {
-                IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
-                
-                IgzFile? dstIgz = null;
-                IgArchiveFile? dstFile = null;
+                ModalRenderer.ShowLoadingModal("Pasting selection...");
+            }
 
-                if (copyToSameFile)
+            Task.Run(() =>
+            {
+                foreach ((IgArchiveFile file, List<NSTEntity> entities) in instances)
                 {
-                    dstFile = file;
-                    dstIgz = srcIgz;
-                }
-                else
-                {
-                    string path = "maps/Custom/" + file.GetName();
-                    dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
-
-                    if (dstFile == null)
-                    {
-                        dstIgz = new IgzFile(path);
-                        dstFile = new IgArchiveFile(path);
-                        
-                        renderer.AddFile(dstFile);
-
-                        fileManager.Add(dstFile, dstIgz, true);
-                    }
-                    else
-                    {
-                        dstIgz = fileManager.GetIgz(dstFile)!;
-                    }
-                }
-                
-                Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
-
-                Dictionary<igObject, igObject> clones = [];
-
-                foreach (NSTEntity entity in entities)
-                {
-                    if (entity.IsPrefabChild)
-                    {
-                        if (entities.Any(e => e == entity.ParentPrefabInstance)) continue;
-                        if (entities.Where(e => e.Object == entity.Object).ToList().IndexOf(entity) > 0) continue;
-                    }
+                    IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
+                    
+                    IgzFile? dstIgz = null;
+                    IgArchiveFile? dstFile = null;
 
                     if (copyToSameFile)
                     {
-                        igEntity entityClone = srcIgz.AddClone(entity.Object, null, clones, CloneMode.Deep | CloneMode.SkipComponents);
-                        NSTEntity clone = entity.Clone(entityClone);
+                        dstFile = file;
+                        dstIgz = srcIgz;
+                    }
+                    else
+                    {
+                        string path = "maps/Custom/" + file.GetName();
+                        dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
 
-                        if (entity.IsPrefabChild)
+                        if (dstFile == null)
                         {
-                            entity.ParentPrefabInstance?.Object.GetComponent<igPrefabComponentData>()?._prefabEntities?._data.Add(entityClone);
+                            dstIgz = new IgzFile(path);
+                            dstFile = new IgArchiveFile(path);
+                            
+                            renderer.AddFile(dstFile);
 
-                            foreach (NSTEntity prefabChild in entity.PrefabTemplate!.PrefabTemplateInstances)
-                            {
-                                NSTEntity newPrefabChild = clone.CloneAsPrefabChild(prefabChild.ParentPrefabInstance!);
-                                _explorer.InstanceManager.Register(newPrefabChild);
-                                newEntities.Add(prefabChild, newPrefabChild);
-                            }
+                            fileManager.Add(dstFile, dstIgz, true);
                         }
                         else
                         {
-                            newEntities.Add(entity, clone);
+                            dstIgz = fileManager.GetIgz(dstFile)!;
+                        }
+                    }
+                    
+                    Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
+
+                    Dictionary<igObject, igObject> clones = [];
+
+                    foreach (NSTEntity entity in entities)
+                    {
+                        if (entity.IsPrefabChild)
+                        {
+                            if (entities.Any(e => e == entity.ParentPrefabInstance)) continue;
+                            if (entities.Where(e => e.Object == entity.Object).ToList().IndexOf(entity) > 0) continue;
                         }
 
-                        _explorer.InstanceManager.Register(clone);
-
-                        renderer.SetEntityUpdated(file, entityClone, clone.CollisionShapeIndex);
-
-                        if (fileManager.GetRenderer(file) is IgzRenderer igzRenderer)
+                        if (copyToSameFile)
                         {
-                            igzRenderer.TreeView.Add(entityClone);
+                            igEntity entityClone = srcIgz.AddClone(entity.Object, null, clones, CloneMode.Deep | CloneMode.SkipComponents);
+
+                            // Special case: paste prefab child
+                            if (entity.IsPrefabChild)
+                            {
+                                NSTEntity template = entity.Clone(entityClone);
+
+                                _explorer.InstanceManager.PrefabTemplates[entityClone] = template;
+
+                                foreach (NSTEntity prefabChild in entity.PrefabTemplate!.PrefabTemplateInstances.ToList())
+                                {
+                                    NSTEntity newPrefabChild = template.CloneAsPrefabChild(prefabChild.ParentPrefabInstance!);
+
+                                    if (entity != prefabChild) newObjects.Add(newPrefabChild);
+                                    else newObjects.Insert(0, newPrefabChild);
+
+                                    var data = entity.ParentPrefabInstance!.Object.GetComponent<igPrefabComponentData>()!._prefabEntities?._data;
+                                    if (data?.Contains(entityClone) == false) data.Add(entityClone);
+                                }
+
+                                clones.Clear();
+                                break;
+                            }
+                        }
+                        // Paste to external archive
+                        else
+                        {
+                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones);
+                        }
+                    }
+
+                    foreach ((igObject src, igObject dst) in clones)
+                    {
+                        renderer.SetObjectUpdated(dstFile, dst);
+
+                        if (src is not igEntity srcEntity || dst is not igEntity dstEntity)
+                        {
+                            continue;
+                        }
+
+                        NSTEntity original = _copyExplorer.InstanceManager.AllEntities.First(e => e.Object == srcEntity);
+                        NSTEntity clone = original.Clone(dstEntity, dstFile);
+                        
+                        if (copyToSameFile)
+                        {
+                            original.Components?.RefreshComponents(_explorer);
+                        }
+
+                        if (original.CollisionShapeIndex != -1 && !original.IsPrefabChild)
+                        {
+                            Console.WriteLine("Add collision: " + clone.Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + clone.IsPrefabTemplate);
+                            newCollisionEntities.Add(original, clone);
+                        }
+
+                        newObjects.Add(clone);
+                        newEntities.Add(original, clone);
+                    }
+                }
+
+                if (newObjects.Count == 0)
+                {
+                    ModalRenderer.CloseLoadingModal();
+                    callback?.Invoke(null);
+                    return;
+                }
+
+                // Register new entities
+                foreach (NSTEntity clone in newEntities.Values)
+                {
+                    _explorer.InstanceManager.Register(clone);
+                }
+                foreach ((NSTEntity original, NSTEntity clone) in newEntities)
+                {
+                    List<NSTEntity> prefabChildren = clone.InitPrefabChildren(_explorer.InstanceManager);
+
+                    if (prefabChildren.Count > 0)
+                    {
+                        List<NSTEntity> originalPrefabChildren = original.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == original).ToList();
+
+                        for (int i = 0; i < prefabChildren.Count; i++)
+                        {
+                            if (originalPrefabChildren[i].CollisionPrefabHash > 0)
+                            {
+                                Console.WriteLine("Add prefab child collision: " + prefabChildren[i].Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + prefabChildren[i].IsPrefabTemplate);
+                                newCollisionEntities.Add(originalPrefabChildren[i], prefabChildren[i]);
+                            }
+
+                            newObjects.Add(prefabChildren[i]);
+                        }
+                    }
+                }
+                foreach (NSTEntity clone in newEntities.Values)
+                {
+                    clone.InitChildren(_explorer, _explorer.InstanceManager.AllObjects);
+                    clone.InitScriptTriggerEntity(_explorer, _explorer.InstanceManager.AllEntities);
+                }
+
+                // Register new collisions
+                foreach ((NSTEntity original, NSTEntity clone) in newCollisionEntities)
+                {
+                    if (copyToSameFile)
+                    {
+                        if (_copyExplorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original.Object, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
+                        {
+                            Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
+                            renderer.SetEntityUpdated(clone, infos.shapeInstance);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Paste collision index to same file: " + clone.Object.ObjectName);
+                            renderer.SetEntityUpdated(clone);
                         }
                     }
                     else
                     {
-                        hknpShapeInstance? shape = _copyExplorer.FindHavokShape(entity);
+                        hknpShapeInstance? shape = _copyExplorer.FindHavokShape(original);
 
-                        igEntity entityClone = renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones);
-
-                        NSTEntity clone = entity.Clone(entityClone, dstFile);
-
-                        newEntities.Add(entity, clone);
-
-                        _explorer.InstanceManager.Register(clone);
-
-                        renderer.SetEntityUpdated(dstFile, entityClone, shapeInstance: shape);
-
-                        if (fileManager.GetRenderer(dstFile) is IgzRenderer igzRenderer)
+                        // if (clone.IsPrefabTemplate)
+                        // {
+                        //     Console.WriteLine("Paste prefab collision shape to another level, parent: " + clone.PrefabTemplateInstances[0].ParentPrefabInstance?.Object);
+                        //     renderer.SetEntityUpdated(clone.PrefabTemplateInstances[0], shape);
+                        // }
+                        
+                        // Console.WriteLine($"IsPrefabInstance: {clone.IsPrefabInstance}, IsPrefabTemplate: {clone.IsPrefabTemplate}, IsPrefabChild: {clone.IsPrefabChild}, CollisionPrefabHash: {clone.CollisionPrefabHash}, CollisionShapeIndex: {clone.CollisionShapeIndex}");
+                        
+                        if (clone.IsPrefabChild)
                         {
-                            igzRenderer.TreeView.Add(entityClone);
+                            Console.WriteLine($"Paste prefab collision shape to another level ({clone.ParentPrefabInstance?.Object.ObjectName} -> {clone.Object.ObjectName}), hash: {original.CollisionPrefabHash}");
+                            clone.CollisionPrefabHash = original.CollisionPrefabHash;
+                            renderer.SetEntityUpdated(clone, shape);
+                        }
+                        else
+                        {
+                            Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
+                            renderer.SetEntityUpdated(clone, shape);
                         }
                     }
                 }
+
+                UpdateSelection(newObjects.Where(e => e is not NSTEntity entity || entity.IsSpawned).ToList());
+
+                if (_copyPaste.All(e => e.IsPrefabChild))
+                {
+                    _selectionContainer.Position.Z += 200;
+                }
+                else
+                {
+                    _selectionContainer.Position.Copy(spawnPoint);
+                }
+
+                ApplyChanges(fileManager, renderer);
+
+                ModalRenderer.CloseLoadingModal();
                 
-                dstFile.SetData(dstIgz.Save());
-            }
-
-            if (newEntities.Count == 0) return null;
-
-            foreach ((NSTEntity original, NSTEntity clone) in newEntities)
-            {
-                clone.InitScriptTriggerEntity(renderer.Archive, newEntities.Values.ToList());
-
-                SelectObject(clone);
-
-                List<NSTEntity> originalPrefabChildren = original.Children.OfType<NSTEntity>().Where(e => e.IsPrefabChild).ToList();
-                List<NSTEntity> newPrefabChildren = clone.Children.OfType<NSTEntity>().Where(e => e.IsPrefabChild).ToList();
-                List<igEntity> clonePrefabChildren = clone.GetPrefabChildren();
-
-                if (originalPrefabChildren.Count == newPrefabChildren.Count)
-                {
-                    Console.WriteLine("[Paste][Prefab] Skipping rebuilding prefab children for entity: " + clone.Object);
-                    foreach (NSTEntity child in clone.Children.OfType<NSTEntity>().Where(e => e.IsSpawned)) SelectObject(child);
-                    continue;
-                }
-                if (originalPrefabChildren.Count != clonePrefabChildren.Count)
-                {
-                    Console.WriteLine("Warning: Prefab child count mismatch: " + originalPrefabChildren.Count + " != " + clonePrefabChildren.Count);
-                    foreach (NSTEntity child in clone.Children.OfType<NSTEntity>().Where(e => e.IsSpawned)) SelectObject(child);
-                    continue;
-                }
-
-                foreach ((NSTEntity originalChild, igEntity cloneChild) in originalPrefabChildren.Zip(clonePrefabChildren))
-                {
-                    if (clone.Children.OfType<NSTEntity>().Any(e => e.Object == cloneChild))
-                    {
-                        Console.WriteLine("Warning? [Paste][Prefab] Skipping prefab child entity: " + cloneChild);
-                        continue;
-                    }
-
-                    NSTEntity newPrefabChildTemplate = originalChild.Clone(cloneChild, clone.ArchiveFile);
-                    NSTEntity childInstance = newPrefabChildTemplate.CloneAsPrefabChild(clone);
-
-                    _explorer.InstanceManager.Register(newPrefabChildTemplate);
-                    _explorer.InstanceManager.Register(childInstance);
-
-                    Console.WriteLine("[Paste][Prefab] Created prefab child entity: " + childInstance.Object);
-                }
-
-                foreach (NSTEntity child in clone.Children.OfType<NSTEntity>().Where(e => e.IsSpawned))
-                {
-                    SelectObject(child);
-                }
-            }
-
-            _selectionContainer.Position.Copy(spawnPoint);
-
-            ApplyChanges(fileManager, renderer);
-
-            return newEntities.Values.ToList()[0];
+                callback?.Invoke(newObjects[0]);
+            });
         }
     }
 }

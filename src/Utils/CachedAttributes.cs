@@ -66,12 +66,12 @@ namespace Alchemy
     /// </summary>
     public class CachedObjectAttr
     {
-        private ObjectAttr _attr;
-        private List<CachedFieldAttr> _fields;
+        private readonly ObjectAttr _attr;
+        private readonly List<CachedFieldAttr> _fields;
 
         public int GetSize() => _attr.size;
         public int GetAlignment() => _attr.alignment;
-        public List<CachedFieldAttr> GetFields() => _fields;
+        public IReadOnlyList<CachedFieldAttr> GetFields() => _fields;
         public CachedFieldAttr? GetField(string name) => _fields.Find(f => f.GetName() == name);
 
         public bool IsBaseMetaObject() => _attr.metaObject;
@@ -98,8 +98,8 @@ namespace Alchemy
     /// </summary>
     public class CachedFieldAttr
     {
-        private FieldInfo _info;
-        private FieldAttr _attr;
+        private readonly FieldInfo _info;
+        private readonly FieldAttr _attr;
 
         public int GetOffset() => _attr.offset;
         public int GetBitFieldSize() => _attr.size;

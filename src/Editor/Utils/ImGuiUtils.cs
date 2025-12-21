@@ -10,6 +10,9 @@ namespace NST
     {
         public static uint id = 0;
 
+        private static string comboLabel = "";
+        private static string comboSearch = "";
+
         public static uint Uuid()
         {
             if (id == uint.MaxValue) id = 9999;
@@ -27,14 +30,28 @@ namespace NST
         /// <summary>
         /// Render a right-aligned button
         /// </summary>
-        public static bool RightAlignedButton(string text, Vector2? buttonSize = null, bool enabled = true)
+        public static bool RightAlignedButton(string text, bool enabled = true)
         {
             float buttonWidth = ImGui.CalcTextSize(text).X + ImGui.GetStyle().FramePadding.X * 2;
-            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - (buttonSize?.X ?? buttonWidth));
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - buttonWidth);
             if (!enabled) ImGui.BeginDisabled();
-            bool clicked = ImGui.Button(text, buttonSize ?? Vector2.Zero);
+            bool clicked = ImGui.Button(text, new Vector2(buttonWidth, 0));
             if (!enabled) ImGui.EndDisabled();
             return clicked;
+        }
+
+        public static bool SmallButtonAlignRight(string text, string label = "")
+        {
+            ImGui.SameLine();
+            float width = ImGui.CalcTextSize(text).X + ImGui.GetStyle().FramePadding.X * 2 + 2;
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - width);
+            return ImGui.SmallButton(text + "##" + label);
+        }
+
+        public static void Prefix(string text, float width = 0)
+        {
+            ImGui.Text(text);
+            ImGui.SameLine(width);
         }
 
         /// <summary>
@@ -66,6 +83,17 @@ namespace NST
             ImGui.Text(text);
         }
 
+        public static bool CenteredButton(string text, Vector2? buttonSize = null)
+        {
+            Vector2 windowSize = ImGui.GetContentRegionAvail();
+            Vector2 textSize = buttonSize ?? ImGui.CalcTextSize(text);
+
+            float textX = (windowSize.X - textSize.X) * 0.5f;
+            ImGui.SetCursorPosX(ImGui.GetCursorPosX() + textX);
+            
+            return ImGui.Button(text, buttonSize ?? Vector2.Zero);
+        }
+
         /// <summary>
         /// Truncate text to fit in a given width, adding "..."
         /// </summary>
@@ -86,7 +114,6 @@ namespace NST
         /// <summary>
         /// Check if the current element is visible in a scrollable region
         /// </summary>
-        /// <returns></returns>
         public static bool IsNodeVisible()
         {
             // Get the current node position (relative to the window's scroll region)
@@ -98,6 +125,39 @@ namespace NST
 
             // Check if the node is within the visible range
             return nodePosY >= scrollTop && nodePosY <= scrollBottom;
+        }
+
+        public static void RenderComboWithSearch(string label, string preview, List<string> options, Action<int> callback)
+        {
+            if (label != comboLabel)
+            {
+                comboSearch = "";
+                comboLabel = label;
+            }
+
+            ImGui.SetNextItemWidth(-1);
+
+            if (ImGui.BeginCombo(label, preview))
+            {
+                ImGui.SetNextItemWidth(-1);
+                ImGui.InputTextWithHint("##input" + label, "Search...", ref comboSearch, 256);
+
+                string searchLower = comboSearch.ToLower();
+
+                for (int i = 0; i < options.Count; i++)
+                {
+                    string name = options[i];
+
+                    if (!name.ToLower().Contains(searchLower)) continue;
+
+                    if (ImGui.Selectable(name))
+                    {
+                        callback(i);
+                    }
+                }
+
+                ImGui.EndCombo();
+            }
         }
     }
 }

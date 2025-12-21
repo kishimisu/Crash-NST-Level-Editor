@@ -31,6 +31,11 @@ namespace Alchemy
         /// </summary>
         public static NamedReference EXID(string namespaceName, string objectName) => new NamedReference(namespaceName, objectName, true);
 
+        public static igObject CreateObjectReference(string namespaceName, string objectName, bool isEXID = false)
+        {
+            return new igObject() { Reference = new NamedReference(namespaceName, objectName, isEXID) };
+        }
+
         /// <summary>
         /// Create a NamedReference from a namespace and object name
         /// </summary>

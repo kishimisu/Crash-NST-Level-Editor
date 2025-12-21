@@ -12,6 +12,7 @@ namespace NST
         public string SelectedNodePath { get; set; }
         public bool IsSearchActive { get; }
         public bool SelectNextNode { get; set; }
+        public bool NeedsRebuild { get; set; }
 
         /// <summary>
         /// Renders the tree
@@ -49,6 +50,11 @@ namespace NST
         /// Called to clean up the file before saving it
         /// </summary>
         public void RemoveUnreferencedNodes();
+
+        /// <summary>
+        /// Rebuilds the tree
+        /// </summary>
+        public void RebuildTree();
     }
 
     /// <summary>
@@ -61,6 +67,7 @@ namespace NST
         protected List<T> _rootNodes = []; // Root object nodes
         public T? SelectedNode { get; private set; } = null; // Currently selected node (can appear multiple times in the tree)
         public string SelectedNodePath { get; set; } = ""; // Unique path to the currently selected node
+        public bool NeedsRebuild { get; set; } = false;
 
         // Search
         public string SearchQuery = ""; // Current search query
@@ -82,11 +89,7 @@ namespace NST
 
         public abstract void Render();
         public virtual void RemoveUnreferencedNodes() { }
-
-        /// <summary>
-        /// Rebuild the tree
-        /// </summary>
-        protected virtual void RebuildTree() { }
+        public virtual void RebuildTree() { }
 
         /// <summary>
         /// Sets the currently focused node and add it to the history.

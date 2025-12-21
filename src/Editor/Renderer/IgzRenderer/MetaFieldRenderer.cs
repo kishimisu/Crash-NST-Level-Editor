@@ -59,7 +59,7 @@ namespace NST
             {
                 ImGui.Text(collapseLabel);
                 ImGui.Indent(1);
-                FieldRenderer.RenderFields(renderer, metaField);
+                FieldRenderer.RenderFields(renderer, metaField, metaField.GetFields());
                 ImGui.Unindent(1);
                 ImGui.TreePop();
             }
@@ -131,7 +131,7 @@ namespace NST
             }
 
             // Namespace field
-            FieldRenderer.CreateStringInput(renderer, reference.namespaceName, name + "file", (newVal) => 
+            FieldRenderer.CreateStringInput(reference.namespaceName, name + "file", (newVal) => 
             {
                 if (newVal == null) {
                     obj.Reference = null;
@@ -146,7 +146,7 @@ namespace NST
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - buttonWidth - ImGui.GetStyle().ItemSpacing.X * 2);
 
             // Object field
-            FieldRenderer.CreateStringInput(renderer, reference.objectName, name + "object", (newVal) => 
+            FieldRenderer.CreateStringInput(reference.objectName, name + "object", (newVal) => 
             {
                 if (newVal == null) return;
                 reference.SetObject((string)newVal);
@@ -183,13 +183,13 @@ namespace NST
             float availableWidth = ImGui.GetContentRegionAvail().X - 10.0f;
 
             ImGui.PushItemWidth(availableWidth * 0.25f);
-            FieldRenderer.CreateStringInput(renderer, obj._type, name + "type", (newVal) => { obj._type = (string?)newVal; renderer.SetUpdated(); }, false);
+            FieldRenderer.CreateStringInput(obj._type, name + "type", (newVal) => { obj._type = (string?)newVal; renderer.SetUpdated(); }, false);
             ImGui.PopItemWidth();
 
             ImGui.SameLine();
 
             ImGui.PushItemWidth(availableWidth * 0.75f);
-            FieldRenderer.CreateStringInput(renderer, obj._name, name + "name", (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); }, false);
+            FieldRenderer.CreateStringInput(obj._name, name + "name", (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); }, false);
             ImGui.PopItemWidth();
         }
 
@@ -224,7 +224,7 @@ namespace NST
 
         private static void Render(igNameMetaField obj, FileRenderer renderer, string name)
         {
-            FieldRenderer.CreateStringInput(renderer, obj._name, name, (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); });
+            FieldRenderer.CreateStringInput(obj._name, name, (newVal) => { obj._name = (string?)newVal; renderer.SetUpdated(); });
         }
 
         private static void Render(igRandomMetaField obj, FileRenderer renderer, string name)

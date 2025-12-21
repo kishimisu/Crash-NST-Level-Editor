@@ -19,6 +19,8 @@ namespace NST
 
         private static bool _errorLoadingFile = false;
 
+        public static bool AutoPlayAudio { get; set; } = false;
+
         public static void Play() => _waveOut.Play();
         public static void Pause() => _waveOut.Pause();
         public static void Stop() => _waveOut.Stop();
@@ -53,7 +55,9 @@ namespace NST
             _seekPosition = 0;
             _errorLoadingFile = false;
 
-            if (autoPlay) Play();
+            _waveOut.Volume = 0.25f;
+
+            if (AutoPlayAudio && autoPlay) Play();
         }
 
         public static void InitAudioPlayer(CSoundSample soundSample)
@@ -73,7 +77,7 @@ namespace NST
                 return;
             }
 
-            IgArchiveFile? file = App.FindFile(fileName, FileSearchType.NameStartsWith);
+            IgArchiveFile? file = App.FindFile(fileName, out _, FileSearchType.NameStartsWith);
             if (file == null)
             {
                 Console.Error.WriteLine($"Warning: Could not load audio, file not found. ({fileName})");
@@ -135,6 +139,15 @@ namespace NST
 
             ImGui.Separator(); 
             ImGuiUtils.VerticalSpacing(10);
+        }
+
+        public static void RenderAudioMenu()
+        {
+            if (ImGui.MenuItem("Auto-play audio", null, AutoPlayAudio))
+            { 
+                AutoPlayAudio = !AutoPlayAudio;
+                LocalStorage.Set("auto_play_audio", AutoPlayAudio);
+            }
         }
 
         private static void TogglePlayPause()

@@ -74,117 +74,141 @@ namespace NST
             HavokFile collisionHkx = collisionHkxFile.ToHavokFile();
             var compoundShape = (hknpStaticCompoundShape)collisionHkx.GetRootObjects().First(x => x is hknpStaticCompoundShape);
 
-            Dictionary<HashedReference, int> collisionData = GetCollisionData(table);
+            Dictionary<hknpShapeInstance, u64> shapes = [];
+            Dictionary<int, hknpShapeInstance> shapesById = [];
+            HashSet<HashedReference> existing = [];
             bool rebuildHashMap = false;
+
+            foreach ((u64 key, i16 id) in table.Dict)
+            {
+                hknpShapeInstance shape = compoundShape._elements[id];
+                shapes.Add(shape, key);
+                shapesById.Add(id, shape);
+                existing.Add(new HashedReference((u32)(key >> 32), (u32)(key & 0xFFFFFFFF)));
+            }
 
             foreach (CollisionUpdateInfos updateInfos in updatedCollisionData)
             {
-                if (updateInfos.shapeInstance != null)
+                if (updateInfos.removed)
+                {
+                    if (updateInfos.entity.CollisionShapeIndex == -1 || !existing.Contains(updateInfos.reference))
+                    {
+                        continue;
+                    }
+
+                    // Remove existing shape
+
+                    hknpShapeInstance shape = shapesById[updateInfos.entity.CollisionShapeIndex];
+
+                    compoundShape._elements.Remove(shape);
+
+                    shapes.Remove(shape);
+                    rebuildHashMap = true;
+
+                    Console.WriteLine("Removed collision for " + updateInfos.entity.Object.ObjectName);
+                }
+                else if (updateInfos.shapeInstance != null)
                 {
                     // Add new shape
-                    int newShapeIndex = AddHavokShape(updateInfos.entity, compoundShape, updateInfos.shapeInstance);
-                    u64 key = ((u64)updateInfos.reference.fileHash << 32) | (u64)updateInfos.reference.objectHash;
 
-                    table.Dict.Add(key, (i16)newShapeIndex);
+                    hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, updateInfos.shapeInstance);
+
+                    u64 key = ((u64)updateInfos.reference.fileHash << 32) | (u64)updateInfos.objectHash;
+
+                    shapes.Add(shape, key);
                     rebuildHashMap = true;
 
-                    Console.WriteLine("Added new shape for " + updateInfos.entity.ObjectName + " at index " + newShapeIndex);
+                    Console.WriteLine($"Added new collision shape for {updateInfos.entity.Object.ObjectName}{(updateInfos.entity.ParentPrefabInstance != null ? $", prefab hash: {updateInfos.entity.CollisionPrefabHash}" : "")}, key: {key}");
                 }
-                else if (!collisionData.ContainsKey(updateInfos.reference))
+                else if (!existing.Contains(updateInfos.reference))
                 {
                     // Add new instance of existing shape
-                    int newShapeIndex = AddHavokShape(updateInfos.entity, compoundShape, updateInfos.shapeIndex);
+
+                    hknpShapeInstance original = shapesById[updateInfos.entity.CollisionShapeIndex];
+                    hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, original);
+
                     u64 key = ((u64)updateInfos.reference.fileHash << 32) | (u64)updateInfos.reference.objectHash;
 
-                    table.Dict.Add(key, (i16)newShapeIndex);
+                    shapes.Add(shape, key);
                     rebuildHashMap = true;
 
-                    Console.WriteLine("Added collision for " + updateInfos.entity.ObjectName + " at index " + newShapeIndex + " (" + updateInfos.shapeIndex + ")");
+                    Console.WriteLine("Added collision shape instance for " + updateInfos.entity.Object.ObjectName);
                 }
                 else
                 {
                     // Update existing shape
-                    UpdateHavokShape(updateInfos.entity, compoundShape, updateInfos.shapeIndex);
 
-                    Console.WriteLine("Updated collision for " + updateInfos.entity.ObjectName + " at index " + updateInfos.shapeIndex);
+                    hknpShapeInstance toUpdate = shapesById[updateInfos.entity.CollisionShapeIndex];
+                    
+                    UpdateHavokShape(updateInfos.entity, toUpdate);
+
+                    Console.WriteLine("Updated collision for " + updateInfos.entity.Object.ObjectName);
                 }
-                // TODO: handle removed shapes
             }
 
             // Rebuild BVH tree
             BVHNode root = BVHBuilder.Build(compoundShape._elements.GetElements());
-            List<hkcdStaticTreeCodec3Axis6> axis6Tree = root.BuildAxis6Tree();
+            List<hkcdStaticTreeCodec3Axis6> axis6Tree = root.BuildAxis6Tree(compoundShape._elements.GetElements());
+
             compoundShape._boundingVolumeData._nodes.Clear();
             compoundShape._boundingVolumeData._nodes.AddRange(axis6Tree);
 
+            // Update bounds
+            compoundShape._min = new System.Numerics.Vector4(root.boundsMin.X, root.boundsMin.Y, root.boundsMin.Z, compoundShape._min.W);
+            compoundShape._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._max.W);
+            compoundShape._boundingVolumeData._min = new System.Numerics.Vector4(root.boundsMin.X, root.boundsMin.Y, root.boundsMin.Z, compoundShape._boundingVolumeData._min.W);
+            compoundShape._boundingVolumeData._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._boundingVolumeData._max.W);
+
             collisionHkxFile.SetData(collisionHkx.Save());
 
-            // Rebuild hash map
+            // Rebuild collision dictionary
             if (rebuildHashMap)
             {
+                table.Dict.Clear();
                 table.RebuildDict = true;
+
+                foreach ((hknpShapeInstance shape, u64 key) in shapes)
+                {
+                    int index = compoundShape._elements.IndexOf(shape);
+                    table.Dict.Add(key, (i16)index);
+                }
+                
                 collisionIgzFile.SetData(collisionIgz.Save());
             }
         }
 
         /// <summary>
-        /// Add a new instance of an existing shape to a static compound shape
+        /// Add a clone of a hknpShapeInstance to a static compound shape
         /// </summary>
-        /// <param name="entity">Associated entity</param>
-        /// <param name="compoundShape">Static compound shape</param>
-        /// <param name="shapeIndex">hknpShapeInstance index</param>
-        /// <returns></returns>
-        static int AddHavokShape(igEntity entity, hknpStaticCompoundShape compoundShape, int shapeIndex)
-        {
-            hknpShapeInstance shapeInstance = compoundShape._elements[shapeIndex];
-
-            return AddHavokShape(entity, compoundShape, shapeInstance);
-        }
-
-        /// <summary>
-        /// Add a new hknpShapeInstance to a static compound shape
-        /// </summary>
-        /// <param name="entity">Associated entity</param>
-        /// <param name="compoundShape">Static compound shape</param>
-        /// <param name="shapeInstance">New shape instance</param>
-        /// <returns></returns>
-        static int AddHavokShape(igEntity entity, hknpStaticCompoundShape compoundShape, hknpShapeInstance shapeInstance)
+        static hknpShapeInstance AddHavokShape(CollisionUpdateInfos infos, hknpStaticCompoundShape compoundShape, hknpShapeInstance shapeInstance)
         {
             hknpShapeInstance cloneInstance = (hknpShapeInstance)shapeInstance.Clone();
-            int cloneIndex = compoundShape._elements.Count;
-
+            
             compoundShape._elements.Add(cloneInstance);
 
-            UpdateHavokShape(entity, compoundShape, cloneIndex);
+            UpdateHavokShape(infos.entity, cloneInstance);
 
-            return cloneIndex;
+            return cloneInstance;
         }
 
         /// <summary>
         /// Update a hknpShapeInstance's transform
         /// </summary>
-        /// <param name="entity">Associated entity</param>
-        /// <param name="compoundShape">Static compound shape</param>
-        /// <param name="shapeIndex">hknpShapeInstance index</param>
-        static void UpdateHavokShape(igEntity entity, hknpStaticCompoundShape compoundShape, int shapeIndex)
+        static void UpdateHavokShape(NSTEntity entity, hknpShapeInstance shapeInstance)
         {
-            hknpShapeInstance shapeInstance = compoundShape._elements[shapeIndex];
+            THREE.Matrix4 transform = entity.ObjectToWorld();
 
-            THREE.Vector3 position = entity._parentSpacePosition.ToVector3();
-            THREE.Vector3 scale = THREE.Vector3.One();
-            THREE.Quaternion rotation = THREE.Quaternion.Identity();
+            THREE.Vector3 position = new THREE.Vector3();
+            THREE.Vector3 scale = new THREE.Vector3();
+            THREE.Quaternion rotation = new THREE.Quaternion();
+            
+            transform.Decompose(position, rotation, scale);
 
-            if (entity._transform is igEntityTransform transform)
-            {
-                rotation = transform._parentSpaceRotation.ToQuaternion();
-                scale = transform._nonUniformPersistentParentSpaceScale.ToVector3();
-            }
-
-            THREE.Matrix4 matrix = new THREE.Matrix4().Compose(position * 0.0254f, rotation, THREE.Vector3.One());
+            transform.Compose(position * 0.0254f, rotation, THREE.Vector3.One());
             
             System.Numerics.Matrix4x4 originalTransform = shapeInstance._transform;
 
-            shapeInstance._transform = matrix.ToMatrix4();
+            shapeInstance._transform = transform.ToMatrix4();
             shapeInstance._scale = new System.Numerics.Vector4(scale.X, scale.Y, scale.Z, 1);
 
             shapeInstance._transform.M14 = originalTransform.M14;

@@ -182,6 +182,15 @@ namespace NST
             }
             ImGui.EndChild();
 
+            if (_rootNodes.Count == 0 && ImGui.BeginPopupContextItem("NewArchiveFilePopup"))
+            {
+                if (ImGui.Selectable("New file..."))
+                {
+                    Renderer.CreateFile("path/to/New_File.igz");
+                }
+                ImGui.EndPopup();
+            }
+
             // Handle drag and drop (from another archive to this one)
             if (_dragAndDropSource != Renderer.Archive)
             {
@@ -272,20 +281,18 @@ namespace NST
             // Drag from another archive to the root (copy file)
             if (targetNode == null)
             {
-                file = file.Clone();
-
-                Renderer.AddFile(file);
-                Renderer.SetFileUpdated(file, isNewFile: true);
+                ModalRenderer.ShowConfirmationModal($"Automatically import all dependencies for\n{file.GetName()}?", 
+                    () => Renderer.AddFile(file.Clone(), true, true),
+                    () => Renderer.AddFileWithDependencies(_dragAndDropSource, file, true),
+                    "No", "Yes"
+                );
             }
             // Drag from another archive to a folder (copy file)
             else if (_dragAndDropSource != Renderer.Archive)
             {
                 string newPath = targetNode.NodePath + file.GetName();
-                
-                file = file.Clone(newPath);
 
-                Renderer.AddFile(file);
-                Renderer.SetFileUpdated(file, isNewFile: true);
+                Renderer.AddFile(file.Clone(newPath), true, true);
             }
             // Drag from/to the same archive (move file)
             else
@@ -294,10 +301,9 @@ namespace NST
                 string newPath = targetNode.NodePath + file.GetName();
                 
                 if (file.GetPath() == newPath) return;
+
                 file.SetPath(newPath);
-
                 RefreshFile(file);
-
                 Renderer.SetFileUpdated(file, originalPath: originalPath);
             }
         }

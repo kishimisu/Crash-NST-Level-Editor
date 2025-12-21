@@ -2,7 +2,6 @@ using Alchemy;
 using Havok;
 using ImGuiNET;
 using System.Numerics;
-using System.Reflection;
 using System.Runtime.InteropServices;
 
 namespace NST
@@ -19,16 +18,15 @@ namespace NST
         /// <summary>
         /// Render all fields of the given igObjectBase or hkObject instance
         /// </summary>
-        public static void RenderFields(FileRenderer renderer, object obj)
+        public static void RenderFields(FileRenderer renderer, object obj, IReadOnlyList<CachedFieldAttr> fields)
         {
-            List<CachedFieldAttr> fields = AttributeUtils.GetAttributes(obj.GetType()).GetFields();
-
-            if (obj is igObject) fields = fields[2..]; // Hide "type ID" and "reference count" fields for igObjects
-
-            foreach (CachedFieldAttr field in fields)
+            for (int i = 0; i < fields.Count; i++)
             {
-                string name = field.GetName();
+                if (obj is igObject && i < 2) continue; // Hide "type ID" and "reference count" fields for igObjects
+
+                CachedFieldAttr field = fields[i];
                 Type fieldType = field.GetFieldType();
+                string name = field.GetName();
 
                 object? value = field.GetValue(obj);
 
@@ -184,7 +182,7 @@ namespace NST
             }
             else if (type == typeof(string))
             {
-                CreateStringInput(renderer, (string?)value, name, onChange);
+                CreateStringInput((string?)value, name, onChange);
             }
 
             else if (value == null)
@@ -197,43 +195,43 @@ namespace NST
             
             else if (type.IsEnum)
             {
-                CreateEnumInput(renderer, value, type, name, onChange);
+                CreateEnumInput(value, type, name, onChange);
             }
             else if (type == typeof(bool))
             {
-                CreateBoolInput(renderer, (bool)value, name, onChange);
+                CreateBoolInput((bool)value, name, onChange);
             }
             else if (type == typeof(Vector4))
             {
-                CreateVector4Input(renderer, (Vector4)value, name, onChange);
+                CreateVector4Input((Vector4)value, name, onChange);
             }
             else if (type == typeof(Quaternion))
             {
-                CreateQuaternionInput(renderer, (Quaternion)value, name, onChange);
+                CreateQuaternionInput((Quaternion)value, name, onChange);
             }
             else if (type == typeof(Matrix4x4))
             {
-                CreateMatrix4x4Input(renderer, (Matrix4x4)value, name, onChange);
+                CreateMatrix4x4Input((Matrix4x4)value, name, onChange);
             }
             else if (type == typeof(Matrix3x4))
             {
-                CreateMatrix3x4Input(renderer, (Matrix3x4)value, name, onChange);
+                CreateMatrix3x4Input((Matrix3x4)value, name, onChange);
             }
             else
             {
                 // Scalar types
                 GCHandle handle = default;
 
-                if      (type == typeof(i8))    handle = CreateScalarInput(renderer, (i8)value,  ImGuiDataType.S8,  label, onChange);
-                else if (type == typeof(u8))    handle = CreateScalarInput(renderer, (u8)value,  ImGuiDataType.U8,  label, onChange);
-                else if (type == typeof(i16))   handle = CreateScalarInput(renderer, (i16)value, ImGuiDataType.S16, label, onChange);
-                else if (type == typeof(u16))   handle = CreateScalarInput(renderer, (u16)value, ImGuiDataType.U16, label, onChange);
-                else if (type == typeof(i32))   handle = CreateScalarInput(renderer, (i32)value, ImGuiDataType.S32, label, onChange);
-                else if (type == typeof(u32))   handle = CreateScalarInput(renderer, (u32)value, ImGuiDataType.U32, label, onChange);
-                else if (type == typeof(i64))   handle = CreateScalarInput(renderer, (i64)value, ImGuiDataType.S64, label, onChange);
-                else if (type == typeof(u64))   handle = CreateScalarInput(renderer, (u64)value, ImGuiDataType.U64, label, onChange);
-                else if (type == typeof(float)) handle = CreateScalarInput(renderer, (float)value, ImGuiDataType.Float, label, onChange);
-                else if (type == typeof(Half))  handle = CreateScalarInput(renderer, (float)(Half)value, ImGuiDataType.Float, label, val => onChange.Invoke((Half)(float)val));
+                if      (type == typeof(i8))    handle = CreateScalarInput((i8)value,  ImGuiDataType.S8,  label, onChange);
+                else if (type == typeof(u8))    handle = CreateScalarInput((u8)value,  ImGuiDataType.U8,  label, onChange);
+                else if (type == typeof(i16))   handle = CreateScalarInput((i16)value, ImGuiDataType.S16, label, onChange);
+                else if (type == typeof(u16))   handle = CreateScalarInput((u16)value, ImGuiDataType.U16, label, onChange);
+                else if (type == typeof(i32))   handle = CreateScalarInput((i32)value, ImGuiDataType.S32, label, onChange);
+                else if (type == typeof(u32))   handle = CreateScalarInput((u32)value, ImGuiDataType.U32, label, onChange);
+                else if (type == typeof(i64))   handle = CreateScalarInput((i64)value, ImGuiDataType.S64, label, onChange);
+                else if (type == typeof(u64))   handle = CreateScalarInput((u64)value, ImGuiDataType.U64, label, onChange);
+                else if (type == typeof(float)) handle = CreateScalarInput((float)value, ImGuiDataType.Float, label, onChange);
+                else if (type == typeof(Half))  handle = CreateScalarInput((float)(Half)value, ImGuiDataType.Float, label, val => onChange.Invoke((Half)(float)val));
                 else
                 {
                     ImGui.Text(value.ToString());
@@ -245,7 +243,7 @@ namespace NST
             }
         }
 
-        public static void CreateStringInput(FileRenderer renderer, string? value, string name, Action<object?> onChange, bool createClearButton = true)
+        public static void CreateStringInput(string? value, string name, Action<object?> onChange, bool createClearButton = true)
         {
             ImGui.PushID(name);
             
@@ -290,7 +288,7 @@ namespace NST
             ImGui.PopID();
         }
 
-        private static void CreateBoolInput(FileRenderer renderer, bool value, string name, Action<object> onChange)
+        private static void CreateBoolInput(bool value, string name, Action<object> onChange)
         {
             if (ImGui.Checkbox("##" + name, ref value))
             {
@@ -298,7 +296,7 @@ namespace NST
             }
         }
 
-        private static void CreateVector4Input(FileRenderer renderer, Vector4 value, string name, Action<object> onChange)
+        private static void CreateVector4Input(Vector4 value, string name, Action<object> onChange)
         {
             if (ImGui.InputFloat4("##" + name, ref value))
             {
@@ -306,7 +304,7 @@ namespace NST
             }
         }
 
-        private static void CreateQuaternionInput(FileRenderer renderer, Quaternion value, string name, Action<object> onChange)
+        private static void CreateQuaternionInput(Quaternion value, string name, Action<object> onChange)
         {
             Vector4 temp = value.AsVector4();
 
@@ -316,7 +314,7 @@ namespace NST
             }
         }
 
-        private static void CreateMatrix3x4Input(FileRenderer renderer, Matrix3x4 m, string name, Action<object> onChange)
+        private static void CreateMatrix3x4Input(Matrix3x4 m, string name, Action<object> onChange)
         {
             Vector4 row0 = new Vector4(m.M11, m.M12, m.M13, m.M14);
             Vector4 row1 = new Vector4(m.M21, m.M22, m.M23, m.M24);
@@ -333,7 +331,7 @@ namespace NST
             }
         }
 
-        private static void CreateMatrix4x4Input(FileRenderer renderer, Matrix4x4 m, string name, Action<object> onChange)
+        private static void CreateMatrix4x4Input(Matrix4x4 m, string name, Action<object> onChange)
         {
             Vector4 row0 = new Vector4(m.M11, m.M12, m.M13, m.M14);
             Vector4 row1 = new Vector4(m.M21, m.M22, m.M23, m.M24);
@@ -356,7 +354,7 @@ namespace NST
         /// <summary>
         /// Renders an input for a scalar value
         /// </summary>
-        private static GCHandle CreateScalarInput<T>(FileRenderer renderer, T value, ImGuiDataType type, string label, Action<object> onChange)
+        private static GCHandle CreateScalarInput<T>(T value, ImGuiDataType type, string label, Action<object> onChange)
         {
             GCHandle handle = GCHandle.Alloc(value, GCHandleType.Pinned);
 
@@ -371,11 +369,12 @@ namespace NST
         /// <summary>
         /// Renders a dropdown input for an enum field
         /// </summary>
-        private static void CreateEnumInput(FileRenderer renderer, object value, Type type, string name, Action<object> onChange)
+        public static bool CreateEnumInput(object value, Type type, string name, Action<object> onChange)
         {
             List<string> options = Enum.GetNames(type).ToList();
             string? optionName = Enum.GetName(type, value);
             int selectedIndex = optionName == null ? 0 : options.IndexOf(optionName);
+            bool changed = false;
 
             if (optionName == null) {
                 Console.WriteLine($"Warning: No enum associated with the value {value} for type {type} on field {name}");
@@ -390,6 +389,7 @@ namespace NST
                     if (ImGui.Selectable(options[i], isSelected))
                     {
                         onChange.Invoke(Enum.Parse(type, options[i]));
+                        changed = true;
                     }
 
                     if (isSelected)
@@ -399,6 +399,8 @@ namespace NST
                 }
                 ImGui.EndCombo();
             }
+
+            return changed;
         }
 
         /// <summary>
@@ -411,12 +413,20 @@ namespace NST
             {
                 string displayName = $"{obj.Reference.namespaceName}::{obj.Reference.objectName}";
 
-                CreateStringInput(renderer, displayName, label, (newVal) => 
+                CreateStringInput(displayName, label, (newVal) => 
                 {
-                    if (newVal == null) return;
-                    obj.Reference.SetNames((string)newVal);
                     renderer.SetUpdated();
-                }, false);
+
+                    if (newVal == null)
+                    {
+                        obj.Reference = null;
+                        onChange.Invoke(null);
+                    }
+                    else
+                    {
+                        obj.Reference.SetNames((string)newVal);
+                    }
+                });
             }
             // Regular object pointer (ROFS)
             else
@@ -908,7 +918,7 @@ namespace NST
             {
                 if (isMetaField && _copyObject is igMetaField source && value is igMetaField target)
                 {
-                    source.Copy(target);
+                    source.CopyTo(target);
                     renderer.SetUpdated();
                 }
                 else if (isIgObject || isHkObject)
@@ -917,7 +927,22 @@ namespace NST
                 }
             }
 
-            if (value == null && !canPaste)
+            if (value is igHandleMetaField handle && handle.Reference != null)
+            {
+                if (ImGui.Selectable(handle.Reference.isEXID ? "Clear EXID" : "Convert to EXID"))
+                {
+                    handle.Reference.isEXID = !handle.Reference.isEXID;
+                }
+            }
+            else if (value is IMemoryRef mem)
+            {
+                if (ImGui.Selectable($"Clear value"))
+                {
+                    mem.Clear();
+                    renderer.SetUpdated();
+                }
+            }
+            else if (value == null && !canPaste)
             {
                 ImGui.Text("No available action");
             }

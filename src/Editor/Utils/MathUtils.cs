@@ -20,6 +20,16 @@ namespace NST
             );
         }
 
+        /// <summary>
+        /// Converts a ImGui color to THREE.Color
+        /// </summary>
+        public static THREE.Color FromImGuiColor(uint col)
+        {
+            THREE.Color color = new THREE.Color((int)col);
+            color.SetRGB(color.B, color.G, color.R);
+            return color;
+        }
+
         // Alchemy -> THREE
         public static THREE.Vector3 ToVector3(this igVec3fMetaField v) => new THREE.Vector3(v._x, v._y, v._z);
         public static THREE.Euler ToEuler(this igVec3fMetaField v) => new THREE.Euler(v._x, v._y, v._z, THREE.RotationOrder.ZYX);
@@ -30,6 +40,13 @@ namespace NST
             m._row2._x, m._row2._y, m._row2._z, m._row2._w, 
             m._row3._x, m._row3._y, m._row3._z, m._row3._w
         );
+
+        // Alchemy -> System.Numerics
+        public static System.Numerics.Vector3 ToNumericsVector3(this igVec3fMetaField v) => new System.Numerics.Vector3(v._x, v._y, v._z);
+        public static System.Numerics.Vector4 ToNumericsVector4(this igVec4fMetaField v) => new System.Numerics.Vector4(v._x, v._y, v._z, v._w);
+
+        // THREE -> Alchemy
+        public static igVec3fMetaField ToVec3MetaField(this THREE.Vector3 v) => new igVec3fMetaField(v.X, v.Y, v.Z);
 
         // THREE -> System.Numerics
         public static System.Numerics.Matrix4x4 ToMatrix4(this THREE.Matrix4 m) => new System.Numerics.Matrix4x4(
@@ -46,5 +63,9 @@ namespace NST
             m.M13, m.M23, m.M33, m.M43,
             m.M14, m.M24, m.M34, m.M44
         );
+
+        // System.Numerics -> Alchemy
+        public static igVec3fMetaField ToVec3MetaField(this System.Numerics.Vector3 v) => new igVec3fMetaField(v.X, v.Y, v.Z);
+        public static igVec4fMetaField ToVec4MetaField(this System.Numerics.Vector4 v) => new igVec4fMetaField(v.X, v.Y, v.Z, v.W);
     }
 }

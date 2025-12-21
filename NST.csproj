@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <OutputType>Exe</OutputType>
+    <OutputType>WinExe</OutputType>
     <TargetFramework>net9.0-windows</TargetFramework>
     <RootNamespace>NST</RootNamespace>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
@@ -26,8 +26,9 @@
       <ProjectReference Include="lib\THREE\THREE.csproj" />
       <ProjectReference Include="lib\THREE.Silk\THREE.Silk.csproj" />
 
-      <EmbeddedResource Include="assets\namespace_infos.metadata" />
       <EmbeddedResource Include="assets\icomoon.ttf" />
+      <EmbeddedResource Include="assets\namespace_infos.metadata" />
+      <EmbeddedResource Include="assets\L332_CollisionTemplate.pak" />
   </ItemGroup>
 
 </Project>
