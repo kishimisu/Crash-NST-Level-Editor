@@ -35,7 +35,7 @@ namespace NST
             WindowOptions options = WindowOptions.Default;
             options.WindowBorder = WindowBorder.Resizable;
             options.WindowState = WindowState.Maximized;
-            options.Title = "Crash NST Editor v1.6";
+            options.Title = "Crash NST Editor v1.7";
             options.API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Compatability, ContextFlags.Default, new APIVersion(3, 3));
 
             options.VSync = false;
@@ -99,7 +99,14 @@ namespace NST
             _io.ConfigWindowsMoveFromTitleBarOnly = true;
             _io.ConfigFlags |= ImGuiConfigFlags.DockingEnable;
 
+            DisableIniFile(_io);
+
             ImGui.GetStyle().IndentSpacing = 12;
+        }
+
+        private unsafe static void DisableIniFile(ImGuiIOPtr io)
+        {
+            io.NativePtr->IniFilename = (byte*)null;
         }
 
         private unsafe static void LoadIconFont(float scale_factor = 1.0f)

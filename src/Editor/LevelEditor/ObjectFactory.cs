@@ -158,9 +158,9 @@ namespace NST
                 {
                     if (ImGui.MenuItem("Relative camera")) AddRelativeCamera(explorer);
                     if (ImGui.MenuItem("Spline camera")) AddSplineCamera(explorer);
-                    if (ImGui.MenuItem("Camera box")) {}
-                    ImGui.Separator();
-                    if (ImGui.MenuItem("Free camera")) {}
+                    // if (ImGui.MenuItem("Camera box")) {}
+                    // ImGui.Separator();
+                    // if (ImGui.MenuItem("Free camera")) {}
                     ImGui.EndMenu();
                 }
 
@@ -245,11 +245,11 @@ namespace NST
 
             if (_bonusCrate) destination = mapFiles.FirstOrDefault(f => f.GetName().Contains("Bonus"));
             
-            destination ??= mapFiles.FirstOrDefault(f => f.GetPath().StartsWith("maps/") && f.GetName(false).EndsWith("_Crates"));
+            destination ??= mapFiles.FirstOrDefault(f => f.GetName(false).EndsWith("_Crates"));
 
-            string destinationPath = destination?.GetPath() ?? "maps/Custom/Custom_Crates.igz";
+            string fileIdentifier = destination?.GetName(false) ?? "Crates";
 
-            explorer.GetOrCreateIgzFile(destinationPath, out destination, out IgzFile crateIgz);
+            explorer.GetOrCreateIgzFile(fileIdentifier, out destination, out IgzFile crateIgz);
             explorer.Clone(crate, templateArchive, templateIgz, destination, crateIgz);
         }
     
@@ -267,11 +267,7 @@ namespace NST
                 return;
             }
 
-            IgArchiveFile? collectibleFile = explorer.Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetName().Contains("Collectibles") && f.GetName().EndsWith(".igz"));
-
-            string destinationPath = collectibleFile?.GetPath() ?? "maps/Custom/Custom_Collectibles.igz";
-
-            explorer.GetOrCreateIgzFile(destinationPath, out collectibleFile, out IgzFile collectibleIgz);
+            explorer.GetOrCreateIgzFile("Collectibles", out IgArchiveFile collectibleFile, out IgzFile collectibleIgz);
             explorer.Clone(collectible, templateArchive, templateIgz, collectibleFile, collectibleIgz);
         }
 
@@ -279,7 +275,7 @@ namespace NST
         {
             CRelativeCamera relativeCamera = CreateRelativeCamera();
 
-            explorer.GetOrCreateIgzFile("maps/Custom_Level/Custom_Level_Camera.igz", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
+            explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone(relativeCamera, null, null, cameraFile, cameraIgz);
         }
@@ -306,7 +302,11 @@ namespace NST
                 points[1]._position._x = 500;
             }
 
-            explorer.GetOrCreateIgzFile("maps/Custom_Level/Custom_Level_Camera.igz", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
+            splineCamera.ObjectName = "Spline_Camera";
+            splineEntity.ObjectName = "Spline_Camera_Entity";
+            splineCamera._splineEntity.Reference!.objectName = splineEntity.ObjectName;
+
+            explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone(splineCamera, sourceArchive, sourceIgz, cameraFile, cameraIgz);
         }
@@ -404,18 +404,18 @@ namespace NST
             return playerStart;
         }
 
-        public static CRelativeCamera CreateRelativeCamera()
+        public static CRelativeCamera CreateRelativeCamera(string name = "Relative_Camera")
         {
             var safeArea = new CCameraScreenSafeArea()
             {
-                ObjectName = "RelativeCamera_screenSafeArea",
+                ObjectName = name + "_screenSafeArea",
                 _min = new igVec2fMetaField(-0.11f, -1),
                 _max = new igVec2fMetaField(-0.01f, 0),
             };
 
             var camera = new CRelativeCamera()
             {
-                ObjectName = "RelativeCamera",
+                ObjectName = name,
                 _screenSafeArea = safeArea,
                 _position = new igVec3fMetaField(0, -600, 200),
                 _rotation = new igVec3fMetaField(0, 0, 90),

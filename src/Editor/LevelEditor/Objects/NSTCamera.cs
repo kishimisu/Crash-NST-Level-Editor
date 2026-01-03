@@ -63,7 +63,9 @@ namespace NST
 
             RenderBounds(ref Object._min, ref Object._max, explorer);
 
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
             ImGui.SeparatorText("Properties");
+            ImGui.PopStyleColor();
 
             RenderEntityData(explorer);
         }
@@ -138,7 +140,9 @@ namespace NST
 
             RenderTransform(ref Object._position, ref Object._rotation);
 
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
             ImGui.SeparatorText("Properties");
+            ImGui.PopStyleColor();
 
             RenderEntityData(explorer);
         }

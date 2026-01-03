@@ -1,3 +1,5 @@
+using System.Text.RegularExpressions;
+
 namespace Alchemy
 {
     public enum FileSearchType 
@@ -295,6 +297,12 @@ namespace Alchemy
         public IgArchiveFile? FindPackageFile()
         {
             return _files.Find(f => f.GetPath().EndsWith("_pkg.igz"));
+        }
+
+        public IgArchiveFile? FindMainMapFile()
+        {
+            Regex regex = new Regex(@"^maps\/([^\/]+)\/([^\/\.]+)\/\2\.igz$");
+            return _files.Find(f => regex.IsMatch(f.GetPath()));
         }
 
         /// <summary>

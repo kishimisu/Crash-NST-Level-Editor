@@ -8,7 +8,7 @@ A mod manager and level editor for Crash Bandicoot: N.Sane Trilogy on PC
 
 - [Installation](#installation)
 - [Level editor](#level-editor)
-- [Archive editor](#archive-manager)
+- [Archive editor](#archivemod-editor)
 - [Mod manager](#mod-manager)
 - [Alchemy namespace](#using-the-alchemy-namespace)
 - [Project structure](#project-structure)

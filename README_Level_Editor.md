@@ -1,7 +1,7 @@
 # Table of Contents
 
 - [New Level](#new-level)
-- [Level Editor](#level-editor-1)
+- [Level Editor](#level-editor)
   - [Level infos](#level-infos)
   - [Editor settings](#editor-settings)
   - [Object Tree](#object-tree)

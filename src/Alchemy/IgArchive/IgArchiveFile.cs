@@ -1,6 +1,7 @@
 using Havok;
 using SevenZip;
 using SevenZip.Compression.LZMA;
+using System.IO.Compression;
 
 namespace Alchemy
 {
@@ -391,12 +392,32 @@ namespace Alchemy
                     destination.Write(_data, sourceOffset, uncompressedSize);
                     break;
 
-                case CompressionType.LZMA:
+                case CompressionType.ZLIB:
                     byte[] compressedSizeBytes = new byte[2];
                     source.Seek(sourceOffset, SeekOrigin.Begin);
                     source.Read(compressedSizeBytes, 0, 2);
 
                     int compressedSize = BitConverter.ToUInt16(compressedSizeBytes, 0);
+
+                    byte[] compressed = new byte[compressedSize];
+                    source.Read(compressed, 0, compressedSize);
+
+                    MemoryStream compressedStream = new MemoryStream(compressed);
+                    DeflateStream stream = new DeflateStream(compressedStream, CompressionMode.Decompress);
+                    
+                    byte[] buffer = new byte[uncompressedSize];
+                    stream.ReadExactly(buffer, 0, uncompressedSize);
+
+                    destination.Seek(destinationOffset, SeekOrigin.Begin);
+                    destination.Write(buffer);
+                    break;
+
+                case CompressionType.LZMA:
+                    compressedSizeBytes = new byte[2];
+                    source.Seek(sourceOffset, SeekOrigin.Begin);
+                    source.Read(compressedSizeBytes, 0, 2);
+
+                    compressedSize = BitConverter.ToUInt16(compressedSizeBytes, 0);
                     
                     byte[] properties = new byte[5];
                     source.Seek(sourceOffset + 2, SeekOrigin.Begin);

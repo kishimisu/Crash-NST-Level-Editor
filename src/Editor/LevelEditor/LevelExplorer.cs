@@ -453,6 +453,11 @@ namespace NST
                     model.Meshes.RemoveRange(1, model.Meshes.Count - 1);
                 }
             }
+            // Remove ghost mesh from the checkpoint crate
+            if (models.TryGetValue("Crash_Crate_Checkpoint", out NSTModel? checkpointModel))
+            {
+                checkpointModel.Meshes.RemoveAt(0);
+            }
 
             // (Step 7b) Fix TNT & Nitro colors
             NamedReference tntMatRef = new NamedReference("Crash_Crates_materials,TNTCrate,0000100", "GrayWood");
@@ -1106,9 +1111,9 @@ namespace NST
             _treeView.SelectObject(hitEntities[0]);
         }
 
-        public void GetOrCreateIgzFile(string path, out IgArchiveFile file, out IgzFile igz)
+        public void GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
         {
-            IgArchiveFile? existing = Archive.FindFile(path, FileSearchType.Path);
+            IgArchiveFile? existing = Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && f.GetName().Contains(fileIdentifier));
 
             if (existing != null)
             {
@@ -1116,24 +1121,30 @@ namespace NST
 
                 if (FileManager.GetInfos(existing) is FileUpdateInfos infos && infos.igz != null)
                 {
-                    Console.WriteLine("GetIgz: Found igz in update infos (active file) for " + path);
+                    Console.WriteLine("GetIgz: Found igz in update infos (active file) for " + file.GetPath());
                     igz = infos.igz;
                 }
                 else
                 {
-                    Console.WriteLine("GetIgz: Found file in archive, creating igz for " + path);
+                    Console.WriteLine("GetIgz: Found file in archive, creating igz for " + file.GetPath());
                     igz = existing.ToIgzFile();
                 }
             }
             else
             {
+                IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
+
+                string path = (mainMapFile == null)
+                    ? $"maps/Custom/Custom_{fileIdentifier}.igz"
+                    : mainMapFile.GetPath().Replace(".igz", $"_{fileIdentifier}.igz");
+
                 file = new IgArchiveFile(path);
                 igz = new IgzFile(path);
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
 
-                Console.WriteLine("GetIgz: Created new igz file for " + path);
+                Console.WriteLine("GetIgz: Created new igz file: " + file.GetPath());
             }
         }
 

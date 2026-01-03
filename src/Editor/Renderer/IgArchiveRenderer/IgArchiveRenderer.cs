@@ -307,7 +307,8 @@ namespace NST
             // unsupported files
             else
             {
-                ImGui.TextColored(new Vector4(1, 0.7f, 0, 1), $"    [ No preview available for {extension} files ]");
+                string msg = $"    [ No preview available for {(extension == ".igz" ? "this file" : extension + " files")} ]";
+                ImGui.TextColored(new Vector4(1, 0.7f, 0, 1), msg);
             }
         }
 
@@ -428,7 +429,14 @@ namespace NST
 
             node.NextFocus = NextFocusState.None;
 
-            OpenFile(node.File, reference, lastRenderer);
+            try 
+            {
+                OpenFile(node.File, reference, lastRenderer);
+            }
+            catch (Exception e)
+            {
+                ModalRenderer.ShowMessageModal("Could not open file", $"An error occured while opening {node.File.GetName()}:\n\n{e.Message}");
+            }
         }
         
         /// <summary>

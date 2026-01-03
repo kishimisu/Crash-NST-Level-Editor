@@ -824,14 +824,28 @@ namespace NST
 
                 return null;
             }
-
+                        
             // Find object in explorer
             NSTObject? obj = explorer.FindObject(reference);
+
             if (obj == null)
             {
                 if (skipIfNotFound) return null;
-                // Console.WriteLine($"Warning: Could not find object reference {reference}");
-                ImGui.Text($"{label}: <Error> {reference}");
+
+                ImGui.Text($"{label} (Not Found) {reference}");
+
+                if (ImGuiUtils.SmallButtonAlignRight("\uE902"))
+                {
+                    ImGui.OpenPopup("ObjectReferencePopup");
+                }
+                if (ImGui.BeginPopup("ObjectReferencePopup"))
+                {
+                    if (ImGui.Selectable("Clear"))
+                    {
+                        callback(null);
+                    }
+                    ImGui.EndPopup();
+                }
                 return null;
             }
 

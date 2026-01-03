@@ -5,7 +5,7 @@
 ## Table of contents
 
 - [Archive manager](#archive-manager)
-- [IGZ/Havok file editor](#igz-havok-file-editor)
+- [IGZ/Havok file editor](#igzhavok-file-editor)
 - [Custom previews](#custom-previews)
   - [Model preview](#model-previews)
   - [Material preview](#material-previews)

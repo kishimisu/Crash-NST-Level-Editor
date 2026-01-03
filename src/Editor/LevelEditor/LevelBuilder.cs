@@ -470,9 +470,9 @@ namespace NST
 
             // Add Camera
 
-            CRelativeCamera camera = ObjectFactory.CreateRelativeCamera();
-
-            playerStart._camera = new CCameraBase() { Reference = new NamedReference("Custom_Level_Camera", "Camera") };
+            CRelativeCamera camera = ObjectFactory.CreateRelativeCamera("Default_Camera");
+            
+            playerStart._camera = new CCameraBase() { Reference = camera.ToNamedReference("Custom_Level_Camera") };
 
             cameraIgz.Objects.Add(camera);
 

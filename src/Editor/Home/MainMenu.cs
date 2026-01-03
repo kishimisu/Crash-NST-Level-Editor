@@ -162,7 +162,7 @@ namespace NST
                 ImGui.PushStyleColor(ImGuiCol.Button, new Vector4(0.2f, 0.2f, 0.2f, 1.0f));
                 if (ImGui.SmallButton("\u00d7##" + path + isLevel))
                 {
-                    LocalStorage.RemoveRecentFile(path);
+                    LocalStorage.RemoveRecentFile(path, isLevel);
                 }
                 ImGui.PopStyleColor();
 

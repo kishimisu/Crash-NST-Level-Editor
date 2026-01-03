@@ -53,7 +53,7 @@ namespace NST
         /// Apply the changes made to the file.
         /// If the file is an IGZ file, its content will be saved.
         /// </summary>
-        /// <returns>True if the file has been deleted</returns>
+        /// <returns>True if the file is empty and needs to be deleted</returns>
         public bool Apply()
         {
             updated = false;
@@ -74,7 +74,8 @@ namespace NST
             }
             else if (igz != null)
             {
-                if (igz.Objects.Count == 0) return true;
+                int activeObjects = igz.Objects.Count(e => e.GetType() != typeof(igObjectList) && e.GetType() != typeof(igNameList));
+                if (activeObjects == 0) return true;
 
                 // Save IGZ file
                 file.SetData(igz.Save());
