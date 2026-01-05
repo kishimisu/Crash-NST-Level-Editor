@@ -116,7 +116,14 @@ namespace NST
 
                         if (objectRef == null && c.Explorer.FileManager.FindObjectInOpenFiles(handle.Reference, out _) is igHandleList handleList)
                         {
-                            RenderNullableCEntityHandleList(field.GetName(), handle, c.Object, c);
+                            if (handleList is CWaypointHandleList waypointList)
+                            {
+                                RenderCWaypointHandleList(field.GetName(), waypointList, c.Object, c);
+                            }
+                            else
+                            {
+                                RenderNullableCEntityHandleList(field.GetName(), handle, c.Object, c);
+                            }
                         }
                     }
                 }
@@ -762,6 +769,106 @@ namespace NST
             return false;
         }
 
+        public static bool RenderCWaypointHandleList(string label, CWaypointHandleList handleList, igComponentData component, NSTComponent manager)
+        {
+            ImGui.Text(label + ":");
+
+            IgzFile igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile)!;
+
+            if (handleList._data.Count > 0)
+            {
+                ImGui.Spacing();
+
+                for (int i = 0; i < handleList._data.Count; i++)
+                {
+                    igHandleMetaField handle = handleList._data[i];
+
+                    var RenderRemove = () =>
+                    {
+                        ImGui.SameLine();
+                        ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - 16);
+                        if (ImGui.SmallButton($"x##{i}"))
+                        {
+                            handleList._data.RemoveAt(i);
+                            manager.SetUpdated(handleList, false);
+                        }
+                    };
+
+                    if (handle.Reference == null)
+                    {
+                        ImGui.Text("(null)");
+                        RenderRemove();
+                        continue;
+                    }
+
+                    CWaypoint? waypoint = (CWaypoint?)igz.FindObject(handle.Reference);
+
+                    if (waypoint == null)
+                    {
+                        ImGui.Text($"(Not Found) {handle.Reference}");
+                        RenderRemove();
+                        continue;
+                    }
+
+                    NSTWaypoint wp = manager.Entity.AddWaypoint(waypoint, manager.Explorer);
+
+                    ImGui.PushID(waypoint.ObjectName);
+
+                    ImGui.SetNextItemAllowOverlap();
+                    if (ImGui.Selectable(waypoint.ObjectName + ":", wp.IsSelected))
+                    {
+                        manager.Explorer.SelectObject(wp.IsSelected ? manager.Entity : wp);
+                    }
+
+                    RenderRemove();
+
+                    ImGui.Indent();
+                    bool updated = RenderFloat3("Position:", ref waypoint._position, waypoint, manager, true);
+                    updated |= RenderFloat3("Rotation:", ref waypoint._rotation, waypoint, manager, true);
+                    RenderCheckbox("Occupied:", ref waypoint._occupied);
+                    ImGui.Unindent();
+
+                    ImGui.Separator();
+
+                    ImGui.PopID();
+
+                    if (updated && wp.Object3D != null)
+                    {
+                        if (wp.IsSelected)
+                        {
+                            manager.Explorer.SelectObject(wp);
+                        }
+                        else
+                        {
+                            var parent = wp.Object3D.Parent;
+                            parent.Remove(wp.Object3D);
+                            parent.Add(wp.CreateObject3D());
+                            manager.Explorer.RenderNextFrame = true;
+                        }
+                    }
+                }
+                
+                ImGui.Spacing();
+            }
+            else
+            {
+                ImGui.SameLine();
+            }
+
+            if (ImGui.Button("Add new...##" + label, new System.Numerics.Vector2(-1, 0)))
+            {
+                CWaypoint newWaypoint = new CWaypoint() { ObjectName = igz.FindSuitableName("Waypoint") };
+                igHandleMetaField newHandle = new igHandleMetaField() { Reference = newWaypoint.ToNamedReference(manager.Entity.FileNamespace) };
+
+                igz.Objects.Add(newWaypoint);
+                handleList._data.Add(newHandle);
+                
+                return true;
+            }
+
+            return false;
+        }
+
         public static void RenderObject(string name, igObject? obj, string fileNamespace, Type type, LevelExplorer explorer, Action<igObject?> callback, bool readOnly = false)
         {
             RenderObjectReference(name, obj?.ToNamedReference(fileNamespace), type, explorer, (value) =>
@@ -1042,14 +1149,15 @@ namespace NST
             return false;
         }
 
-        private static bool RenderFloat3(string name, ref igVec3fMetaField value, igObject obj, NSTComponent manager)
+        private static bool RenderFloat3(string name, ref igVec3fMetaField value, igObject obj, NSTComponent manager, bool dragInput = false)
         {
             var tmp = value.ToNumericsVector3();
 
             ImGui.Text(name);
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
-            if (ImGui.InputFloat3("##" + name, ref tmp))
+            if (!dragInput && ImGui.InputFloat3("##" + name, ref tmp) ||
+                 dragInput && ImGui.DragFloat3("##" + name, ref tmp))
             {
                 value._x = tmp.X;
                 value._y = tmp.Y;

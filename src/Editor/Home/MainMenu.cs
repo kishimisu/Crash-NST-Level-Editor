@@ -150,7 +150,7 @@ namespace NST
 
                     bool isButtonActive = ModManager.CanClickPlay;
                     if (!isButtonActive) ImGui.BeginDisabled();
-                    if (ImGui.SmallButton("Play##" + path)) IgArchive.Open(path).RunLevel();
+                    if (ImGui.SmallButton("Play##" + path)) IgArchive.Open(path).TryRunLevel();
                     if (!isButtonActive) ImGui.EndDisabled();
                     ImGui.SameLine();
                 }

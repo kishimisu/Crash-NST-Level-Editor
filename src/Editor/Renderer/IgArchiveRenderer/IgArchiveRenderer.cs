@@ -60,6 +60,11 @@ namespace NST
             if (packageFile == null) return;
 
             IsLevelArchive = packageFile.GetPath().Substring("packages/generated/".Length).StartsWith("maps/");
+
+            if (packageFile.GetName() == "chunkInfos_pkg.igz")
+            {
+                IsLevelArchive = false; // update.pak
+            }
             
             IgzFile packageIgz = packageFile.ToIgzFile();
             igStreamingChunkInfo? chunkInfo = packageIgz.FindObject<igStreamingChunkInfo>();
@@ -99,9 +104,8 @@ namespace NST
         /// </summary>
         public void Render()
         {
-            if (!IsOpen)
+            if (!IsOpen && TryCloseArchive())
             {
-                TryCloseArchive();
                 return;
             }
 
@@ -145,7 +149,7 @@ namespace NST
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(true); // Save and run
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E)) App.OpenLevelExplorer(this); // Level Explorer
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(); // Restore backup
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(false); // Restore backup
             }
 
             // Render undocked IGZs
@@ -200,7 +204,12 @@ namespace NST
 
                 if (ImGui.BeginMenu("Backup"))
                 {
-                    if (!_hasBackup)
+                    uint hash = NamespaceUtils.ComputeHash(Archive.GetPath());
+                    string autoBackupPath = Path.Join(LocalStorage.GetStoragePath("backups"), $"{hash}.pak");
+                    bool hasAutoBackup = File.Exists(autoBackupPath);
+
+
+                    if (!_hasBackup && !hasAutoBackup)
                     {
                         ImGui.MenuItem("No backup found", null, false, false);
                         if (ImGui.MenuItem("Create backup")) CreateBackup();
@@ -208,8 +217,14 @@ namespace NST
                     else
                     {
                         ImGui.MenuItem("Backup found!", null, false, false);
-                        if (ImGui.MenuItem("Restore backup", "Ctrl+Shift+R")) RestoreBackup();
-                        if (ImGui.MenuItem("Delete backup")) DeleteBackup();
+                        if (hasAutoBackup)
+                        {
+                            FileInfo fileInfo = new FileInfo(autoBackupPath);
+                            string formatted = fileInfo.LastWriteTime.ToString("dd/MM HH:mm");
+                            if (ImGui.MenuItem($"Restore auto backup ({formatted})")) RestoreBackup(fromLevelEditor, autoBackupPath);
+                        }
+                        if (_hasBackup && ImGui.MenuItem("Restore backup", "Ctrl+Shift+R")) RestoreBackup(fromLevelEditor);
+                        if (_hasBackup && ImGui.MenuItem("Delete backup")) DeleteBackup();
                     }
                     ImGui.EndMenu();
                 }
@@ -237,14 +252,7 @@ namespace NST
             if (!isButtonActive) ImGui.BeginDisabled();
             if (ImGui.Button("Play current level"))
             {
-                try
-                {
-                    Archive.RunLevel();
-                }
-                catch (Exception e)
-                {
-                    ModalRenderer.ShowMessageModal("Error", e.Message);
-                }
+                Archive.TryRunLevel();
             }
             if (!isButtonActive) ImGui.EndDisabled();
         }
@@ -264,17 +272,30 @@ namespace NST
             });
         }
 
-        private void RestoreBackup()
+        private void RestoreBackup(bool fromLevelEditor, string? backupPath = null)
         {
-            if (!_hasBackup) return;
-            
-            File.Copy(Archive.GetPath() + ".backup", Archive.GetPath(), true);
+            if (backupPath == null && !_hasBackup) return;
 
+            // Restore backup
+            backupPath ??= Archive.GetPath() + ".backup";
+            File.Copy(backupPath, Archive.GetPath(), true);
+
+            // Reset archive renderer
             Archive = IgArchive.Open(Archive.GetPath());
-
             Setup();
 
-            IsUpdated = true;
+            // Reopen level explorer
+            LevelExplorer? explorer = App.GetLevelExplorer(this);
+            if (explorer != null)
+            {
+                explorer.IsOpen = false;
+                explorer.ReOpen = fromLevelEditor;
+            }
+
+            if (!fromLevelEditor)
+            {
+                ModalRenderer.ShowMessageModal("Operation successful", "Backup has been restored.");
+            }
         }
 
         /// <summary>
@@ -517,16 +538,18 @@ namespace NST
             }
         }
 
-        private void TryCloseArchive()
+        private bool TryCloseArchive()
         {
             if (!App.CanCloseArchive(this))
             {
                 ModalRenderer.ShowWarningModal($"Are you sure you want to close {Archive.GetName()} without saving?", () => { IsUpdated = false; IsOpen = false; });
                 IsOpen = true;
+                return false;
             }
             else
             {
                 App.CloseArchive(this);
+                return true;
             }
         }
 
@@ -538,7 +561,7 @@ namespace NST
         {
             if (!IsUpdated)
             {
-                if (launchGame) Archive.RunLevel();
+                if (launchGame) Archive.TryRunLevel();
                 return;
             }
 
@@ -653,6 +676,24 @@ namespace NST
                     Archive.UncompressAll();
                 }
 
+                if (launchGame)
+                {
+                    try
+                    {
+                        // Create backup
+                        uint hash = NamespaceUtils.ComputeHash(path);
+                        string backupDir = LocalStorage.GetStoragePath("backups");
+                        string backupPath = Path.Join(backupDir, $"{hash}.pak");
+                        Directory.CreateDirectory(backupDir);
+                        File.Copy(Archive.GetPath(), backupPath, true);
+                        Console.WriteLine("Created backup: " + backupPath);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Could not create backup: {e.Message}\n{e.StackTrace}");
+                    }
+                }
+
                 // Save archive
                 Archive.Save(path, true);
                 IsUpdated = false;
@@ -661,9 +702,20 @@ namespace NST
 
                 if (launchGame)
                 {
-                    Archive.RunLevel();
+                    Archive.TryRunLevel();
                 }
-            });
+            })
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    foreach (var ex in t.Exception.InnerExceptions)
+                    {
+                        Console.WriteLine($"Error saving archive: {ex.Message}\n{ex.StackTrace}");
+                        ModalRenderer.ShowMessageModal("Error", "An error occured while saving the archive");
+                    }
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
         /// <summary>

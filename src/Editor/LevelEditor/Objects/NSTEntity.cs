@@ -31,6 +31,7 @@ namespace NST
         public bool IsSpawned => !IsPrefabTemplate && !IsTemplate && !IsHidden;
 
         public NSTSpline? Spline { get; private set; }
+        private Dictionary<CWaypoint, NSTWaypoint> _waypoints = [];
 
         public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
         {
@@ -102,6 +103,8 @@ namespace NST
                 Object3D.Parent?.Remove(Object3D);
             }
 
+            _waypoints.Clear();
+
             Object3D = group;
 
             return group;
@@ -138,6 +141,22 @@ namespace NST
             }
 
             return null;
+        }
+
+        public NSTWaypoint AddWaypoint(CWaypoint waypoint, LevelExplorer explorer)
+        {
+            if (_waypoints.TryGetValue(waypoint, out NSTWaypoint? wpOut))
+            {
+                return wpOut;
+            }
+            
+            _waypoints[waypoint] = new NSTWaypoint(this, waypoint);
+
+            Object3D?.Add(_waypoints[waypoint].CreateObject3D());
+
+            explorer.RenderNextFrame = true;
+
+            return _waypoints[waypoint];
         }
 
         public List<igEntity> GetPrefabChildren()

@@ -87,7 +87,7 @@ namespace NST
                         _type = GetFileType(filePath)
                     };
                     newFiles.Add(newChunk);
-                    Console.WriteLine($"[Package file] Added {newChunk._name} ({newChunk._type})");
+                    // Console.WriteLine($"[Package file] Added {newChunk._name} ({newChunk._type})");
                 }
                 else
                 {
@@ -108,7 +108,7 @@ namespace NST
             if (existingFiles.Count > 0)
             {
                 needsRebuild = true;
-                existingFiles.ForEach(e => Console.WriteLine("[Package file] Removed " + e._name));
+                // existingFiles.ForEach(e => Console.WriteLine("[Package file] Removed " + e._name));
             }
 
             if (needsRebuild) 
@@ -232,7 +232,20 @@ namespace NST
             return archive.GetFiles().Find(e => e.GetPath().StartsWith("update/") && e.GetPath().EndsWith("_zoneinfo.igz"));
         }
 
-        public static void RunLevel(this IgArchive archive)
+        public static void TryRunLevel(this IgArchive archive)
+        {
+            try
+            {
+                archive.RunLevel();
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine($"Error while launching the game: {e.Message}\n{e.StackTrace}");
+                ModalRenderer.ShowMessageModal("Could not launch the level", "The game is already running");
+            }
+        }
+
+        private static void RunLevel(this IgArchive archive)
         {
             ModManager.PlayButtonTimeout();
             
@@ -307,7 +320,7 @@ namespace NST
                 
             foreach (IgArchiveFile file in update.GetFiles().ToList())
             {
-                if (file.GetName(false).EndsWith("_custom_zoneinfo"))
+                if (file.GetName(false).EndsWith("_zoneinfo"))
                 {
                     update.RemoveFile(file);
                 }
@@ -341,9 +354,9 @@ namespace NST
                 {
                     update.RemoveFile(previousFile);
                 }
-                
-                file.SetPath(path, false);
-                update.AddFile(file);
+
+                IgArchiveFile clone = file.Clone(path);
+                update.AddFile(clone);
             }
 
             if (update.FindFile(packageFile.GetPath(), FileSearchType.Path) is IgArchiveFile previousPackageFile)

@@ -189,7 +189,7 @@ namespace NST
             return update.GetFiles().Any(f =>
             {
                 string name = f.GetName(false).ToLower();
-                return name != "chunkinfos_pkg" && !name.EndsWith("_custom_zoneinfo");
+                return name != "chunkinfos_pkg" && !name.EndsWith("_zoneinfo");
             });
         }
 

@@ -361,7 +361,7 @@ namespace Alchemy
             return removed;
         }
 
-        private string FindSuitableName(string name)
+        public string FindSuitableName(string name)
         {
             while (Objects.Any(e => e.ObjectName == name))
             {

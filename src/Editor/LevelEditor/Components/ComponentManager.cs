@@ -310,6 +310,11 @@ namespace NST
                 }
             }
 
+            if (Entity.Spline == null)
+            {
+                Entity.InitSpline();
+            }
+
             foreach (igObject clone in clones.Values)
             {
                 explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, clone);
@@ -377,19 +382,42 @@ namespace NST
             if (Entity.Object._entityData?._componentData != null && _copyComponents.Count > 0 && explorer == _copyEntityExplorer)
             {
                 if (useSelection)
-            {
-                ImGui.Separator();
-                if (ImGui.Selectable($"Paste {_copyComponents.Count} component{(_copyComponents.Count == 1 ? "" : "s")}"))
                 {
-                    PasteComponents(explorer);
+                    ImGui.Separator();
+                    if (ImGui.Selectable($"Paste {_copyComponents.Count} component{(_copyComponents.Count == 1 ? "" : "s")}"))
+                    {
+                        PasteComponents(explorer);
                     }
                 }
-                else if (_copyComponents[0].Object.GetType() == components[0].Object.GetType())
+
+                if (_copyComponents[0].Object.GetType() == components[0].Object.GetType())
                 {
                     ImGui.Separator();
                     if (ImGui.Selectable($"Paste component values"))
                     {
+                        IgzFile sourceIgz = _copyEntityExplorer.FileManager.GetIgz(_copyComponents[0].Entity.ArchiveFile)!;
+                        IgzFile destinationIgz = explorer.FileManager.GetIgz(components[0].Entity.ArchiveFile)!;
+
                         _copyComponents[0].Object.CopyTo(components[0].Object);
+
+                        var clones = new Dictionary<igObject, igObject>();
+
+                        foreach (CachedFieldAttr field in components[0].Object.GetFields())
+                        {
+                            object? value = field.GetValue(components[0].Object);
+
+                            if (value is igObject obj && obj.ObjectName != null && obj.Reference == null)
+                            {
+                                object? clone = destinationIgz.AddClone(obj, sourceIgz, clones, CloneMode.Deep | CloneMode.SkipComponents | CloneMode.SkipEntities);
+                                field.SetValue(components[0].Object, clone);
+                            }
+                        }
+
+                        foreach (var clone in clones.Values)
+                        {
+                            explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, clone);
+                        }
+                        
                         explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, components[0].Object, true);
 
                         if (_components[0].Object is CModelComponentData)

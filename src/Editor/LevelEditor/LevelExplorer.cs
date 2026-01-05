@@ -67,6 +67,7 @@ namespace NST
         private int _debugMode = 0;
 
         public bool IsOpen = true;
+        public bool ReOpen = false;
         private bool _isDragging = false;
         private bool _clickInsideScene = false;
         private bool _openContextMenu = false;
@@ -97,7 +98,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"ERROR loading entities: {ex.Message}\n{ex.StackTrace}");
+                        Console.WriteLine($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
                 }
@@ -128,7 +129,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"ERROR loading entities: {ex.Message}\n{ex.StackTrace}");
+                        Console.WriteLine($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
                 }
@@ -454,7 +455,7 @@ namespace NST
                 }
             }
             // Remove ghost mesh from the checkpoint crate
-            if (models.TryGetValue("Crash_Crate_Checkpoint", out NSTModel? checkpointModel))
+            if (models.TryGetValue("Crash_Crate_Checkpoint", out NSTModel? checkpointModel) && checkpointModel.Meshes.Count > 10)
             {
                 checkpointModel.Meshes.RemoveAt(0);
             }
@@ -718,8 +719,8 @@ namespace NST
                 else
                 {
                     App.CloseExplorer(this);
+                    return;
                 }
-                return;
             }
 
             ImGui.SetNextWindowPos(new System.Numerics.Vector2(0, 0), ImGuiCond.Once, new System.Numerics.Vector2(0, 0));
@@ -740,7 +741,7 @@ namespace NST
 
                 ArchiveRenderer?.RenderMenuBar(true);
 
-                IsWindowFocused = ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
+                IsWindowFocused = _isDragging | ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
 
                 if (ImGui.BeginTable("LevelEditorTable" + GetHashCode(), 3, ImGuiTableFlags.Resizable))
                 {
@@ -800,6 +801,10 @@ namespace NST
                             else if (SelectionManager._selection[0] is NSTSplineMarker marker)
                             {
                                 marker.Parent.Parent.Render(this);
+                            }
+                            else if (SelectionManager._selection[0] is NSTWaypoint waypoint)
+                            {
+                                waypoint.Parent.Render(this);
                             }
                             else
                             {
@@ -956,19 +961,20 @@ namespace NST
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
-                ImGui.SeparatorText("Gizmos");
-                ImGui.BulletText("Ctrl + E: translate mode");
-                ImGui.BulletText("Ctrl + R: rotate mode");
-                ImGui.BulletText("Ctrl + T: scale mode");
                 ImGui.SeparatorText("Selection");
                 ImGui.BulletText("Left click: select object");
                 ImGui.BulletText("(Click multiple times focus child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
                 ImGui.SeparatorText("Objects");
+                ImGui.BulletText("Right click: add objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
                 ImGui.BulletText("Ctrl + V: paste selected objects");
                 ImGui.BulletText("Del/Suppr: delete selected objects");
                 ImGui.BulletText("(You can paste in a different level)");
+                ImGui.SeparatorText("Gizmos");
+                ImGui.BulletText("Ctrl + E: translate mode");
+                ImGui.BulletText("Ctrl + R: rotate mode");
+                ImGui.BulletText("Ctrl + T: scale mode");
                 ImGui.Spacing();
             }
         }
@@ -1039,7 +1045,7 @@ namespace NST
             RenderNextFrame = true;
         }
 
-        public void SelectObject(NSTObject obj, bool selectInTree = false, bool fromTree = true)
+        public void SelectObject(NSTObject obj, bool selectInTree = false, bool fromTree = false)
         {
             List<NSTObject> selected = InstanceManager.Select(obj, fromTree);
             SelectionManager.UpdateSelection(selected);
@@ -1213,7 +1219,7 @@ namespace NST
             
             if (selected != null)
             {
-                SelectObject(selected, true);
+                SelectObject(selected);
             }
         }
 

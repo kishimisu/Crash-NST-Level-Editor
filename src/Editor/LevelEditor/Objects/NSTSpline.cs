@@ -929,12 +929,6 @@ namespace NST
         public NSTSpline Parent { get; }
         public THREE.Vector3 Position { get; set; }
 
-        public NSTSplineMarker(igSplineEvent marker, IgArchiveFile archiveFile)
-        {
-            Object = marker;
-            ArchiveFile = archiveFile;
-        }
-
         public NSTSplineMarker(NSTSpline parent, igSplineEvent marker)
         {
             Parent = parent;
@@ -961,6 +955,38 @@ namespace NST
             Object3D = mesh;
 
             return mesh;
+        }
+    }
+
+    public class NSTWaypoint : NSTObject<CWaypoint>
+    {
+        public NSTEntity Parent { get; }
+
+        public NSTWaypoint(NSTEntity parent, CWaypoint waypoint)
+        {
+            Parent = parent;
+            Object = waypoint;
+            ArchiveFile = parent.ArchiveFile;
+        }
+
+        public override THREE.Object3D CreateObject3D(bool selected = false)
+        {
+            var sphereGeo = new THREE.SphereGeometry(8, 10, 10);
+            var sphereMat = new THREE.MeshBasicMaterial() { Color = new THREE.Color(0xff0000) };
+            var sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
+
+            sphereMesh.Position.Set(Object._position._x, Object._position._y, Object._position._z);
+
+            if (!selected)
+            {
+                sphereMesh.ApplyMatrix4(Parent.ObjectToWorld().Inverted());
+            }
+
+            sphereMesh.UserData["waypoint"] = this;
+
+            Object3D = sphereMesh;
+
+            return sphereMesh;
         }
     }
 }

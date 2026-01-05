@@ -230,7 +230,6 @@ namespace NST
             if (hit.object3D.UserData.ContainsKey("entity"))
             {
                 NSTObject entity = (NSTObject)hit.object3D.UserData["entity"];
-
                 // Console.WriteLine("Hit object: " + entity.GetObject().ObjectName);
                 return Select(entity);
             }
@@ -238,7 +237,6 @@ namespace NST
             {
                 InstanceManager instance = (InstanceManager)hit.object3D.UserData["instance"];
                 NSTEntity entity = instance.Entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
-
                 // Console.WriteLine("Hit instance: " + entity.Object.ObjectName);
                 return Select(entity);
             }
@@ -261,6 +259,12 @@ namespace NST
                 // Console.WriteLine("Hit spline marker: " + marker.Object.ObjectName);
                 return Select(marker);
             }
+            else if (hit.object3D.UserData.ContainsKey("waypoint"))
+            {
+                NSTWaypoint waypoint = (NSTWaypoint)hit.object3D.UserData["waypoint"];
+                // Console.WriteLine("Hit waypoint: " + waypoint.Object.ObjectName);
+                return Select(waypoint);
+            }
 
             return [];
         }
@@ -281,7 +285,7 @@ namespace NST
                     return [];
                 }
 
-                if (entity.IsPrefabChild && (entity.PrefabTemplate!.PrefabTemplateInstances.Count > 1 || entity.ParentPrefabInstance!.Children.Where(e => e is NSTEntity entity && entity.IsPrefabChild).Count() < 8))
+                if (entity.IsPrefabChild && (entity.PrefabTemplate!.PrefabTemplateInstances.Count > 1 || entity.ParentPrefabInstance!.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) < 8))
                 {
                     bool triggerPassThrough = !selectionEmpty && selection.All(e => e.Object is CScriptTriggerEntity && e.IsPrefabChild);
 
@@ -296,12 +300,16 @@ namespace NST
                         return SelectPrefabGroup(entity.ParentPrefabInstance!).Cast<NSTObject>().ToList();
                     }
                 }
+                else if (entity.IsPrefabInstance)
+                {
+                    return SelectPrefabGroup(entity).Cast<NSTObject>().ToList();
+                }
 
                 if (entity.IsSelected && selection.Count != 1) return [ entity ];
 
                 List<NSTObject> selected = [ entity ];
                 // selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.IsSpawned));
-                selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity));
+                if (!fromTree || alreadySelected) selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity));
 
                 Console.WriteLine("Select " + selected.Count + " entities");
                 return selected;
@@ -412,6 +420,10 @@ namespace NST
                         {
                             kf.Parent.Rotations3D.Add(kf.CreateObject3D());
                         }
+                        continue;
+                    }
+                    if (obj is NSTWaypoint)
+                    {
                         continue;
                     }
                     

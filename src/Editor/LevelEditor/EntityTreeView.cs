@@ -36,7 +36,7 @@ namespace NST
                 
                 ImGui.SeparatorText(group);
 
-                foreach (EntityTreeNode node in nodes)
+                foreach (EntityTreeNode node in nodes.ToList())
                 {
                     node.Render(this);
                 }
@@ -267,7 +267,13 @@ namespace NST
 
         public void Render(EntityTreeView tree)
         {
-            ImGuiTreeNodeFlags? flags = SetupNode(tree, onFocus: () => { if (Object != null && NextFocus == NextFocusState.FocusAndKeyboard) tree.Explorer.SelectObject(Object); });
+            ImGuiTreeNodeFlags? flags = SetupNode(tree, onFocus: () => 
+            { 
+                if (Object != null && NextFocus == NextFocusState.FocusAndKeyboard)
+                {
+                    tree.Explorer.SelectObject(Object, fromTree: true);
+                }
+            });
 
             if (flags == null) return;
 
@@ -322,11 +328,6 @@ namespace NST
                 {
                     tree.Explorer.LookAtObject(Object);
                 }
-                else
-                {
-                    tree.SetSelectedNode(this);
-                    tree.Explorer.SelectObject(Object);
-                }
             }
 
             HandleNavigation(tree);
@@ -336,12 +337,6 @@ namespace NST
         private void RenderFolderNode(EntityTreeView tree, ImGuiTreeNodeFlags flags)
         {
             IsOpen = ImGui.TreeNodeEx("###" + Name, flags);
-
-            if (Object != null && ImGui.IsItemClicked()) 
-            {
-                tree.SetSelectedNode(this);
-                tree.Explorer.SelectObject(Object);
-            }
 
             HandleNavigation(tree);
             RenderName(Name);

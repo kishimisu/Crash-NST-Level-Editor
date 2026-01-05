@@ -180,6 +180,13 @@ namespace NST
                     archiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
                     continue;
                 }
+                if (obj is NSTWaypoint waypoint)
+                {
+                    waypoint.Object._position = worldPos.ToVec3MetaField();
+                    waypoint.Object._rotation = worldEulerDegrees.ToVec3MetaField();
+                    archiveRenderer.SetObjectUpdated(waypoint.ArchiveFile, waypoint.Object);
+                    continue;
+                }
 
                 if (obj is not NSTEntity entity3D)
                 {
@@ -490,7 +497,18 @@ namespace NST
                 ModalRenderer.CloseLoadingModal();
                 
                 callback?.Invoke(newObjects[0]);
-            });
+            })
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    foreach (var ex in t.Exception.InnerExceptions)
+                    {
+                        Console.WriteLine($"Error pasting objects: {ex.Message}\n{ex.StackTrace}");
+                        ModalRenderer.ShowMessageModal("Error", "An error occured while pasting the objects");
+                    }
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);
         }
     }
 }

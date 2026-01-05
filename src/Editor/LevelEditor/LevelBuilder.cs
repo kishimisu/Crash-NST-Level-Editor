@@ -58,7 +58,7 @@ namespace NST
                 {
                     List<string> files = FileExplorer.OpenFiles(LocalStorage.ArchivePath, FileExplorer.EXT_ARCHIVES, false);
                     if (files.Count == 0) return;
-                    IgArchive.Open(files[0]).RunLevel();
+                    IgArchive.Open(files[0]).TryRunLevel();
                 }
             }
             else
