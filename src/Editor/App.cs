@@ -64,26 +64,39 @@ namespace NST
         {
             if (ImGui.BeginMenuBar())
             {
-                if (ImGui.BeginMenu("File"))
-                {
-                    if (ImGui.MenuItem("New mod")) OnClickNew();
-                    if (ImGui.MenuItem("Open archive")) OnClickOpen();
-                    RenderOpenRecent(true);
-                    ImGui.Separator();
-                    if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
-                    if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
-                    if (ImGui.MenuItem("Exit")) Environment.Exit(0);
-                    ImGui.EndMenu();
-                }
-                if (ImGui.BeginMenu("About..."))
-                {
-                    if (ImGui.MenuItem("Open project page")) {
-                        OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
-                    }
-                    ImGui.EndMenu();
-                }
-                
+                RenderFileMenu();
+                RenderAboutMenu();
                 ImGui.EndMenuBar();
+            }
+        }
+
+        private static void RenderFileMenu()
+        {
+            if (ImGui.BeginMenu("File"))
+            {
+                if (ImGui.MenuItem("New mod")) OnClickNew();
+                if (ImGui.MenuItem("Open archive")) OnClickOpen();
+                RenderOpenRecent(true);
+                ImGui.Separator();
+                if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
+                if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
+                if (ImGui.MenuItem("Run Tests")) Tests.TestAlchemy();
+                if (ImGui.MenuItem("Exit")) Environment.Exit(0);
+                ImGui.EndMenu();
+            }
+        }
+
+        public static void RenderAboutMenu()
+        {
+            if (ImGui.BeginMenu("About"))
+            {
+                if (ImGui.MenuItem("Open project page (Github)")) {
+                    OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
+                }
+                if (ImGui.MenuItem("Report an issue (Discord)")) {
+                    OpenURL("https://discord.gg/vsnVrPvVjc");
+                }
+                ImGui.EndMenu();
             }
         }
 

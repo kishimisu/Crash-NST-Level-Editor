@@ -98,7 +98,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
+                        CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
                 }
@@ -129,7 +129,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
+                        CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
                 }
@@ -406,23 +406,25 @@ namespace NST
                 NamedReference textureRef = _textureToMaterials.Keys.ElementAt(i);
                 if (progressBar) _progressManager.SetProgress("textures", (float)(i+1) / _textureToMaterials.Count, $"Loading textures {i + 1}/{_textureToMaterials.Count}...");
 
-                igImage2? texture = (igImage2?)AlchemyUtils.FindObjectInArchives(textureRef, Archive);
-                if (texture == null)
+                try 
                 {
-                    Console.WriteLine($"WARNING: Failed to find texture file for {textureRef}.");
-                    continue;
+                    igImage2 texture = (igImage2)AlchemyUtils.FindObjectInArchives(textureRef, Archive);
+
+                    TextureData data = new TextureData()
+                    {
+                        pixels = texture.GetPixels(),
+                        width = texture._width,
+                        height = texture._height,
+                    };
+
+                    foreach (NSTMaterial mat in _textureToMaterials[textureRef])
+                    {
+                        mat.CreateThreeTexture(data);
+                    }
                 }
-
-                TextureData data = new TextureData()
+                catch (Exception e)
                 {
-                    pixels = texture.GetPixels(),
-                    width = texture._width,
-                    height = texture._height,
-                };
-
-                foreach (NSTMaterial mat in _textureToMaterials[textureRef])
-                {
-                    mat.CreateThreeTexture(data);
+                    Console.WriteLine($"Warning: failed to find texture {textureRef}:\n{e.Message}\n{e.StackTrace}");
                 }
             }
 

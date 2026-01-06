@@ -504,7 +504,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"Error pasting objects: {ex.Message}\n{ex.StackTrace}");
+                        CrashHandler.Log($"Error pasting objects: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while pasting the objects");
                     }
                 }

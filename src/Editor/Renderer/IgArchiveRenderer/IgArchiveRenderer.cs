@@ -179,7 +179,7 @@ namespace NST
 
                     if (ImGui.BeginMenu("Archive"))
                     {
-                        if (fromLevelEditor && ImGui.MenuItem("Open archive..."))
+                        if (fromLevelEditor && ImGui.MenuItem("Open current archive"))
                         {
                             App.OpenArchiveRenderer(this);
                         }
@@ -228,6 +228,8 @@ namespace NST
                     }
                     ImGui.EndMenu();
                 }
+
+                App.RenderAboutMenu();
 
                 if (fromLevelEditor || IsLevelArchive)
                 {
@@ -711,7 +713,7 @@ namespace NST
                 {
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
-                        Console.WriteLine($"Error saving archive: {ex.Message}\n{ex.StackTrace}");
+                        CrashHandler.Log($"Error saving archive: {ex.Message}\n{ex.StackTrace}");
                         ModalRenderer.ShowMessageModal("Error", "An error occured while saving the archive");
                     }
                 }

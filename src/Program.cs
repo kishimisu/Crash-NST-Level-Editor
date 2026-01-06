@@ -6,7 +6,11 @@ class Program
     [STAThread]
     static void Main(string[] args)
     {
-        new NST.SilkWindow().Run(); // Application entry point
+        // Exception handling
+        AppDomain.CurrentDomain.UnhandledException += NST.CrashHandler.CreateExceptionHandler();
+
+        // Application entry point
+        new NST.SilkWindow().Run();
     }
 
     /// <summary>
