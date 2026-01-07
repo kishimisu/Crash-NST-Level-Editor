@@ -99,8 +99,10 @@ namespace NST
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
                         CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
-                        ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
+                    string logPath = CrashHandler.WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while loading the scene\n\nLog file: {logPath}");
+                    IsOpen = false;
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);        
         }
@@ -130,8 +132,10 @@ namespace NST
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
                         CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
-                        ModalRenderer.ShowMessageModal("Error", "An error occured while loading the scene");
                     }
+                    string logPath = CrashHandler.WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while loading the scene. Log saved to:\n\n{logPath}");
+                    IsOpen = false;
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
         }

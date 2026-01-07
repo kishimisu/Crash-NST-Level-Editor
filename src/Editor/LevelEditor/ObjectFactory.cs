@@ -198,6 +198,8 @@ namespace NST
                 return;
             }
 
+            crate = (CEntity)crate.Clone();
+
             // Apply settings
 
             if (_bonusCrate && crate.TryGetComponent(out common_Crate_LevelCountData? levelCountComponent) && levelCountComponent != null)
@@ -207,13 +209,19 @@ namespace NST
 
             if (_outlinedCrate)
             {
-                CEntity outlinedCrate = templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!;
+                CEntity outlinedCrate = (CEntity)templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!.Clone();
 
-                crate.AddComponent("archetype_CTriggerVolumeBoxComponentData", outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!);
-                crate.AddComponent("archetype_Scripts.Graph.common_Crate_OutlineData", outlinedCrate.GetComponent<common_Crate_OutlineData>()!);
+                var outlineData = outlinedCrate.GetComponent<common_Crate_OutlineData>()!;
+                var triggerBox = outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!;
 
-                outlinedCrate.GetComponent<common_Crate_OutlineData>()!._ReplacementEntity = crate.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn;
-                crate.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn = outlinedCrate.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn;
+                crate.AddComponent("archetype_CTriggerVolumeBoxComponentData", triggerBox);
+                crate.AddComponent("archetype_Scripts.Graph.common_Crate_OutlineData", outlineData);
+
+                var spawnerTemplate = crate.GetComponent<common_Spawner_TemplateData>()!;
+                var outlineTemplate = outlinedCrate.GetComponent<common_Spawner_TemplateData>()!;
+
+                outlineData._ReplacementEntity = spawnerTemplate._EntityToSpawn;
+                spawnerTemplate._EntityToSpawn = outlineTemplate._EntityToSpawn;
             }
             
             if (_floatMode == "Water")
@@ -221,21 +229,28 @@ namespace NST
                 CEntity waterCrate = templateIgz.FindObject<CEntity>("Crate_Water_Basic")!;
 
                 crate.AddComponent("archetype_Scripts.Graph.common_Crate_WaterData", waterCrate.GetComponent<common_Crate_WaterData>()!);
+                crate.GetComponent<common_Crate_StackCheckerData>()!._Bool_0x68 = true;
+
             }
             else if (_floatMode == "Floating")
             {
                 CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
                 CPhysicalEntity floatingCrateSpawned = templateIgz.FindObject<CPhysicalEntity>("Crate_Floating_Basic_Spawned_gen")!;
-                
-                crateSpawned.AddComponent("archetype_Scripts.Graph.common_Crate_FloatingData", floatingCrateSpawned.GetComponent<common_Crate_FloatingData>()!);
-                crateSpawned.GetComponent<CMovementControllerComponentData>()!._controllerList = floatingCrateSpawned.GetComponent<CMovementControllerComponentData>()!._controllerList;
+
+                var floatingComponent = floatingCrateSpawned.GetComponent<common_Crate_FloatingData>()!;
+                var movementController = floatingCrateSpawned.GetComponent<CMovementControllerComponentData>()!;
+
+                crateSpawned.AddComponent("archetype_Scripts.Graph.common_Crate_FloatingData", floatingComponent);
+                crateSpawned.GetComponent<CMovementControllerComponentData>()!._controllerList = movementController._controllerList;
             }
             else if (_floatMode == "Flood")
             {
                 CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
                 CPhysicalEntity floodCrateSpawned = templateIgz.FindObject<CPhysicalEntity>("Crate_Flood_Basic_Spawned_gen")!;
+
+                var floodComponent = floodCrateSpawned.GetComponent<common_Crate_Flood_BehaviorData>()!;
                 
-                crateSpawned.AddComponent("archetype_Scripts.Graph.common_Crate_Flood_BehaviorData", floodCrateSpawned.GetComponent<common_Crate_Flood_BehaviorData>()!);
+                crateSpawned.AddComponent("archetype_Scripts.Graph.common_Crate_Flood_BehaviorData", floodComponent);
             }
 
             // Clone crate
@@ -251,6 +266,11 @@ namespace NST
 
             explorer.GetOrCreateIgzFile(fileIdentifier, out destination, out IgzFile crateIgz);
             explorer.Clone(crate, templateArchive, templateIgz, destination, crateIgz);
+
+            if (_floatMode == "Floating" || _floatMode == "Flood")
+            {
+                templateIgz = templateFile?.ToIgzFile();
+            }
         }
     
         private static void AddCollectible(string name, LevelExplorer explorer)

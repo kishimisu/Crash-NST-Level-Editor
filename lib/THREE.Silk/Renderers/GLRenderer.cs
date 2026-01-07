@@ -1170,7 +1170,7 @@ namespace THREE
         public virtual void Init()
         {
 
-            debug.Add("checkShaderErrors", true);
+            debug.Add("checkShaderErrors", false);
 
             this.InitGLContext();
 

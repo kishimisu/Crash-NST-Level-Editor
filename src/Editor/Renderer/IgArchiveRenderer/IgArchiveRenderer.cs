@@ -229,7 +229,7 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
-                App.RenderAboutMenu();
+                App.RenderHelpMenu();
 
                 if (fromLevelEditor || IsLevelArchive)
                 {
@@ -254,7 +254,14 @@ namespace NST
             if (!isButtonActive) ImGui.BeginDisabled();
             if (ImGui.Button("Play current level"))
             {
-                Archive.TryRunLevel();
+                if (ForceSaveAs)
+                {
+                    ModalRenderer.ShowMessageModal("Warning", "You need to save the level first");
+                }
+                else
+                {
+                    Archive.TryRunLevel();
+                }
             }
             if (!isButtonActive) ImGui.EndDisabled();
         }
@@ -714,8 +721,9 @@ namespace NST
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
                         CrashHandler.Log($"Error saving archive: {ex.Message}\n{ex.StackTrace}");
-                        ModalRenderer.ShowMessageModal("Error", "An error occured while saving the archive");
                     }
+                    string logPath = CrashHandler.WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while saving the archive. Log saved to:\n\n{logPath}");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
         }

@@ -289,10 +289,7 @@ namespace NST
 
             ClearSelection(true);
 
-            if (!copyToSameFile)
-            {
-                ModalRenderer.ShowLoadingModal("Pasting selection...");
-            }
+            ModalRenderer.ShowLoadingModal("Pasting selection...");
 
             Task.Run(() =>
             {
@@ -328,7 +325,7 @@ namespace NST
                         }
                     }
                     
-                    Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
+                    // Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
 
                     Dictionary<igObject, igObject> clones = [];
 
@@ -505,8 +502,9 @@ namespace NST
                     foreach (var ex in t.Exception.InnerExceptions)
                     {
                         CrashHandler.Log($"Error pasting objects: {ex.Message}\n{ex.StackTrace}");
-                        ModalRenderer.ShowMessageModal("Error", "An error occured while pasting the objects");
                     }
+                    string logPath = CrashHandler.WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while pasting the objects. Log saved to:\n\n{logPath}");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
         }

@@ -151,7 +151,7 @@ namespace NST
                 _models = LevelExplorer._cachedModels.ToDictionary().Where(e => e.Value.OriginalPath.StartsWith("models:")).ToDictionary();
             }
 
-            ImGuiUtils.RenderComboWithSearch("##model", displayName, _models.Keys.ToList(), (index) =>
+            ImGuiUtils.RenderComboWithSearch("##model", displayName, _models.Keys.ToList(), true, (index) =>
             {
                 NSTModel model = _models.Values.ElementAt(index);
 
@@ -452,6 +452,17 @@ namespace NST
 
                         manager.SetUpdated(method.Collectibles, true);
                     });
+
+                    if (entity == null)
+                    {
+                        ImGui.SameLine();
+                        if (ImGui.Button($"x##{i}"))
+                        {
+                            method.Collectibles._data.RemoveAt(i);
+                            manager.SetUpdated(method.Collectibles);
+                            break;
+                        }
+                    }
                 }
 
                 ImGui.Spacing();
@@ -913,7 +924,7 @@ namespace NST
                 
                 // Dropdown
                 var objects = explorer.InstanceManager.AllObjects.Where(e => (fileNamespace == null || e.FileNamespace == fileNamespace) && e.GetObject().GetType().IsAssignableTo(type)).ToList();
-                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.Select(e => e.GetObject().ObjectName!).ToList(), (index) =>
+                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.Select(e => e.GetObject().ObjectName!).ToList(), false, (index) =>
                 {
                     NSTObject obj = objects[index];
                     callback(obj.ToReference());

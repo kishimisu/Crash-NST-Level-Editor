@@ -494,8 +494,8 @@ namespace NST
             ImGui.PopStyleColor();
 
             // Store state properties
-            bool isHovered = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenOverlapped);
-            bool isHoveredDelay = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenOverlapped | ImGuiHoveredFlags.DelayShort | ImGuiHoveredFlags.NoSharedDelay);
+            bool isHovered = ImGui.IsItemHovered();
+            bool isHoveredDelay = ImGui.IsItemHovered(ImGuiHoveredFlags.DelayShort | ImGuiHoveredFlags.NoSharedDelay);
             bool isActive = ImGui.IsItemActive();
 
             // Store border properties
@@ -523,7 +523,7 @@ namespace NST
                 {
                     OnToggleModEnabled(path, isModEnabled);
                 }
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenOverlapped))
+                if (ImGui.IsItemHovered())
                 {
                     isHoveredDelay = false;
                     ImGui.SetTooltip(isModEnabled ? "Disable" : "Enable");
@@ -536,7 +536,7 @@ namespace NST
                 {
                     OnClickDeleteMod(path);
                 }
-                if (ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenOverlapped))
+                if (ImGui.IsItemHovered())
                 {
                     isHoveredDelay = false;
                     ImGui.SetTooltip("Remove");

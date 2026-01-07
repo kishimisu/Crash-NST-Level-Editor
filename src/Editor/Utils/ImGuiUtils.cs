@@ -127,7 +127,7 @@ namespace NST
             return nodePosY >= scrollTop && nodePosY <= scrollBottom;
         }
 
-        public static void RenderComboWithSearch(string label, string preview, List<string> options, Action<int> callback)
+        public static void RenderComboWithSearch(string label, string preview, List<string> options, bool fullWidth, Action<int> callback)
         {
             if (label != comboLabel)
             {
@@ -135,7 +135,10 @@ namespace NST
                 comboLabel = label;
             }
 
-            ImGui.SetNextItemWidth(-1);
+            if (fullWidth)
+            {
+                ImGui.SetNextItemWidth(-1);
+            }
 
             if (ImGui.BeginCombo(label, preview))
             {

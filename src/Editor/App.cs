@@ -33,7 +33,7 @@ namespace NST
             ImGui.DockSpaceOverViewport();
 
             // Render main menu
-            if (!_mainMenu.IsOpen && !_archives.Any(e => e.IsOpen) && !_editors.Any(e => e.IsOpen))
+            if (!_mainMenu.IsOpen && _archives.Count == 0 && _editors.Count == 0)
             {
                 _mainMenu.IsOpen = true;
             }
@@ -65,7 +65,7 @@ namespace NST
             if (ImGui.BeginMenuBar())
             {
                 RenderFileMenu();
-                RenderAboutMenu();
+                RenderHelpMenu();
                 ImGui.EndMenuBar();
             }
         }
@@ -80,15 +80,14 @@ namespace NST
                 ImGui.Separator();
                 if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
                 if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
-                if (ImGui.MenuItem("Run Tests")) Tests.TestAlchemy();
                 if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                 ImGui.EndMenu();
             }
         }
 
-        public static void RenderAboutMenu()
+        public static void RenderHelpMenu()
         {
-            if (ImGui.BeginMenu("About"))
+            if (ImGui.BeginMenu("Help"))
             {
                 if (ImGui.MenuItem("Open project page (Github)")) {
                     OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
@@ -211,7 +210,7 @@ namespace NST
             _editors.Add(newEditor);
         }
 
-        public static void AddLevelExplorer(LevelExplorer explorer) => _editors.Add(explorer);
+        public static void AddLevelExplorer(LevelExplorer explorer) { _editors.Add(explorer); _mainMenu.IsOpen = false; }
         public static LevelExplorer? GetLevelExplorer(IgArchiveRenderer archive) => _editors.Find(e => e.ArchiveRenderer == archive);
         public static void CloseArchive(IgArchiveRenderer archive) => _archives.Remove(archive);
         public static bool CanCloseArchive(IgArchiveRenderer archive)
