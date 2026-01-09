@@ -217,10 +217,16 @@ namespace NST
         {
             return !archive.IsUpdated || _editors.Find(e => e.ArchiveRenderer == archive)?.IsOpen == true;
         }
+        
         public static void CloseExplorer(LevelExplorer explorer)
         {
+            SilkWindow.instance.controls.Remove(explorer);
+
             explorer.Dispose();
+
             _editors.Remove(explorer);
+
+            _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);
 
             if (explorer.ReOpen)
             {

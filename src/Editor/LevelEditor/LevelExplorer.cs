@@ -777,7 +777,15 @@ namespace NST
 
                     base.Render(deltaTime);
 
-                    _renderBounds = DrawImage();
+                    if (RebuildState != RebuildStatus.Rebuild)
+                    {
+                        _renderBounds = DrawImage();
+                    }
+                    else
+                    {
+                        _renderBounds = DrawImage(tint: System.Numerics.Vector4.One * 0.65f);
+                        ImGuiUtils.CenteredText("Cleaning memory, please wait...");
+                    }
 
                     IsSceneFocused = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem | ImGuiHoveredFlags.AllowWhenBlockedByPopup);
 

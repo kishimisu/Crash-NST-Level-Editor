@@ -8,8 +8,7 @@ namespace NST
     /// </summary>
     public class ThreeSceneRenderer : ControlsContainer
     {
-        static protected GLRenderer _renderer;
-
+        protected GLRenderer _renderer;
         protected Scene _scene;
         protected Camera _camera;
         protected IControls _controls;
@@ -22,6 +21,8 @@ namespace NST
         protected int _height;
         private bool _alwaysRender = false;
 
+        public enum RebuildStatus { None, NeedsRebuild, Rebuild }
+        public RebuildStatus RebuildState { get; set; } = RebuildStatus.None;
         public bool RenderNextFrame { get; set; } = true;
 
         public override THREE.Rectangle GetClientRectangle() => new THREE.Rectangle(0, 0, _width, _height);
@@ -32,9 +33,7 @@ namespace NST
             _height = height;
             _alwaysRender = alwaysRender;
 
-            if (_renderer == null) {
-                _renderer = new GLRenderer(SilkWindow.instance._window, _width, _height);
-            }
+            _renderer = new GLRenderer(SilkWindow.instance._window, _width, _height);
 
             _renderTarget = new GLRenderTarget(_width, _height);
 
@@ -93,6 +92,8 @@ namespace NST
         {
             if (!_alwaysRender && !RenderNextFrame && !_controls.Focused()) return;
 
+            if (CheckRebuildStatus()) return;
+
             SilkWindow.instance.SetViewport(0, 0, _width, _height);
 
             _controls.Update(deltaTime);
@@ -117,22 +118,45 @@ namespace NST
         }
 
         /// <summary>
+        /// Check if the current GL renderer should be rebuilt after another renderer has been disposed
+        /// </summary>
+        private bool CheckRebuildStatus()
+        {
+            if (RebuildState == RebuildStatus.NeedsRebuild)
+            {
+                RenderNextFrame = true;
+                RebuildState = RebuildStatus.Rebuild;
+                return true;
+            }
+
+            if (RebuildState == RebuildStatus.Rebuild)
+            {
+                _renderer.Dispose();
+                _renderer.InitGLContext();
+                RebuildState = RebuildStatus.None;
+            }
+
+            return false;
+        }
+
+        /// <summary>
         /// Draw the rendered image to the screen
         /// </summary>
-        public System.Numerics.Vector4 DrawImage(float heightRatio = 1.0f)
+        public System.Numerics.Vector4 DrawImage(float heightRatio = 1.0f, System.Numerics.Vector4? tint = null)
         {
             uint renderTargetTextureId = _composer == null
                 ? (uint)_renderer.properties.Get(_renderTarget.Texture)["glTexture"]!
                 : (uint)_renderer.properties.Get(_composer.RenderTarget1.Texture)["glTexture"]!;
 
-            return TextureHelper.RenderImageFittingParentWidth((int)renderTargetTextureId, _width, _height, heightRatio);
+            return TextureHelper.RenderImageFittingParentWidth((int)renderTargetTextureId, _width, _height, heightRatio, tint);
         }
 
         public override void Dispose()
         {
             base.Dispose();
-            // _renderer.Dispose();
-            _renderTarget.Dispose();
+            _renderTarget?.Dispose();
+            _renderer?.Dispose();
+            SilkWindow.instance.RestoreViewport();
         }
     }
 }

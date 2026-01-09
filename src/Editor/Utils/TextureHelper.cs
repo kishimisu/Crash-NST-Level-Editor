@@ -47,7 +47,7 @@ namespace NST
         /// Render a texture and fit it to the parent window or container while preserving the aspect ratio
         /// </summary>
         /// <returns>The bounds of the image on the screen (x, y, w, h)</returns>
-        public static Vector4 RenderImageFittingParentWidth(int textureId, int width, int height, float maxHeightRatio = 0.6f)
+        public static Vector4 RenderImageFittingParentWidth(int textureId, int width, int height, float maxHeightRatio = 0.6f, Vector4? tint = null)
         {
             float aspectRatio = (float)width / (float)height;
 
@@ -77,7 +77,7 @@ namespace NST
             // Apply horizontal offset
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + horizontalOffset);
 
-            ImGui.Image(textureId, imageSize);
+            ImGui.Image(textureId, imageSize, Vector2.Zero, Vector2.One, tint ?? Vector4.One);
 
             return new Vector4(x + horizontalOffset, y, imageSize.X, imageSize.Y);
         }

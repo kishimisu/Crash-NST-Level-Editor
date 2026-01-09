@@ -315,7 +315,7 @@ namespace THREE
             this._currentViewport = (_viewport * _pixelRatio).Floor();
             state.Viewport(_currentViewport);
         }
-        private void InitGLContext()
+        public void InitGLContext()
         {
             this.extensions = new GLExtensions(gl);
             this.parameters = new GLCapabilitiesParameters();
