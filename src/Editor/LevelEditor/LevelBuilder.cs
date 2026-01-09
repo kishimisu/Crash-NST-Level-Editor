@@ -431,7 +431,7 @@ namespace NST
                     levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("C2_LevelEndTeleporter")!;
                 }
 
-                levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1200, 0, 0);
+                levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1400, 0, 0);
 
                 archive.Clone(levelEndTeleporter, levelEndArchive, levelEndIgz, mainIgz, clones);
             }
@@ -452,7 +452,7 @@ namespace NST
                 }
 
                 playerStart._parentSpacePosition = new igVec3fMetaField(0, 0, 560);
-                levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1200, 0, 0);
+                levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1400, 0, 0);
 
                 var introComponent = introCutscene.GetComponent<common_C3_IntroSequenceData>()!;
                 var cutsceneList = levelEndIgz.FindObject<CEntityHandleList>("IntroCutsceneSequencePlayer_entityData_componentData_CommonCutsceneSequencePlayer_CutsceneSequenceShotList001")!;
@@ -635,7 +635,16 @@ namespace NST
             // Build package file
 
             string packagePath = $"packages/generated/{mainPath}".Replace(".igz", "_pkg.igz");
-            archive.RebuildPackageFile(archive.GetFiles(), out _, packagePath);
+            archive.RebuildPackageFile(archive.GetFiles(), out IgArchiveFile? packageFile, packagePath);
+
+            if (packageFile != null)
+            {
+                IgzFile packageIgz = packageFile.ToIgzFile();
+                var chunkInfos = packageIgz.FindObject<igStreamingChunkInfo>()!;
+                chunkInfos._required._data.Add(new(){ _type = "pkg", _name = $"packages/generated/packagexmls/crash{crashMode+1}_pkg.igz" });
+                chunkInfos._required._data.Add(new(){ _type = "pkg", _name = "packages/generated/ui/domains/juicedomain_story_pkg.igz" });
+                packageFile.SetData(packageIgz.Save());
+            }
 
             archive.AddFile(infoFile);
 
