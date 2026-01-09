@@ -559,21 +559,6 @@ namespace NST
             // }
             // ImGui.Text($"Distance: {distance}");
 
-            ImGui.TextDisabled("(?)");
-            if (ImGui.IsItemHovered() && ImGui.BeginTooltip())
-            {
-                ImGui.Text("GUI controls:");
-                ImGui.BulletText("Click any item to select it.");
-                ImGui.BulletText("Shift+click: select range");
-                ImGui.BulletText("Ctrl+click: add/remove from selection");
-                ImGui.BulletText("Suppr/Del: delete selection");
-                ImGui.Separator();
-                ImGui.BulletText("Right click: add new items");
-                ImGui.BulletText("Double click: focus in the scene");
-                ImGui.BulletText("Click and drag to edit number fields");
-                ImGui.EndTooltip();
-            }
-
             // Render positions
 
             if (OpenControlPointList)
@@ -584,6 +569,22 @@ namespace NST
 
             if (ImGui.TreeNodeEx($"Positions ({_controlPoints.Count})###Positions", ImGuiTreeNodeFlags.NoTreePushOnOpen))
             {
+                ImGui.TextDisabled("Right click to add new elements (?)");
+                if (ImGui.IsItemHovered() && ImGui.BeginTooltip())
+                {
+                    ImGui.Text("GUI controls:");
+                    ImGui.BulletText("Click any item to select it.");
+                    ImGui.BulletText("Shift+click: select range");
+                    ImGui.BulletText("Ctrl+click: add/remove from selection");
+                    ImGui.BulletText("Suppr/Del: delete selection");
+                    ImGui.Separator();
+                    ImGui.BulletText("Right click: add new items");
+                    ImGui.BulletText("Double click: focus in the scene");
+                    ImGui.BulletText("Click and drag to edit number fields");
+                    ImGui.EndTooltip();
+                }
+
+                ImGui.Spacing();
                 ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(2.0f, 0.0f));
 
                 for (int i = 0; i < _controlPoints.Count; i++)

@@ -5,7 +5,7 @@ namespace NST
 {
     public class SelectionManager
     {
-        static List<NSTEntity> _copyPaste = [];
+        static List<NSTObject> _copyPaste = [];
         static LevelExplorer _copyExplorer;
 
         public List<NSTObject> _selection = [];
@@ -267,10 +267,11 @@ namespace NST
             }
         }
 
-        public void Copy(LevelExplorer explorer)
+        public bool Copy(LevelExplorer explorer)
         {
-            _copyPaste = _selection.OfType<NSTEntity>().ToList();
+            _copyPaste = _selection.Where(e => e is NSTEntity || e is NSTCamera || e is NSTCameraBox).ToList();
             _copyExplorer = explorer;
+            return _copyPaste.Count > 0;
         }
 
         public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint, Action<NSTObject?>? callback = null)
@@ -279,7 +280,7 @@ namespace NST
 
             bool copyToSameFile = (_explorer == _copyExplorer);
 
-            Dictionary<IgArchiveFile, List<NSTEntity>> instances = _copyPaste
+            Dictionary<IgArchiveFile, List<NSTObject>> instances = _copyPaste
                     .GroupBy(x => x.ArchiveFile)
                     .ToDictionary(x => x.Key, x => x.ToList());
 
@@ -293,8 +294,9 @@ namespace NST
 
             Task.Run(() =>
             {
-                foreach ((IgArchiveFile file, List<NSTEntity> entities) in instances)
+                foreach ((IgArchiveFile file, List<NSTObject> objects) in instances)
                 {
+                    List<NSTEntity> entities = objects.OfType<NSTEntity>().ToList();
                     IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
                     
                     IgzFile? dstIgz = null;
@@ -307,7 +309,9 @@ namespace NST
                     }
                     else
                     {
-                        string path = "maps/Custom/" + file.GetName();
+                        string path = _explorer.Archive.FindMainMapFile()?.GetPath().Replace(".igz", $"_{file.GetName()}")
+                                      ?? "maps/Custom/" + file.GetName();
+
                         dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
 
                         if (dstFile == null)
@@ -329,8 +333,21 @@ namespace NST
 
                     Dictionary<igObject, igObject> clones = [];
 
-                    foreach (NSTEntity entity in entities)
+                    foreach (NSTObject obj in objects)
                     {
+                        if (obj is not NSTEntity entity)
+                        {
+                            if (copyToSameFile)
+                            {
+                                srcIgz.AddClone(obj.GetObject(), null, clones, CloneMode.Deep | CloneMode.SkipComponents);
+                            }
+                            else
+                            {
+                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones);
+                            }
+                            continue;
+                        }
+
                         if (entity.IsPrefabChild)
                         {
                             if (entities.Any(e => e == entity.ParentPrefabInstance)) continue;
@@ -374,6 +391,19 @@ namespace NST
                     {
                         renderer.SetObjectUpdated(dstFile, dst);
 
+                        if (src is CCamera srcCam && dst is CCamera dstCam)
+                        {
+                            NSTCamera? originalCam = (NSTCamera?)_copyExplorer.InstanceManager.AllObjects.Find(e => e is NSTCamera c && c.Object == srcCam);
+                            newObjects.Add(new NSTCamera(dstCam, dstFile));
+                            continue;
+                        }
+                        if (src is CCameraBox srcCamBox && dst is CCameraBox dstCamBox)
+                        {
+                            NSTCameraBox? originalCam = (NSTCameraBox?)_copyExplorer.InstanceManager.AllObjects.Find(e => e is NSTCameraBox c && c.Object == srcCamBox);
+                            newObjects.Add(new NSTCameraBox(dstCamBox, dstFile));
+                            continue;
+                        }
+
                         if (src is not igEntity srcEntity || dst is not igEntity dstEntity)
                         {
                             continue;
@@ -406,7 +436,7 @@ namespace NST
                 }
 
                 // Register new entities
-                foreach (NSTEntity clone in newEntities.Values)
+                foreach (NSTObject clone in newObjects)
                 {
                     _explorer.InstanceManager.Register(clone);
                 }
@@ -480,7 +510,7 @@ namespace NST
 
                 UpdateSelection(newObjects.Where(e => e is not NSTEntity entity || entity.IsSpawned).ToList());
 
-                if (_copyPaste.All(e => e.IsPrefabChild))
+                if (_copyPaste.All(e => e is NSTEntity entity && entity.IsPrefabChild))
                 {
                     _selectionContainer.Position.Z += 200;
                 }

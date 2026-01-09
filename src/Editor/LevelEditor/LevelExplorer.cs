@@ -835,7 +835,12 @@ namespace NST
 
             if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
             {
-                if (IsSceneFocused) SelectionManager.Copy(this);
+                if (IsSceneFocused && SelectionManager.Copy(this))
+                {
+                    THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
+                    _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
+                    Task.Delay(250).ContinueWith(_ => _outlinePass.visibleEdgeColor.Copy(prev));
+                }
             }   
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
             {
@@ -1019,12 +1024,12 @@ namespace NST
                 return;
             }
 
-            Focus(nstObj, true);
+            Focus(nstObj, true, true);
         }
 
-        public void Focus(NSTObject obj, bool forceLookAt = false)
+        public void Focus(NSTObject obj, bool forceLookAt = false, bool selectInTree = false)
         {
-            SelectObject(obj);
+            SelectObject(obj, selectInTree);
 
             _treeView.SelectObject(obj);
 
