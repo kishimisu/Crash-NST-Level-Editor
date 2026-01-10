@@ -6,9 +6,10 @@ namespace NST
     /// <summary>
     /// Base class for rendering 3D scenes using THREE.Silk
     /// </summary>
-    public class ThreeSceneRenderer : ControlsContainer
+    public abstract class ThreeSceneRenderer : ControlsContainer
     {
-        protected GLRenderer _renderer;
+        protected static GLRenderer? _renderer;
+
         protected Scene _scene;
         protected Camera _camera;
         protected IControls _controls;
@@ -33,7 +34,7 @@ namespace NST
             _height = height;
             _alwaysRender = alwaysRender;
 
-            _renderer = new GLRenderer(SilkWindow.instance._window, _width, _height);
+            _renderer ??= new GLRenderer(SilkWindow.instance._window, _width, _height);
 
             _renderTarget = new GLRenderTarget(_width, _height);
 
@@ -44,12 +45,12 @@ namespace NST
             _scene.Fog = new Fog(backgroundColor, 0.00004f);
 
             _camera = new PerspectiveCamera(60.0f, _width / (float)_height, 1.0f, 10000.0f);
-            _camera.Position = new THREE.Vector3(0, 0, 5);
-            _camera.LookAt(new THREE.Vector3(0, 0, 0));
+            _camera.Position = new Vector3(0, 0, 5);
+            _camera.LookAt(new Vector3(0, 0, 0));
 
             if (useEffectComposer)
             {
-                _outlinePass = new OutlinePass(new THREE.Vector2(_width, _height), _scene, _camera);
+                _outlinePass = new OutlinePass(new Vector2(_width, _height), _scene, _camera);
 
                 _composer = new EffectComposer(_renderer, _renderTarget);
                 _composer.AddPass(new RenderPass(_scene, _camera));
@@ -66,6 +67,8 @@ namespace NST
         /// </summary>
         public void Resize(int width, int height)
         {
+            if (_renderer == null) return;
+
             _width = width;
             _height = height;
 
@@ -92,7 +95,7 @@ namespace NST
         {
             if (!_alwaysRender && !RenderNextFrame && !_controls.Focused()) return;
 
-            if (CheckRebuildStatus()) return;
+            if (CheckRebuildStatus() || _renderer == null) return;
 
             SilkWindow.instance.SetViewport(0, 0, _width, _height);
 
@@ -131,8 +134,8 @@ namespace NST
 
             if (RebuildState == RebuildStatus.Rebuild)
             {
-                _renderer.Dispose();
-                _renderer.InitGLContext();
+                _renderer ??= new GLRenderer(SilkWindow.instance._window, _width, _height);
+                _composer.Renderer = _renderer;
                 RebuildState = RebuildStatus.None;
             }
 
@@ -144,6 +147,8 @@ namespace NST
         /// </summary>
         public System.Numerics.Vector4 DrawImage(float heightRatio = 1.0f, System.Numerics.Vector4? tint = null)
         {
+            if (_renderer == null) return new System.Numerics.Vector4(0, 0, _width, _height);
+
             uint renderTargetTextureId = _composer == null
                 ? (uint)_renderer.properties.Get(_renderTarget.Texture)["glTexture"]!
                 : (uint)_renderer.properties.Get(_composer.RenderTarget1.Texture)["glTexture"]!;
@@ -155,7 +160,14 @@ namespace NST
         {
             base.Dispose();
             _renderTarget?.Dispose();
-            _renderer?.Dispose();
+            _outlinePass.Dispose();
+        }
+
+        public static void DisposeRenderer()
+        {
+            if (_renderer == null) return;
+            _renderer.Dispose();
+            _renderer = null;
             SilkWindow.instance.RestoreViewport();
         }
     }

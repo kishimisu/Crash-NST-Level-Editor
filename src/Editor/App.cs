@@ -226,7 +226,11 @@ namespace NST
 
             _editors.Remove(explorer);
 
-            _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);
+            if (_editors.Count == 0 || LocalStorage.Get("clear_memory", true))
+            {
+                ThreeSceneRenderer.DisposeRenderer();
+                _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);
+            }
 
             if (explorer.ReOpen)
             {
@@ -333,7 +337,7 @@ namespace NST
 
             try 
             {
-            return AlchemyUtils.FindFileInArchives(Path.GetFileNameWithoutExtension(name), out archive);
+                return AlchemyUtils.FindFileInArchives(Path.GetFileNameWithoutExtension(name), out archive);
             }
             catch (Exception e)
             {

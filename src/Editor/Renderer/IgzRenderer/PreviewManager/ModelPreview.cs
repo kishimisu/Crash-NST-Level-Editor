@@ -126,6 +126,11 @@ namespace NST
         {
             _light.Position = _camera.Position.Negate();
 
+            if (_renderer == null && RebuildState == RebuildStatus.None)
+            {
+                RebuildState = RebuildStatus.NeedsRebuild;
+            }
+
             base.Render();
             base.DrawImage(0.6f);
 

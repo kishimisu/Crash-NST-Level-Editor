@@ -71,6 +71,7 @@ namespace NST
         private bool _isDragging = false;
         private bool _clickInsideScene = false;
         private bool _openContextMenu = false;
+        private static bool _clearMemoryOnExit = false;
 
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
 
@@ -143,6 +144,8 @@ namespace NST
         private void Init()
         {
             InitScene();
+
+            _clearMemoryOnExit = LocalStorage.Get("clear_memory", true);
 
             KeyDown   += (_, e) => _isDragging = _clickInsideScene;
             MouseMove += (_, e) => _isDragging = _clickInsideScene;
@@ -777,17 +780,21 @@ namespace NST
 
                     base.Render(deltaTime);
 
-                    if (RebuildState != RebuildStatus.Rebuild)
+                    if (RebuildState == RebuildStatus.None)
                     {
                         _renderBounds = DrawImage();
+                        IsSceneFocused = ImGui.IsItemHovered();
+                    }
+                    else if (RebuildState == RebuildStatus.NeedsRebuild)
+                    {
+                        _renderBounds = new System.Numerics.Vector4(0, 0, _width, _height);
+                        IsSceneFocused = ImGui.TableGetHoveredColumn() == 1;
+                        ImGuiUtils.CenteredText("Memory cleared, hover to reload the scene");
                     }
                     else
                     {
-                        _renderBounds = DrawImage(tint: System.Numerics.Vector4.One * 0.65f);
-                        ImGuiUtils.CenteredText("Cleaning memory, please wait...");
+                        ImGuiUtils.CenteredText("Reloading scene, please wait...");
                     }
-
-                    IsSceneFocused = ImGui.IsItemHovered(ImGuiHoveredFlags.AllowWhenBlockedByActiveItem | ImGuiHoveredFlags.AllowWhenBlockedByPopup);
 
                     _controls.SetFocus(IsSceneFocused || _clickInsideScene);
 
@@ -932,12 +939,18 @@ namespace NST
 
             if (ImGui.CollapsingHeader("Editor settings"))
             {
-                ImGui.Text($"FPS: {(_controls.Focused() ? (int)ImGui.GetIO().Framerate : "0")} ({_renderer.Width}x{_renderer.Height})");
+                ImGui.Text($"FPS: {(_controls.Focused() ? (int)ImGui.GetIO().Framerate : "0")}" + (_renderer == null ? "" : $"({_renderer.Width}x{_renderer.Height})"));
 
                 ImGui.PushItemWidth(-1);
 
+                ImGuiUtils.Prefix("Free memory on close:");
+                if (ImGui.Checkbox("##clearMemory", ref _clearMemoryOnExit))
+                {
+                    LocalStorage.Set("clear_memory", _clearMemoryOnExit);
+                }
+
                 ImGui.SeparatorText("Render settings");
-                
+
                 ImGuiUtils.Prefix("Render distance:");
                 if (ImGui.SliderFloat("##renderDistance", ref _camera.Far, 4000, 200000, $"%.0f"))
                 {
