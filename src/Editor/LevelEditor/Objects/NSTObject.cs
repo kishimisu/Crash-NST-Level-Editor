@@ -24,19 +24,30 @@ namespace NST
         public abstract THREE.Object3D CreateObject3D(bool selected = false);
         public NamedReference ToReference() => GetObject().ToNamedReference(FileNamespace);
 
-        protected THREE.Mesh CreateBoxHelper(THREE.Vector3 size, THREE.Color color, bool focused, LevelExplorer.CameraLayer layer)
+        protected THREE.Mesh CreateBoxHelper(THREE.Vector3 min, THREE.Vector3 max, THREE.Color color, bool focused, LevelExplorer.CameraLayer? layer = null)
         {
-            THREE.Mesh mesh = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), new THREE.MeshBasicMaterial() {
+            THREE.BoxGeometry geo = new THREE.BoxGeometry(1, 1, 1);
+
+            THREE.Mesh mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial() {
                 Color = color,
                 Wireframe = true
             });
+            
+            if (focused)
+            {
+                mesh.Add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial() {
+                    Color = color,
+                    Opacity = 0.35f,
+                    Transparent = true,
+                }));
+            }
 
-            mesh.Position.Z += size.Z / 2;
-            mesh.Scale.Copy(size);
+            mesh.Scale.Copy(max - min);
+            mesh.Position.Add((max + min) / 2);
 
             mesh.UserData["entity"] = this;
 
-            if (!focused)
+            if (!focused && layer != null)
             {
                 mesh.Layers.Set((int)layer);
             }
@@ -103,24 +114,44 @@ namespace NST
             }
         }
 
-        public static void RenderTransform(ref igVec3fMetaField position, ref igVec3fMetaField rotation)
+        public void RenderTransform(ref igVec3fMetaField position, ref igVec3fMetaField rotation, LevelExplorer explorer)
         {
             ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
             ImGui.SeparatorText("Transform");
             ImGui.PopStyleColor();
 
-            RenderVector3("Position", ref position);
-            RenderVector3("Rotation", ref rotation);
+            bool updated = RenderVector3("Position", ref position);
+            updated     |= RenderVector3("Rotation", ref rotation);
+
+            if (updated)
+            {
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
+
+                if (Object3D != null)
+                {
+                    explorer.SelectionManager.UpdateSelection([this]);
+                }
+            }
         }
 
-        public static void RenderBounds(ref igVec3fMetaField min, ref igVec3fMetaField max, LevelExplorer explorer)
+        public void RenderBounds(ref igVec3fMetaField min, ref igVec3fMetaField max, LevelExplorer explorer)
         {
-            ImGui.PushStyleColor(ImGuiCol.Separator, new System.Numerics.Vector4(0.15f, 0.15f, 0.15f, 1.0f));
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
             ImGui.SeparatorText("Bounds");
             ImGui.PopStyleColor();
 
-            RenderVector3("Min     ", ref min);
-            RenderVector3("Max     ", ref max);
+            bool updated = RenderVector3("Min     ", ref min);
+            updated     |= RenderVector3("Max     ", ref max);
+
+            if (updated && Object3D != null)
+            {
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
+
+                if (Object3D != null)
+                {
+                    explorer.SelectionManager.UpdateSelection([this]);
+                }
+            }
         }
 
         public static bool RenderVector3(string name, ref igVec3fMetaField vec, float speed = 1.0f)

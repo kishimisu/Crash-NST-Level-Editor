@@ -164,6 +164,8 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.MenuItem("New CDynamicClipEntity")) AddCDynamicClipEntity(explorer);
+
                 ImGui.EndPopup();
             }
         }
@@ -329,6 +331,54 @@ namespace NST
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone(splineCamera, sourceArchive, sourceIgz, cameraFile, cameraIgz);
+        }
+
+        private static void AddCDynamicClipEntity(LevelExplorer explorer)
+        {
+            var entity = new CDynamicClipEntity()
+            {
+                ObjectName = "CDynamicClipEntity",
+                _min = new igVec3fMetaField(-800, -15, 0),
+                _max = new igVec3fMetaField(800, 15, 300),
+                _entityData = new CDynamicClipEntityData()
+                {
+                    ObjectName = "CDynamicClipEntity_entityData",
+                    _componentData = new igComponentDataTable() 
+                    { 
+                        ObjectName = "CDynamicClipEntity_entityData_componentData" 
+                    },
+                },
+                _components = new igComponentList()
+            };
+
+            entity._parentSpacePosition = explorer.Camera.Position.Clone().Add( explorer.Camera.Front * 400).ToVec3MetaField();
+
+            entity._bitfield._enabledByVisualScript = true;
+            entity._bitfield._isPositionDirty = true; // todo: set not dirty as default
+            entity._bitfield._isRotationDirty = true;
+            entity._bitfield._isScaleDirty = true;
+            entity._bitfield._isMoving = true;
+            entity._bitfield._isVolumeCulled = true;
+            entity._bitfield._netHasAuthority = true;
+            entity._properties._actToggleOn = true;
+            entity._clipTypeStorage._clipNPCEnemies = true;
+            entity._clipTypeStorage._clipNPCAltEnemies = true;
+            entity._clipTypeStorage._clipPlayers = true;
+            entity._clipTypeStorage._clipWorld = true;
+
+            explorer.GetOrCreateIgzFile("Clip", out IgArchiveFile file, out IgzFile igz);
+
+            igz.Objects.Add(entity);
+
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._components);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._entityData);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._entityData._componentData);
+
+            NSTEntity clip = new NSTEntity(entity, file);
+            explorer.InstanceManager.Register(clip);
+            explorer.RebuildTree();
+            explorer.SelectObject(clip, true);
         }
 
         public static (CZoneInfo, igLocalizedInfo) CreateZoneInfo(string levelIdentifier, EGameYear crashMode)

@@ -40,8 +40,7 @@ namespace NST
             group.Position.Copy(Object._position.ToVector3());
             group.Rotation.SetFromVector3(Object._rotation.ToVector3().MultiplyScalar(THREE.MathUtils.DEG2RAD), THREE.RotationOrder.ZYX);
 
-            THREE.Vector3 size = Object._max.ToVector3() - Object._min.ToVector3();
-            group.Add(CreateBoxHelper(size, color, selected, LevelExplorer.CameraLayer.CameraBox));
+            group.Add(CreateBoxHelper(Object._min.ToVector3(), Object._max.ToVector3(), color, selected, LevelExplorer.CameraLayer.CameraBox));
 
             if (!selected)
             {
@@ -59,7 +58,7 @@ namespace NST
         {
             base.Render(explorer);
 
-            RenderTransform(ref Object._position, ref Object._rotation);
+            RenderTransform(ref Object._position, ref Object._rotation, explorer);
 
             RenderBounds(ref Object._min, ref Object._max, explorer);
 
@@ -138,7 +137,7 @@ namespace NST
         {
             base.Render(explorer);
 
-            RenderTransform(ref Object._position, ref Object._rotation);
+            RenderTransform(ref Object._position, ref Object._rotation, explorer);
 
             ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);
             ImGui.SeparatorText("Properties");

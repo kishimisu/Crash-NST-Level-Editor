@@ -309,23 +309,29 @@ namespace NST
                     }
                     else
                     {
-                        string path = _explorer.Archive.FindMainMapFile()?.GetPath().Replace(".igz", $"_{file.GetName()}")
-                                      ?? "maps/Custom/" + file.GetName();
+                        string path = file.GetPath();
 
-                        dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
-
-                        if (dstFile == null)
+                        if (Path.GetFileNameWithoutExtension(path).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
                         {
-                            dstIgz = new IgzFile(path);
-                            dstFile = new IgArchiveFile(path);
-                            
-                            renderer.AddFile(dstFile);
-
-                            fileManager.Add(dstFile, dstIgz, true);
+                            _explorer.GetOrCreateIgzFile("Camera", out dstFile, out dstIgz);
                         }
                         else
                         {
-                            dstIgz = fileManager.GetIgz(dstFile)!;
+                            dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
+
+                            if (dstFile == null)
+                            {
+                                dstIgz = new IgzFile(path);
+                                dstFile = new IgArchiveFile(path);
+                                
+                                renderer.AddFile(dstFile);
+
+                                fileManager.Add(dstFile, dstIgz, true);
+                            }
+                            else
+                            {
+                                dstIgz = fileManager.GetIgz(dstFile)!;
+                            }
                         }
                     }
                     

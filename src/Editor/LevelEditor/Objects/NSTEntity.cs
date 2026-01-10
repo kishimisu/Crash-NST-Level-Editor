@@ -133,10 +133,12 @@ namespace NST
         {
             if (Object is CEntity entity && (Object is CScriptTriggerEntity || Object is CDynamicClipEntity))
             {
-                THREE.Vector3 size = entity._max.ToVector3() - entity._min.ToVector3();
                 THREE.Color color = new THREE.Color(Object is CScriptTriggerEntity ? 0xFFA500 : 0xFF0000);
-                THREE.Mesh mesh = CreateBoxHelper(size, color, focused, LevelExplorer.CameraLayer.Triggers);
+                var layer = Object is CDynamicClipEntity ? LevelExplorer.CameraLayer.ClipEntities : LevelExplorer.CameraLayer.Triggers;
+                THREE.Mesh mesh = CreateBoxHelper(entity._min.ToVector3(), entity._max.ToVector3(), color, focused, layer);
+
                 mesh.ApplyMatrix4(ObjectToWorld());
+
                 return mesh;
             }
 
@@ -457,6 +459,14 @@ namespace NST
             else if (Object is CDynamicClipEntity cd)
             {
                 RenderBounds(ref cd._min, ref cd._max, explorer);
+
+                ImGui.SeparatorText("Clip Type");
+                ComponentRenderer.RenderCheckbox("Players", ref cd._clipTypeStorage._clipPlayers, this, explorer, 120);
+                ComponentRenderer.RenderCheckbox("Team Hero", ref cd._clipTypeStorage._clipTeamHero, this, explorer, 120);
+                ComponentRenderer.RenderCheckbox("NPC Enemies", ref cd._clipTypeStorage._clipNPCEnemies, this, explorer, 120);
+                ComponentRenderer.RenderCheckbox("NPC Alt Enemies", ref cd._clipTypeStorage._clipNPCAltEnemies, this, explorer, 120);
+                ComponentRenderer.RenderCheckbox("World", ref cd._clipTypeStorage._clipWorld, this, explorer, 120);
+                ImGui.Separator();
             }
 
             // Render _canSpawn

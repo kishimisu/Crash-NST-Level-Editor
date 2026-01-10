@@ -1168,9 +1168,9 @@ namespace NST
 #endregion
 #region ImGui
 
-        public static bool RenderCheckbox(string name, ref bool value, NSTObject obj, LevelExplorer explorer)
+        public static bool RenderCheckbox(string name, ref bool value, NSTObject obj, LevelExplorer explorer, int align = 0)
         {
-            if (RenderCheckbox(name, ref value))
+            if (RenderCheckbox(name, ref value, align))
             {
                 explorer.ArchiveRenderer.SetObjectUpdated(obj.ArchiveFile, obj.GetObject());
                 return true;
@@ -1186,11 +1186,12 @@ namespace NST
             }
             return false;
         }
-        private static bool RenderCheckbox(string name, ref bool value)
+        private static bool RenderCheckbox(string name, ref bool value, int align = 0)
         {
             ImGui.BeginGroup();
             ImGui.Text(name);
-            ImGui.SameLine();
+            if (align == 0) ImGui.SameLine();
+            else ImGui.SameLine(align);
             bool changed = ImGui.Checkbox("##" + name, ref value);
             ImGui.EndGroup();
             return changed;

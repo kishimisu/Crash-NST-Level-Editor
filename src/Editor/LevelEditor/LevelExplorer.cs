@@ -18,6 +18,7 @@ namespace NST
         public InstancedMeshManager InstanceManager { get; private set; }
         public SelectionManager SelectionManager { get; private set; }
         public ActiveFileManager FileManager => ArchiveRenderer.FileManager;
+        public THREE.Camera Camera => _camera;
 
         public bool IsWindowFocused { get; private set; } = false;
         public bool IsSceneFocused { get; private set; } = false;
@@ -43,18 +44,20 @@ namespace NST
             Default = 0, 
             AllEntities = 1, 
             Splines = 2, 
-            CameraBox = 3, 
-            Triggers = 4, 
-            Templates = 5, 
-            Clouds = 6, 
-            Shadows = 7, 
-            Hidden = 8 
+            ClipEntities = 3,
+            CameraBox = 4, 
+            Triggers = 5, 
+            Templates = 6, 
+            Clouds = 7, 
+            Shadows = 8, 
+            Hidden = 9
         };
 
         private readonly Dictionary<string, bool> _layers = new()
         {
             { "All Entities", true },
             { "Splines", true },
+            { "DynamicClipEntity", true },
             { "Cameras", false },
             { "Triggers", false },
             { "Templates", false },
@@ -72,8 +75,9 @@ namespace NST
         private bool _clickInsideScene = false;
         private bool _openContextMenu = false;
         private static bool _clearMemoryOnExit = false;
-
+        
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
+        public void RebuildTree() => _treeView.RebuildTree(InstanceManager.AllObjects);
 
         /// <summary>
         /// Constructor used when creating a new level
