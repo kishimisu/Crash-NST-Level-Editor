@@ -102,7 +102,7 @@ namespace NST
             InitAudioPlayer(soundSample._data.ToArray(), autoPlay, subSound._fileName);
         }
 
-        public static void Render()
+        public static void Render(bool showExtract = true)
         {
             ImGuiUtils.VerticalSpacing(10);
             ImGui.Separator();
@@ -132,7 +132,7 @@ namespace NST
                 Seek(_seekPosition);
             }
 
-            if (ImGui.Button("Extract audio"))
+            if (showExtract &&ImGui.Button("Extract audio"))
             {
                 ExportAudio();
             }

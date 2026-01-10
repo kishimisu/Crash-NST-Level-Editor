@@ -78,13 +78,13 @@ namespace NST
         /// <summary>
         /// Constructor used when creating a new level
         /// </summary>
-        public LevelExplorer(string baseLevel, string level, int crashMode) : base(useEffectComposer: true, alwaysRender: false)
+        public LevelExplorer(string baseLevel, string level, string musicLevel, int crashMode) : base(useEffectComposer: true, alwaysRender: false)
         {
             Init();
 
             _initializationTask = Task.Run(() => 
             {
-                IgArchive archive = LevelBuilder.CreateLevel(baseLevel, level, crashMode, _progressManager);
+                IgArchive archive = LevelBuilder.CreateLevel(baseLevel, level, musicLevel, crashMode, _progressManager);
 
                 ArchiveRenderer = new IgArchiveRenderer(archive);
                 ArchiveRenderer.IsUpdated = true;
@@ -943,6 +943,7 @@ namespace NST
 
                 ImGui.PushItemWidth(-1);
 
+                ImGui.Spacing();
                 ImGuiUtils.Prefix("Free memory on close:");
                 if (ImGui.Checkbox("##clearMemory", ref _clearMemoryOnExit))
                 {

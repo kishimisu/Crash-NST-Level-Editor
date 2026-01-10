@@ -45,6 +45,7 @@ namespace NST
             { typeof(CSplineLaneMoverComponentData), (c, m) =>                 RenderComponent((CSplineLaneMoverComponentData)c, m) },
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
+            { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
         };
 
         private static readonly HashSet<Type> _emptyComponents = new ()
@@ -690,6 +691,105 @@ namespace NST
             ImGui.SetItemTooltip("True in:\n- L226_TotallyBear\n- L227_TotallyFly\n- L326_SkiCrazed\n- L328_Area51\n- L330_RingsOfPower\n- L331_HotCoco\n- L332_EggipusRex");
         }
 
+        private static int _audioPlayerStatus = 0;
+        private static igComponentData? _musicComponent;
+        private static IgArchiveFile? _soundBankFile;
+        private static IgzFile? _soundBankIgz;
+        private static CSubSound? _subSound;
+        private static void RenderComponent(common_OnStartMusicData component, NSTComponent manager)
+        {
+            if (_musicComponent == null || _musicComponent != component)
+            {
+                _subSound = null;
+                _audioPlayerStatus = 0;
+                _musicComponent = component;
+
+                Task.Run(() => 
+                {
+                    IgzFile igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile)!;
+
+                    var musicSettings = (CGameSoundMusicSettings)igz.FindObject(component._OnStartMusic.Reference!)!;
+
+                    _soundBankFile = manager.Explorer.Archive.FindFile(musicSettings._nextStream.Reference!.namespaceName, FileSearchType.Name)!;
+                    _soundBankIgz = manager.Explorer.FileManager.GetIgz(_soundBankFile) ?? _soundBankFile.ToIgzFile();
+
+                    var sound = (CSound)_soundBankIgz.FindObject(musicSettings._nextStream.Reference)!;
+
+                    _subSound = sound._subSoundList!._data[0];
+
+                    string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
+                    IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
+
+                    if (soundFile != null)
+                    {
+                        AudioPlayerInstance.InitAudioPlayer(soundFile.Uncompress());
+                        _audioPlayerStatus = 1;
+                    }
+                    else
+                    {
+                        _audioPlayerStatus = -1;
+                    }
+                })
+                .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
+            }
+
+            if (_subSound != null && _soundBankFile != null && _soundBankIgz != null)
+            {
+                if (RenderString("Sound file:", ref _subSound._fileName!))
+                {
+                    manager.Explorer.FileManager.Add(_soundBankFile, _soundBankIgz);
+                    manager.Explorer.ArchiveRenderer.SetObjectUpdated(_soundBankFile, _subSound);
+                }
+                if (ImGui.Button("Locate"))
+                {
+                    string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
+                    IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
+                    if (soundFile != null)
+                    {
+                        App.OpenArchiveRenderer(manager.Explorer.ArchiveRenderer);
+                        manager.Explorer.ArchiveRenderer.FocusFile(soundFile);
+                    }
+                }
+                ImGui.SameLine();
+                if (ImGui.Button("Reload"))
+                {
+                    _audioPlayerStatus = 0;
+
+                    Task.Run(() =>
+                    {
+                        string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
+                        IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
+
+                        if (soundFile != null)
+                        {
+                            AudioPlayerInstance.InitAudioPlayer(soundFile.Uncompress());
+                            _audioPlayerStatus = 1;
+                        }
+                        else
+                        {
+                            _audioPlayerStatus = -1;
+                        }
+                    })
+                    .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
+                }
+            }
+
+            if (_audioPlayerStatus == 0)
+            {
+                ImGui.Spacing();
+                ImGui.Text("Loading audio player...");
+            }
+            else if (_audioPlayerStatus == 1)
+            {
+                AudioPlayerInstance.Render(false);
+            }
+            else
+            {
+                ImGui.Spacing();
+                ImGui.Text("Could not load audio file.");
+            }
+        }
+
 #endregion
 #region References
 
@@ -1224,7 +1324,7 @@ namespace NST
             return changed;
         }
 
-        private static bool RenderString(string name, ref string value, igObject obj, NSTComponent manager)
+        private static bool RenderString(string name, ref string value)
         {
             ImGui.Text(name);
             ImGui.SameLine();
@@ -1236,11 +1336,11 @@ namespace NST
         {
             string objectName = handle.Reference?.objectName ?? "";
 
-            if (RenderString(name, ref objectName, component, manager))
+            if (RenderString(name, ref objectName))
             {
                 if (handle.Reference == null) handle.Reference = new(namespaceName, objectName);
                 else handle.Reference.objectName = objectName;
-                manager.SetUpdated();
+                manager.SetUpdated(component);
                 return true;
             }
             return false;

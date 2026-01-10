@@ -9,13 +9,15 @@ namespace NST
         public static readonly string[] CrashModes = [ "Crash 1", "Crash 2", "Crash 3" ];
         public static readonly string[] CrashCharacters = [ "Crash", "Coco" ]; // , "BlasterTech", "BruiserUndead" ];
         private static int _currentMode = 0;
-        private static bool _newLevelOpen = false;
+        public static bool _newLevelOpen = false;
 
         private static int _selectedLevel = 2;
         private static int _selectedLighting = 1;
+        private static int _selectedMusic = 1;
 
         private static string[]? _levels = null;
         private static string[]? _baseLevels = null;
+        private static string[]? _musicLevels = null;
 
         public static void Render()
         {
@@ -63,10 +65,12 @@ namespace NST
             }
             else
             {
-                if (_baseLevels == null || _levels == null)
+                if (_baseLevels == null || _levels == null || _musicLevels == null)
                 {
                     List<string> levels = ModManager._levels.Skip(1).ToList();
                     _levels = levels.ToArray();
+
+                    _musicLevels = levels.Where((_, i) => i < 106).ToArray();
 
                     levels.Insert(0, "none");
                     _baseLevels = levels.ToArray();
@@ -81,7 +85,7 @@ namespace NST
                 {
                     if (_selectedLevel != 0)
                     {
-                        _selectedLighting = _selectedLevel - 1;
+                        _selectedLighting = _selectedMusic = _selectedLevel - 1;
                         _currentMode = GetGameYearInt(_baseLevels[_selectedLevel].Split("/").First().ToLowerInvariant());
                     }
                 }
@@ -89,17 +93,20 @@ namespace NST
                 float buttonEndX = ImGui.GetCursorPosX() - ImGui.GetStyle().ItemSpacing.X;
                 ImGui.TextDisabled("(?)");
                 ImGui.SetItemTooltip("- Choose \"none\" to create a new empty level\n- Or choose an existing level to use as a base");
+                
+                ImGui.Separator();
 
                 if (_selectedLevel != 0) ImGui.BeginDisabled();
 
                 ImGui.Text("Lighting:");
                 ImGui.SameLine(100);
-                if (ImGui.Combo("##SelectedLighting", ref _selectedLighting, _levels, _levels.Length))
-                {
-                    _currentMode = GetGameYearInt(_levels[_selectedLighting].Split("/").First().ToLowerInvariant());
-                }
+                ImGui.Combo("##SelectedLighting", ref _selectedLighting, _levels, _levels.Length);
                 ImGui.SameLine(); ImGui.TextDisabled("(?)");
-                ImGui.SetItemTooltip("Import the global lighting and ambience from another level.\nThese options are only available if the base level is set to \"none\".");
+                ImGui.SetItemTooltip("These options are only available if the base level is set to \"none\".");
+
+                ImGui.Text("Music:");
+                ImGui.SameLine(100);
+                ImGui.Combo("##SelectedMusic", ref _selectedMusic, _musicLevels, _musicLevels.Length);
 
                 ImGui.Text("Mode:");
                 ImGui.SameLine(100);
@@ -116,7 +123,7 @@ namespace NST
                 ImGui.SameLine();
                 if (ImGui.Button("Create New Level", new System.Numerics.Vector2(buttonEndX - ImGui.GetCursorPosX(), 0)))
                 {
-                    var explorer = new LevelExplorer(_baseLevels[_selectedLevel], _levels[_selectedLighting], _currentMode);
+                    var explorer = new LevelExplorer(_baseLevels[_selectedLevel], _levels[_selectedLighting], _musicLevels[_selectedMusic], _currentMode);
                     App.AddLevelExplorer(explorer);
                     _newLevelOpen = false;
                 }
@@ -125,11 +132,11 @@ namespace NST
             ImGuiUtils.VerticalSpacing(10);
         }
 
-        public static IgArchive CreateLevel(string baseLevel, string level, int crashMode, ProgressManager progress)
+        public static IgArchive CreateLevel(string baseLevel, string level, string musicLevel, int crashMode, ProgressManager progress)
         {
             if (baseLevel == "none")
             {
-                return CreateNewLevel(level, crashMode, progress);
+                return CreateNewLevel(level, musicLevel, crashMode, progress);
             }
             else
             {
@@ -293,7 +300,7 @@ namespace NST
             }
         }
 
-        private static IgArchive CreateNewLevel(string level, int crashMode, ProgressManager progress)
+        private static IgArchive CreateNewLevel(string level, string musicLevel, int crashMode, ProgressManager progress)
         {
             progress.SetProgress("newlevel", 1/8f, $"Creating new level (1/8)...");
 
@@ -312,6 +319,8 @@ namespace NST
             IgArchiveFile sourceLighting = sourceArchive.FindFile($"{levelName}_lighting.igz")!;
             IgzFile sourceLightingIgz = sourceLighting.ToIgzFile();
 
+            IgArchive modelArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L332_EggipusRex.pak"));
+
             progress.SetProgress("newlevel", 2/8f, $"Creating new level (2/8)...");
 
             // Create new archive
@@ -323,6 +332,7 @@ namespace NST
             string cameraPath = $"{basePath}/Custom_Level/Custom_Level_Camera.igz";
             string lightingPath = $"{basePath}/Custom_Level/Custom_Level_lighting.igz";
             string cratePath = $"{basePath}/Custom_Level/Custom_Level_Crates.igz";
+            string musicPath = $"{basePath}/Custom_Level/Custom_Level_Music.igz";
             string infoPath = $"update/{basePath}/Custom_Level/Custom_Level_zoneinfo.igz".ToLowerInvariant();
 
             // Create new files
@@ -330,13 +340,15 @@ namespace NST
             IgArchiveFile mainFile = new IgArchiveFile(mainPath);
             IgArchiveFile cameraFile = new IgArchiveFile(cameraPath);
             IgArchiveFile lightingFile = new IgArchiveFile(lightingPath);
-            IgArchiveFile crateFile = new IgArchiveFile(cratePath); 
+            IgArchiveFile crateFile = new IgArchiveFile(cratePath);
+            IgArchiveFile musicFile = new IgArchiveFile(musicPath);
             IgArchiveFile infoFile = new IgArchiveFile(infoPath);
 
             IgzFile mainIgz = new IgzFile(mainPath);
             IgzFile cameraIgz = new IgzFile(cameraPath);
             IgzFile lightingIgz = new IgzFile(lightingPath);
             IgzFile crateIgz = new IgzFile(cratePath);
+            IgzFile musicIgz = new IgzFile(musicPath);
             IgzFile infoIgz = new IgzFile(infoPath);
 
             Dictionary<igObject, igObject> clones = [];
@@ -456,6 +468,7 @@ namespace NST
 
                 var introComponent = introCutscene.GetComponent<common_C3_IntroSequenceData>()!;
                 var cutsceneList = levelEndIgz.FindObject<CEntityHandleList>("IntroCutsceneSequencePlayer_entityData_componentData_CommonCutsceneSequencePlayer_CutsceneSequenceShotList001")!;
+                introComponent._BehaviorEventCrashIntro = "Cutscene_Crash2_Portal_Exit_Victory";
                 introComponent._Float_0x30 = 1.0f;
                 introComponent._Float_0x34 = 1.0f;
                 introComponent._Float_0x40 = 2.45f;
@@ -557,6 +570,73 @@ namespace NST
                 archive.AddFile(lngFile);
             }
 
+            // Music
+
+            IgArchive sourceMusicArchive = sourceArchive;
+
+            if (musicLevel != level)
+            {
+                string musicLevelName = musicLevel.Split("/").Last();
+                
+                string musicLevelPath = Directory
+                    .GetFiles(LocalStorage.ArchivePath)
+                    .First(f => Path.GetFileName(f).ToLowerInvariant() == $"{musicLevelName}.pak");
+
+                sourceMusicArchive = IgArchive.Open(musicLevelPath);
+            }
+
+            var CreateMusicFromFile = (string identifier) =>
+            {
+                IgArchiveFile? sourceMusicFile = sourceMusicArchive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetName().ToLowerInvariant().Contains(identifier));
+                if (sourceMusicFile == null) return false;
+
+                IgzFile sourceMusicIgz = sourceMusicFile.ToIgzFile();
+
+                var startMusicData = (CEntity?)sourceMusicIgz.Objects.Find(e => e is CEntity entity && entity.GetComponent<common_OnStartMusicData>() != null);
+                if (startMusicData != null)
+                {
+                    startMusicData.ObjectName = "MainMusic";
+                    startMusicData._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
+                    Console.WriteLine(startMusicData);
+                    archive.Clone(startMusicData, sourceMusicArchive, sourceMusicIgz, musicIgz);
+                    return true;
+                }
+                
+                // Special case for L101, L222 & L224
+                var musicSettings = (CGameSoundMusicSettings?)sourceMusicIgz.Objects.Find(e => e is CGameSoundMusicSettings s && s.ObjectName != null && s._nextStream.Reference != null && (s.ObjectName.ToLowerInvariant().Contains("first") || s.ObjectName.ToLowerInvariant().Contains("onstart")));
+                if (musicSettings != null)
+                {
+                    IgArchiveFile startMusicVSC = modelArchive.FindFile("common_OnStartMusic_c", FileSearchType.Name)!;
+                    archive.AddFile(startMusicVSC);
+
+                    archive.Clone(musicSettings, sourceMusicArchive, sourceMusicIgz, musicIgz);
+
+                    CEntity startMusic = modelArchive.FindObject<CEntity>(new NamedReference("L332_EggipusRex_Music", "Music_Entity"))!;
+                    startMusic.GetChildrenRecursive().ForEach(c =>
+                    {
+                        c.MemoryPool = musicSettings.MemoryPool;
+                        c.GetFields().ToList().ForEach(f =>
+                        {
+                            if (f.GetValue(c) is IMemoryRef mem) mem.MemoryPool = musicSettings.MemoryPool;
+                        });
+                    });
+
+                    var startMusicComponent = startMusic.GetComponent<common_OnStartMusicData>()!;
+                    startMusicComponent._OnStartMusic.Reference = musicSettings.ToNamedReference(musicFile.GetName(false));
+
+                    musicIgz.Objects.Add(startMusic);
+
+                    return true;
+                }
+
+                return false;
+            };
+
+            if (!CreateMusicFromFile("music") && !CreateMusicFromFile("audio"))
+            {
+                Console.WriteLine("Warning: Could not find default music object");
+            }
+
             // CZoneInfo
 
             string levelIdentifier = $"{basePath.Substring(5)}/custom_level/custom_level".ToLowerInvariant();
@@ -587,7 +667,6 @@ namespace NST
 
             // Find default collision object
 
-            IgArchive modelArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L332_EggipusRex.pak"));
             IgArchiveFile modelFile = modelArchive.FindFile("L332_EggipusRex_Art.igz")!;
             IgzFile modelIgz = modelFile.ToIgzFile();
             igEntity modelEntity = modelIgz.FindObject<igEntity>("Pltfrm05_01")!;
@@ -625,12 +704,14 @@ namespace NST
             cameraFile.SetData(cameraIgz.Save());
             lightingFile.SetData(lightingIgz.Save());
             crateFile.SetData(crateIgz.Save());
+            musicFile.SetData(musicIgz.Save());
             infoFile.SetData(infoIgz.Save());
 
             archive.AddFile(mainFile);
             archive.AddFile(cameraFile);
             archive.AddFile(lightingFile);
             archive.AddFile(crateFile);
+            archive.AddFile(musicFile);
 
             // Build package file
 
