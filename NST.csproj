@@ -8,12 +8,12 @@
     <UseWindowsForms>true</UseWindowsForms>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
-    <PathMap>$(MSBuildProjectDirectory)=./</PathMap>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(Configuration)' == 'Release'">
     <OutputType>WinExe</OutputType>
     <DebugType>embedded</DebugType>
+    <PathMap>$(MSBuildProjectDirectory)=./</PathMap>
   </PropertyGroup>
 
   <ItemGroup>

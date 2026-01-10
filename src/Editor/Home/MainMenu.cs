@@ -51,7 +51,7 @@ namespace NST
                 
                 // Level editor
 
-                ImGui.BeginChild("LevelMenu", firstSectionSize);
+                ImGui.BeginChild("LevelMenu", firstSectionSize + new Vector2(0, LevelBuilder._newLevelOpen ? 30 : 0));
                 LevelBuilder.Render();
                 ImGui.EndChild();
 

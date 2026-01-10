@@ -172,7 +172,7 @@ namespace NST
                     App.RenderOpenRecent(fromLevelEditor: fromLevelEditor);
                     ImGui.Separator();
                     if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
-                    if (ImGui.MenuItem("Save as", "Ctrl+Shift+S")) SaveArchive(true);
+                    if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) SaveArchive(true);
                     if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(true);
 
                     ImGui.Separator();

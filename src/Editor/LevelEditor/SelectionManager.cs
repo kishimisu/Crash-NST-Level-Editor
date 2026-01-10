@@ -224,7 +224,7 @@ namespace NST
                 entity._parentSpacePosition._y = worldPos.Y;
                 entity._parentSpacePosition._z = worldPos.Z;
 
-                if (entity._transform == null && (worldEuler != new THREE.Euler(0, 0, 0) || worldScale != THREE.Vector3.One()))
+                if (entity._transform == null && (worldEuler.ToVector3().LengthSq() > 1e-3f || (worldScale - THREE.Vector3.One()).LengthSq() > 1e-3f))
                 {
                     entity._transform = new igEntityTransform();
                     entity._transform.MemoryPool = entity.MemoryPool;
