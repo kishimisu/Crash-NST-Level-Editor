@@ -63,6 +63,8 @@ namespace NST
         /// </summary>
         public static bool IsFileLocked(string filePath)
         {
+            if (!File.Exists(filePath)) return false;
+            
             FileStream? stream = null;
 
             try

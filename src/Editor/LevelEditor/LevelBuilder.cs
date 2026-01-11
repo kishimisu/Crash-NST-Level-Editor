@@ -597,7 +597,6 @@ namespace NST
                 {
                     startMusicData.ObjectName = "MainMusic";
                     startMusicData._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
-                    Console.WriteLine(startMusicData);
                     archive.Clone(startMusicData, sourceMusicArchive, sourceMusicIgz, musicIgz);
                     return true;
                 }
@@ -612,6 +611,8 @@ namespace NST
                     archive.Clone(musicSettings, sourceMusicArchive, sourceMusicIgz, musicIgz);
 
                     CEntity startMusic = modelArchive.FindObject<CEntity>(new NamedReference("L332_EggipusRex_Music", "Music_Entity"))!;
+                    startMusic.ObjectName = "MainMusic";
+                    startMusic._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
                     startMusic.GetChildrenRecursive().ForEach(c =>
                     {
                         c.MemoryPool = musicSettings.MemoryPool;

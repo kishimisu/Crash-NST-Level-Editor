@@ -280,7 +280,7 @@ namespace NST
             {
                 bool alreadySelected = !selectionEmpty && selection.All(e => e.Object == entity.Object);
 
-                if (entity.Object is CScriptTriggerEntity && alreadySelected)
+                if ((entity.Object is CScriptTriggerEntity || entity.Object is CDynamicClipEntity) && alreadySelected)
                 {
                     return [];
                 }

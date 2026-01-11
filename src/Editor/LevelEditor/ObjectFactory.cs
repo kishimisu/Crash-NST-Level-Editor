@@ -335,24 +335,23 @@ namespace NST
 
         private static void AddCDynamicClipEntity(LevelExplorer explorer)
         {
-            var entity = new CDynamicClipEntity()
-            {
-                ObjectName = "CDynamicClipEntity",
-                _min = new igVec3fMetaField(-800, -15, 0),
-                _max = new igVec3fMetaField(800, 15, 300),
-                _entityData = new CDynamicClipEntityData()
-                {
-                    ObjectName = "CDynamicClipEntity_entityData",
-                    _componentData = new igComponentDataTable() 
-                    { 
-                        ObjectName = "CDynamicClipEntity_entityData_componentData" 
-                    },
-                },
-                _components = new igComponentList()
-            };
+            explorer.GetOrCreateIgzFile("Clip", out IgArchiveFile file, out IgzFile igz);
+
+            string name = igz.FindSuitableName("CDynamicClipEntity");
+
+            var entity = new CDynamicClipEntity() { ObjectName = name };
+            var entityData = new CDynamicClipEntityData() { ObjectName = entity.ObjectName + "_entityData" };
+            var componentData = new igComponentDataTable() { ObjectName = entityData.ObjectName + "_componentData" };
+
+            entity._entityData = entityData;
+            entityData._componentData = componentData;
 
             entity._parentSpacePosition = explorer.Camera.Position.Clone().Add( explorer.Camera.Front * 400).ToVec3MetaField();
 
+            entity._min = new igVec3fMetaField(-800, -15, 0);
+            entity._max = new igVec3fMetaField(800, 15, 300);
+            entity._components = new igComponentList();
+            
             entity._bitfield._enabledByVisualScript = true;
             entity._bitfield._isPositionDirty = true; // todo: set not dirty as default
             entity._bitfield._isRotationDirty = true;
@@ -366,14 +365,12 @@ namespace NST
             entity._clipTypeStorage._clipPlayers = true;
             entity._clipTypeStorage._clipWorld = true;
 
-            explorer.GetOrCreateIgzFile("Clip", out IgArchiveFile file, out IgzFile igz);
-
             igz.Objects.Add(entity);
 
-            explorer.ArchiveRenderer.SetObjectUpdated(file, entity);
-            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._components);
-            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._entityData);
             explorer.ArchiveRenderer.SetObjectUpdated(file, entity._entityData._componentData);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._entityData);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity._components);
+            explorer.ArchiveRenderer.SetObjectUpdated(file, entity, true);
 
             NSTEntity clip = new NSTEntity(entity, file);
             explorer.InstanceManager.Register(clip);
