@@ -26,6 +26,8 @@ namespace NST
 
             _gizmos.Attach(_selectionContainer);
             _gizmos.Visible = false;
+
+            explorer.KeyDown += OnKeyDown;
         }
 
         public void UpdateSelection(List<NSTObject> objects, bool newSelection = true)
@@ -274,7 +276,7 @@ namespace NST
             return _copyPaste.Count > 0;
         }
 
-        public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3 spawnPoint, Action<NSTObject?>? callback = null)
+        public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3? spawnPoint = null, Action<NSTObject?>? callback = null)
         {
             if (_copyPaste.Count == 0) return;
 
@@ -520,7 +522,7 @@ namespace NST
                 {
                     _selectionContainer.Position.Z += 200;
                 }
-                else
+                else if (spawnPoint != null)
                 {
                     _selectionContainer.Position.Copy(spawnPoint);
                 }
@@ -543,6 +545,58 @@ namespace NST
                     ModalRenderer.ShowMessageModal("Error", $"An error occured while pasting the objects. Log saved to:\n\n{logPath}");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private void OnKeyDown(object? sender, THREE.Silk.KeyboardKeyEventArgs e)
+        {
+            if (e.Key != Silk.NET.Input.Key.ControlLeft) return;
+            if (_selection.Count == 0 || _selection[0] is not NSTEntity entity) return;
+            if (entity.Model == null || entity.Object3D == null || entity.Object.ObjectName?.StartsWith("Crate_") != true) return;
+
+            THREE.Vector3 worldPos = entity.Object3D.GetWorldPosition(new THREE.Vector3());
+            float crateSize = entity.Model.Name.Contains("Iron") || entity.Model.Name.Contains("Switch") ? 76.5f : 80.0f;
+
+            NSTEntity? closestCrate = null;
+            float closest = float.PositiveInfinity;
+
+            foreach (NSTEntity otherEntity in _explorer.InstanceManager.AllEntities)
+            {
+                if (otherEntity.IsSelected || !otherEntity.IsSpawned) continue;
+                if (otherEntity.Object is not CEntity || otherEntity.Object.ObjectName?.StartsWith("Crate_") != true) continue;
+
+                float distance = worldPos.DistanceTo(otherEntity.Position);
+
+                if ((closestCrate == null || distance < closest) && distance < crateSize * 3.0f)
+                {
+                    closestCrate = otherEntity;
+                    closest = distance;
+                }
+            }
+
+            if (closestCrate == null) return;
+            
+            THREE.Vector3 snappedPosition = BlockSnap(worldPos, closestCrate.Position, crateSize);
+
+            _selectionContainer.Position.Add(snappedPosition - worldPos);
+
+            ApplyChanges(_explorer.FileManager, _explorer.ArchiveRenderer);
+
+            _gizmos.StopDragging();
+        }
+
+        private static THREE.Vector3 BlockSnap(THREE.Vector3 a, THREE.Vector3 b, float size)
+        {
+            THREE.Vector3 delta = a - b;
+            float absX = MathF.Abs(delta.X);
+            float absY = MathF.Abs(delta.Y);
+            float absZ = MathF.Abs(delta.Z);
+
+            if (absX >= absY && absX >= absZ) 
+                return b + new THREE.Vector3(MathF.Sign(delta.X) * size, 0f, 0f);
+            else if (absY >= absX && absY >= absZ) 
+                return b + new THREE.Vector3(0f, MathF.Sign(delta.Y) * size, 0f);
+            else
+                return b + new THREE.Vector3(0f, 0f, MathF.Sign(delta.Z) * size);
         }
     }
 }

@@ -44,11 +44,11 @@ namespace THREE.Silk
         }
         public virtual void OnKeyDown(Key key, int scanCode,KeyModifiers modifer)
         {
-            KeyDown?.Invoke(this,new KeyboardKeyEventArgs(key, scanCode, modifer, false));
+            KeyDown?.Invoke(this, new KeyboardKeyEventArgs(key, scanCode, modifer, false));
         }
         public virtual void OnKeyUp(Key key,int scanCode,KeyModifiers modifer)
         {
-            KeyDown?.Invoke(this, new KeyboardKeyEventArgs(key, scanCode, modifer, false));
+            KeyUp?.Invoke(this, new KeyboardKeyEventArgs(key, scanCode, modifer, false));
         }
         public virtual void OnKeyPress(string ch)
         {

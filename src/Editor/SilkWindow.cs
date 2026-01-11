@@ -35,7 +35,7 @@ namespace NST
             WindowOptions options = WindowOptions.Default;
             options.WindowBorder = WindowBorder.Resizable;
             options.WindowState = WindowState.Maximized;
-            options.Title = "Crash NST Editor v1.13";
+            options.Title = "Crash NST Editor v1.14";
             options.API = new GraphicsAPI(ContextAPI.OpenGL, ContextProfile.Compatability, ContextFlags.Default, new APIVersion(3, 3));
 
             options.VSync = false;

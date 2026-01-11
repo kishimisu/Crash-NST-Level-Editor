@@ -544,6 +544,11 @@ namespace THREE.Silk
 
             }
         }
+        public void StopDragging()
+        {
+            control.MouseMove -= OnPointerMove;
+            PointerUp(mouse, MouseButton.Left);
+        }
         private void OnPointerUp(object sender, MouseEventArgs e)
         {
             control.MouseMove -= OnPointerMove;

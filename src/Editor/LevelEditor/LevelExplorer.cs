@@ -587,14 +587,18 @@ namespace NST
             return compoundShape._elements[entity.CollisionShapeIndex];
         }
 
-        private void PasteObjects()
+        private void PasteObjects(bool keepOriginalPosition = false)
         {
             const float maxDistance = 5000.0f;
+            THREE.Vector3? spawnPoint = null;
 
             // Raycast to find spawn point
-            var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
-            float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
-            THREE.Vector3 spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+            if (!keepOriginalPosition)
+            {
+                var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
+                float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
+                spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+            }
 
             // Paste selection
             SelectionManager.Paste(ArchiveRenderer, FileManager, spawnPoint, (NSTObject? newObject) =>
@@ -852,20 +856,7 @@ namespace NST
         {
             if (!IsWindowFocused) return;
 
-            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
-            {
-                if (IsSceneFocused && SelectionManager.Copy(this))
-                {
-                    THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
-                    _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
-                    Task.Delay(250).ContinueWith(_ => _outlinePass.visibleEdgeColor.Copy(prev));
-                }
-            }   
-            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
-            {
-                if (IsSceneFocused) PasteObjects();
-            }
-            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
+            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
             {
                 ArchiveRenderer.TrySaveArchive(false, true);
                 LoadCollisions(InstanceManager.AllEntities);
@@ -880,21 +871,40 @@ namespace NST
                 ArchiveRenderer.SaveArchive(true);
                 LoadCollisions(InstanceManager.AllEntities);
             }
+            else if (!IsSceneFocused) return;
+
+            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
+            {
+                if (SelectionManager.Copy(this))
+                {
+                    THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
+                    _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
+                    Task.Delay(250).ContinueWith(_ => _outlinePass.visibleEdgeColor.Copy(prev));
+                }
+            }   
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
+            {
+                PasteObjects();
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.V))
+            {
+                PasteObjects(true);
+            }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
-                if (IsSceneFocused) _gizmos.mode = "translate";
+                _gizmos.mode = "translate";
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.R))
             {
-                if (IsSceneFocused) _gizmos.mode = "rotate";
+                _gizmos.mode = "rotate";
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.T))
             {
-                if (IsSceneFocused) _gizmos.mode = "scale";
+                _gizmos.mode = "scale";
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
-                if (IsSceneFocused) DeleteSelection();
+                DeleteSelection();
             }
         }
         
