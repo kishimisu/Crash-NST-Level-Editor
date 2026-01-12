@@ -45,6 +45,7 @@ namespace NST
             { typeof(CSplineLaneMoverComponentData), (c, m) =>                 RenderComponent((CSplineLaneMoverComponentData)c, m) },
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
+            { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
             { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
         };
 
@@ -689,6 +690,46 @@ namespace NST
         {
             RenderCheckbox("Unknown:", ref component._Bool, component, manager);
             ImGui.SetItemTooltip("True in:\n- L226_TotallyBear\n- L227_TotallyFly\n- L326_SkiCrazed\n- L328_Area51\n- L330_RingsOfPower\n- L331_HotCoco\n- L332_EggipusRex");
+        }
+
+        private static void RenderComponent(common_BonusRoundTeleporterData component, NSTComponent manager)
+        {
+            if (RenderEnum("Type:", ref component._NewEnum2_id_9tewcwq5, component, manager))
+            {
+                string type;
+                switch (component._NewEnum2_id_9tewcwq5)
+                {
+                    case common_BonusRoundTeleporterData.ENewEnum2_id_9tewcwq5.Tawna:
+                        type = "Tawna";
+                        break;
+                    case common_BonusRoundTeleporterData.ENewEnum2_id_9tewcwq5.Brio:
+                        type = "Brio";
+                        break;
+                    case common_BonusRoundTeleporterData.ENewEnum2_id_9tewcwq5.Cortex:
+                        type = "Cortex";
+                        break;
+                    default:
+                        return;
+                }
+
+                string vfx = "CR1_BonusRound_Counter_" + type;
+                component._Vfx_Effect_0x48.Reference ??= new NamedReference();
+                component._Vfx_Effect_0x48.Reference.objectName = vfx;
+                component._Vfx_Effect_0x48.Reference.namespaceName = vfx;
+                
+                if (manager.Entity.Object._entityData is CGameEntityData entityData && entityData._tags != null)
+                {
+                    entityData._tags.Clear();
+                    entityData._tags.Add(new igObject() { Reference = new NamedReference("EntityTags", "Teleporter_" + type)}, true);
+                    manager.SetUpdated(entityData._tags);
+                }
+            }
+
+            RenderObjectReference("Checkpoint:", component._Entity.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            {
+                component._Entity.Reference = value;
+                manager.SetUpdated(true);
+            });
         }
 
         private static int _audioPlayerStatus = 0;

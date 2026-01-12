@@ -1,4 +1,5 @@
 using Alchemy;
+using Havok;
 using ImGuiNET;
 
 namespace NST
@@ -80,6 +81,33 @@ namespace NST
             "Clear", "Blue", "Green", "Orange", "Purple", "Red", "Yellow"
         };
         
+        private static readonly Dictionary<string, (string, string)> _bonusFiles = new()
+        {
+            { "Tawna_Small", ("L102_JungleRollers",  "L102_JungleRollers_Bonus") },
+            { "Tawna_Large", ("L106_RollingStones", "L106_RollingStones_BonusTawna") },
+            { "Brio",        ("L106_RollingStones", "L106_RollingStones_BonusNBrio") },
+            { "Cortex",      ("L115_SunsetVista",   "L115_SunsetVista_BonusRound_Cortex") },
+        };
+
+        private static readonly Dictionary<string, List<(string, int, uint)>> _bonusCollisions = new()
+        {
+            { "Tawna_Small", new() {
+                ("TawnaBonusStage_Terrain001_gen", 306, 726133659),
+                ("TawnaBonusStage_Terrain002_gen", 307, 2243604655)
+            }},
+            { "Tawna_Large", new() {
+                ("TawnaBonusStage_Terrain_gen", 363, 3653174630),
+                ("TawnaBonusStage_Terrain002_gen", 364, 2938897377),
+                ("TawnaBonusStage_Terrain004_gen", 365, 1470977180),
+            }},
+            { "Brio", new() {
+                ("NBrioBonusStage_Terrain_gen", 362, 1481713885),
+            }},
+            { "Cortex", new() {
+                ("platforms_gen", 212, 3264971473),
+            }}
+        };
+
         private static string _floatMode = "None";
         private static bool _outlinedCrate = false;
         private static bool _bonusCrate = false;
@@ -154,17 +182,31 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.BeginMenu("New bonus round..."))
+                {
+                    if (ImGui.MenuItem("Bonus Teleporter")) AddBonusRoundTeleporter(explorer);
+                    ImGui.Separator();
+                    if (ImGui.MenuItem("Tawna Small")) AddBonusRound("Tawna_Small", explorer);
+                    if (ImGui.MenuItem("Tawna Large")) AddBonusRound("Tawna_Large", explorer);
+                    if (ImGui.MenuItem("Brio")) AddBonusRound("Brio", explorer);
+                    if (ImGui.MenuItem("Cortex")) AddBonusRound("Cortex", explorer);
+                    ImGui.EndMenu();
+                }
+
                 if (ImGui.BeginMenu("New camera..."))
                 {
                     if (ImGui.MenuItem("Relative camera")) AddRelativeCamera(explorer);
                     if (ImGui.MenuItem("Spline camera")) AddSplineCamera(explorer);
-                    // if (ImGui.MenuItem("Camera box")) {}
-                    // ImGui.Separator();
-                    // if (ImGui.MenuItem("Free camera")) {}
+                    if (ImGui.MenuItem("Stack camera")) AddStackCamera(explorer);
                     ImGui.EndMenu();
                 }
 
-                if (ImGui.MenuItem("New CDynamicClipEntity")) AddCDynamicClipEntity(explorer);
+                if (ImGui.BeginMenu("Other..."))
+                {
+                    if (ImGui.MenuItem("New CDynamicClipEntity")) AddCDynamicClipEntity(explorer);
+                    if (ImGui.MenuItem("New Death Trigger")) AddDeathTrigger(explorer);
+                    ImGui.EndMenu();
+                }
 
                 ImGui.EndPopup();
             }
@@ -267,7 +309,7 @@ namespace NST
             string fileIdentifier = destination?.GetName(false) ?? "Crates";
 
             explorer.GetOrCreateIgzFile(fileIdentifier, out destination, out IgzFile crateIgz);
-            explorer.Clone(crate, templateArchive, templateIgz, destination, crateIgz);
+            explorer.Clone([crate], templateArchive, templateIgz, destination, crateIgz);
 
             if (_floatMode == "Floating" || _floatMode == "Flood")
             {
@@ -290,7 +332,7 @@ namespace NST
             }
 
             explorer.GetOrCreateIgzFile("Collectibles", out IgArchiveFile collectibleFile, out IgzFile collectibleIgz);
-            explorer.Clone(collectible, templateArchive, templateIgz, collectibleFile, collectibleIgz);
+            explorer.Clone([collectible], templateArchive, templateIgz, collectibleFile, collectibleIgz);
         }
 
         private static void AddRelativeCamera(LevelExplorer explorer)
@@ -299,7 +341,7 @@ namespace NST
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
-            explorer.Clone(relativeCamera, null, null, cameraFile, cameraIgz);
+            explorer.Clone([relativeCamera], null, null, cameraFile, cameraIgz);
         }
 
         private static void AddSplineCamera(LevelExplorer explorer)
@@ -330,7 +372,19 @@ namespace NST
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
-            explorer.Clone(splineCamera, sourceArchive, sourceIgz, cameraFile, cameraIgz);
+            explorer.Clone([splineCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
+        }
+
+        private static void AddStackCamera(LevelExplorer explorer)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L305_MakinWaves.pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile("L305_MakinWaves.igz")!.ToIgzFile();
+
+            CStackCamera stackCamera = sourceIgz.FindObject<CStackCamera>()!;
+
+            explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
+
+            explorer.Clone([stackCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
         }
 
         private static void AddCDynamicClipEntity(LevelExplorer explorer)
@@ -376,6 +430,97 @@ namespace NST
             explorer.InstanceManager.Register(clip);
             explorer.RebuildTree();
             explorer.SelectObject(clip, true);
+        }
+
+        private static void AddDeathTrigger(LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+
+            CScriptTriggerEntity deathTrigger = templateIgz!.FindObject<CScriptTriggerEntity>("Hazard_Pit")!;
+
+            deathTrigger._min = new igVec3fMetaField(-600, -300, 0);
+            deathTrigger._max = new igVec3fMetaField(600, 300, 300);
+
+            explorer.GetOrCreateIgzFile("Hazards", out IgArchiveFile hazardFile, out IgzFile hazardIgz);
+
+            explorer.Clone([deathTrigger], templateArchive, templateIgz, hazardFile, hazardIgz, 800);
+        }
+
+        private static void AddBonusRoundTeleporter(LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+
+            if (explorer.Archive.FindFile("CR1_BonusRound_Counter_Brio.igz") == null)
+            {
+                IgArchiveFile brioVfx = templateArchive!.FindFile("CR1_BonusRound_Counter_Brio.igz")!;
+                explorer.ArchiveRenderer.AddFile(brioVfx);
+            }
+            if (explorer.Archive.FindFile("CR1_BonusRound_Counter_Cortex.igz") == null)
+            {
+                IgArchiveFile cortexVfx = templateArchive!.FindFile("CR1_BonusRound_Counter_Cortex.igz")!;
+                explorer.ArchiveRenderer.AddFile(cortexVfx);
+            }
+
+            CGameEntity bonusTeleporter = templateIgz!.FindObject<CGameEntity>("BonusRoundTeleporter_Tawna")!;
+
+            explorer.GetOrCreateIgzFile("Bonus", out IgArchiveFile bonusFile, out IgzFile bonusIgz);
+
+            explorer.Clone([bonusTeleporter], templateArchive, templateIgz, bonusFile, bonusIgz);
+        }
+
+        private static void AddBonusRound(string type, LevelExplorer explorer)
+        {
+            ModalRenderer.ShowLoadingModal("Importing bonus round...");
+
+            Task.Run(() =>
+            {
+                (string archiveName, string fileName) = _bonusFiles[type];
+
+                IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, archiveName + ".pak"));
+                IgzFile sourceIgz = sourceArchive.FindFile(fileName + ".igz")!.ToIgzFile();
+
+                igEntity bonusPrefab = sourceIgz.FindObject<igEntity>($"BonusRound_{type}_prefab")!;
+
+                List<igObject> crates = sourceIgz.Objects.Where(e => e.GetType() == typeof(CEntity) && e.ObjectName?.StartsWith("Crate_") == true).ToList();
+                crates.Insert(0, bonusPrefab);
+
+                explorer.GetOrCreateIgzFile($"Bonus_{type}", out IgArchiveFile bonusFile, out IgzFile bonusIgz);
+
+                List<NSTObject> newObjects = explorer.Clone(crates, sourceArchive, sourceIgz, bonusFile, bonusIgz, 2000, true);
+
+                IgArchiveFile collisionFile = sourceArchive.FindCollisionFile(".hkx")!;
+                HavokFile havok = collisionFile.ToHavokFile();
+                var compoundShape = (hknpStaticCompoundShape)havok.GetRootObjects().Find(e => e is hknpStaticCompoundShape)!;
+
+                NSTEntity parent = (NSTEntity)newObjects.Find(e => e.GetObject().ObjectName == bonusPrefab.ObjectName)!;
+
+                foreach ((string objectName, int collisionIndex, uint collisionHash) in _bonusCollisions[type])
+                {
+                    hknpShapeInstance shape = compoundShape._elements[collisionIndex];
+                    NSTEntity obj = (NSTEntity)newObjects.Find(e => e.GetObject().ObjectName == objectName)!;
+
+                    obj.ParentPrefabInstance = parent;
+                    obj.CollisionShapeIndex = collisionIndex;
+                    obj.CollisionPrefabHash = collisionHash;
+
+                    explorer.ArchiveRenderer.SetEntityUpdated(obj, shape);
+                }
+
+                ModalRenderer.CloseLoadingModal();
+            })
+            .ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    foreach (var ex in t.Exception.InnerExceptions)
+                    {
+                        CrashHandler.Log($"Error importing bonus round: {ex.Message}\n{ex.StackTrace}");
+                    }
+                    string logPath = CrashHandler.WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the bonus round\n\nLog file: {logPath}");
+                }
+            }, 
+            TaskContinuationOptions.OnlyOnFaulted);
         }
 
         public static (CZoneInfo, igLocalizedInfo) CreateZoneInfo(string levelIdentifier, EGameYear crashMode)

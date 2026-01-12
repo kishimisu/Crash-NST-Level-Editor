@@ -582,8 +582,6 @@ namespace NST
 
             hknpStaticCompoundShape compoundShape = (hknpStaticCompoundShape)hkx.GetRootObjects().First(x => x is hknpStaticCompoundShape);
 
-            HashedReference reference = entity.ToReference().ToEXID();
-
             return compoundShape._elements[entity.CollisionShapeIndex];
         }
 
@@ -1004,25 +1002,39 @@ namespace NST
 
             if (ImGui.CollapsingHeader("Controls"))
             {
-                ImGui.SeparatorText("Camera");
+                var Separator = (string name) =>
+                {
+                    ImGui.PushStyleColor(ImGuiCol.Text, 0xff00aaff);
+                    ImGui.SeparatorText(name);
+                    ImGui.PopStyleColor();
+                };
+
+                ImGui.PushStyleColor(ImGuiCol.Separator, 0x6600aaff);
+                Separator("Camera");
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
-                ImGui.SeparatorText("Selection");
+                Separator("Selection");
                 ImGui.BulletText("Left click: select object");
                 ImGui.BulletText("(Click multiple times focus child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
-                ImGui.SeparatorText("Objects");
+                ImGui.BulletText("Ctrl: align/snap selected crates");
+                Separator("Objects");
                 ImGui.BulletText("Right click: add objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
-                ImGui.BulletText("Ctrl + V: paste selected objects");
+                ImGui.BulletText("Ctrl + V: paste selected objects (current position)");
+                ImGui.BulletText("Ctrl+Shift + V: paste selected objects (original position)");
                 ImGui.BulletText("Del/Suppr: delete selected objects");
-                ImGui.BulletText("(You can paste in a different level)");
-                ImGui.SeparatorText("Gizmos");
+                Separator("Gizmos");
                 ImGui.BulletText("Ctrl + E: translate mode");
                 ImGui.BulletText("Ctrl + R: rotate mode");
                 ImGui.BulletText("Ctrl + T: scale mode");
+                Separator("Save & launch");
+                ImGui.BulletText("Ctrl + S: save level");
+                ImGui.BulletText("Ctrl + Shift + S: save level as...");
+                ImGui.BulletText("Ctrl + L: backup, save and launch");
                 ImGui.Spacing();
+                ImGui.PopStyleColor();
             }
         }
 
@@ -1201,20 +1213,23 @@ namespace NST
             }
         }
 
-        public void Clone(igObject obj, IgArchive? sourceArchive, IgzFile? sourceIgz, IgArchiveFile destFile, IgzFile destIgz)
+        public List<NSTObject> Clone(List<igObject> objects, IgArchive? sourceArchive, IgzFile? sourceIgz, IgArchiveFile destFile, IgzFile destIgz, float camDistance = 400, bool refreshInstances = false)
         {
             Dictionary<igObject, igObject> clones = [];
             Dictionary<NSTEntity, string?> newEntities = [];
             HashSet<(string, string)> modelNames = [];
             List<NSTObject> newObjects = [];
 
-            if (sourceArchive != null && sourceIgz != null)
+            foreach (igObject obj in objects)
             {
-                ArchiveRenderer.Clone(obj, sourceArchive, sourceIgz, destIgz, clones);
-            }
-            else
-            {
-                destIgz.AddClone(obj, destIgz, clones);
+                if (sourceArchive != null && sourceIgz != null)
+                {
+                    ArchiveRenderer.Clone(obj, sourceArchive, sourceIgz, destIgz, clones);
+                }
+                else
+                {
+                    destIgz.AddClone(obj, destIgz, clones);
+                }
             }
 
             foreach ((igObject original, igObject clone) in clones)
@@ -1243,31 +1258,42 @@ namespace NST
                     modelNames.Add((modelName, modelPath));
                 }
 
-                entity.Object._parentSpacePosition = _camera.Position.Clone().Add(_camera.Front * 400).ToVec3MetaField();
-
                 newEntities.Add(entity, modelName);
             }
 
             LoadModels(newEntities, modelNames);
 
-            foreach ((NSTEntity entity, string? modelName) in newEntities)
-            {
-                InstanceManager.Register(entity);
-            }
+            var allObjects = newEntities.Keys.Union(newObjects).ToList();
+            if (allObjects.Count == 0) return [];
 
-            foreach (NSTObject newObj in newObjects)
+            if (refreshInstances)
             {
-                InstanceManager.Register(newObj);
+                InstanceManager.Register(allObjects);
+            }
+            else
+            {
+                foreach (NSTObject newObj in allObjects)
+                {
+                    InstanceManager.Register(newObj);
+                }
             }
 
             _treeView.RebuildTree(InstanceManager.AllObjects);
 
             NSTObject? selected = newEntities.Keys.Union(newObjects).FirstOrDefault();
-            
-            if (selected != null)
+            if (selected == null) return [];
+
+            SelectObject(selected);
+
+            if (refreshInstances)
             {
-                SelectObject(selected);
+                SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
+
+            SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
+            SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+
+            return allObjects;
         }
 
         public override void Dispose()

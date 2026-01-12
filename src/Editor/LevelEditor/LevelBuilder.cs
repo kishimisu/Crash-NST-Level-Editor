@@ -505,6 +505,7 @@ namespace NST
             CEntity checkpointCrate = sourceCrateIgz.FindObject<CEntity>("Crate_Checkpoint")!;
             CEntity ironCrate = sourceCrateIgz.FindObject<CEntity>("Crate_Basic_Iron")!;
             CEntity crystal = sourceCrateIgz.FindObject<CEntity>("Collectible_PowerCrystal")!;
+            CEntity crateCounter = sourceCrateIgz.FindObject<CEntity>("LevelEnd_CrateCounter")!;
 
             Dictionary<igObject, igObject> crateClones = [];
 
@@ -518,11 +519,16 @@ namespace NST
             CEntity checkpointCrateClone = archive.Clone(checkpointCrate, sourceCrateArchive, sourceCrateIgz, crateIgz, crateClones);
             CEntity ironCrateClone = archive.Clone(ironCrate, sourceCrateArchive, sourceCrateIgz, crateIgz, crateClones);
 
+            // C2/C3 crystal
             if (crashMode != 0)
             {
                 CEntity crystalClone = archive.Clone(crystal, sourceCrateArchive, sourceCrateIgz, crateIgz, crateClones);
                 crystalClone._parentSpacePosition = new igVec3fMetaField(900, 0, 150);
             }
+
+            // Crate counter
+            CEntity crateCounterClone = archive.Clone(crateCounter, sourceCrateArchive, sourceCrateIgz, mainIgz);
+            crateCounterClone._parentSpacePosition =  new igVec3fMetaField(1160, 0, 100);
 
             basicCrateClone._parentSpacePosition = new igVec3fMetaField(-400, 0, 0);
             bounceCrateClone._parentSpacePosition = new igVec3fMetaField(-300, 0, 0);

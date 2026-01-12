@@ -58,7 +58,8 @@ namespace NST
                     component is common_Spawner_TemplateData || 
                     component is Multiple_Spawner_Template_c || 
                     component is igPrefabComponentData || 
-                    component is common_Level_ManagerData)
+                    component is common_Level_ManagerData ||
+                    component is common_BonusRoundTeleporterData)
                 {
                     _selection.Add(c);
                 }

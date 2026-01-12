@@ -56,6 +56,17 @@ namespace Alchemy
             Dict.Remove(key);
             RebuildDict = true;
         }
+        
+        /// <summary>
+        /// Remove all entries from the table
+        /// </summary>
+        public void Clear()
+        {
+            Dict.Clear();
+            _keys.Clear();
+            _values.Clear();
+            RebuildDict = true;
+        }
 
         public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null)
         {

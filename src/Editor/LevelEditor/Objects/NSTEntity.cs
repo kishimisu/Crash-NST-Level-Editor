@@ -19,7 +19,7 @@ namespace NST
 
         // Prefab child instance
         public bool IsPrefabChild => ParentPrefabInstance != null; // Child instance of a prefab instance
-        public NSTEntity? ParentPrefabInstance { get; private set; } = null; // (Prefab child) Parent prefab instance
+        public NSTEntity? ParentPrefabInstance { get; set; } = null; // (Prefab child) Parent prefab instance
         public NSTEntity? PrefabTemplate { get; private set; } = null; // (Prefab child) Original prefab template
 
         // Prefab child template
@@ -96,6 +96,10 @@ namespace NST
                 else if (Model == null) layer = LevelExplorer.CameraLayer.AllEntities;
 
                 group.Traverse(e => e.Layers.Set((int)layer));
+            }
+            else if (IsPrefabChild && ParentPrefabInstance?.IsSelected == true && Model?.Name.Contains("cloud", StringComparison.InvariantCultureIgnoreCase) == true)
+            {
+                group.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.Clouds));
             }
 
             if (Object3D != null)
@@ -422,7 +426,8 @@ namespace NST
 
             // Render rotation input
 
-            if (RenderVector3("Rotation", ref transform._parentSpaceRotation, 0.01f))
+            igVec3fMetaField rotationDegrees = transform._parentSpaceRotation.Mul(THREE.MathUtils.RAD2DEG);
+            if (RenderVector3("Rotation", ref rotationDegrees, 0.01f))
             {
                 if (Object._transform == null)
                 {
@@ -430,6 +435,8 @@ namespace NST
                     explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
                 }
                 explorer.ArchiveRenderer.SetEntityUpdated(this);
+
+                Object._transform._parentSpaceRotation = rotationDegrees.Mul(THREE.MathUtils.DEG2RAD);
 
                 Object3D?.Quaternion.SetFromEuler(Object._transform._parentSpaceRotation.ToEuler());
                 explorer.RenderNextFrame = true;

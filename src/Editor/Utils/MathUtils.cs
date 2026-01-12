@@ -47,6 +47,7 @@ namespace NST
 
         // THREE -> Alchemy
         public static igVec3fMetaField ToVec3MetaField(this THREE.Vector3 v) => new igVec3fMetaField(v.X, v.Y, v.Z);
+        public static igVec3fMetaField Mul(this igVec3fMetaField v, float k) => new igVec3fMetaField(v._x * k, v._y * k, v._z * k);
 
         // THREE -> System.Numerics
         public static System.Numerics.Matrix4x4 ToMatrix4(this THREE.Matrix4 m) => new System.Numerics.Matrix4x4(
