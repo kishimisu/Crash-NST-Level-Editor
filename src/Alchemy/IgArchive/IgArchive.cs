@@ -348,6 +348,7 @@ namespace Alchemy
         {
             Parallel.For(0, files.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
             {
+                if (files[i].GetPath().StartsWith("sound_samples") || files[i].GetPath().StartsWith("sound_streams")) return; // fix game freezing after a while
                 files[i].Compress();
             });
         }

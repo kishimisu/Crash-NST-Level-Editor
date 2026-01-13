@@ -444,6 +444,13 @@ namespace NST
                 {
                     if (!req.Selected)
                     {
+                        if (Entity.Object3D != null && Entity.TriggerVolumeBox != null 
+                            && Entity.Object3D.Children.Contains(Entity.TriggerVolumeBox))
+                        {
+                            Entity.Object3D.Remove(Entity.TriggerVolumeBox);
+                            Explorer.RenderNextFrame = true;
+                        }
+
                         _selection.Clear();
                         continue;
                     }

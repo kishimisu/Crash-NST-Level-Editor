@@ -409,19 +409,11 @@ namespace NST
 
             if (crashMode == 0)
             {
-                igEntity? levelEndScenePrefab = sourceIgz.FindObject<igEntity>("LevelEndScene_prefab");
-                CGameEntity? levelEndTeleporter = sourceIgz.FindObject<CGameEntity>("LevelEndTeleporter");
-                IgArchive levelEndArchive = sourceArchive;
-                IgzFile levelEndIgz = sourceIgz;
+                IgArchive levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L101_NSanityBeach.pak"));
+                IgzFile levelEndIgz = levelEndArchive.FindFile("L101_NSanityBeach.igz")!.ToIgzFile();
 
-                if (levelEndScenePrefab == null || levelEndTeleporter == null)
-                {
-                    levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L101_NSanityBeach.pak"));
-                    levelEndIgz = levelEndArchive.FindFile("L101_NSanityBeach.igz")!.ToIgzFile();
-
-                    levelEndScenePrefab = levelEndIgz.FindObject<igEntity>("LevelEndScene_prefab")!;
-                    levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("LevelEndTeleporter")!;
-                }
+                igEntity levelEndScenePrefab = levelEndIgz.FindObject<igEntity>("LevelEndScene_prefab")!;
+                CGameEntity levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("LevelEndTeleporter")!;
 
                 levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1450, 0, 0);
                 levelEndScenePrefab._parentSpacePosition = new igVec3fMetaField(0, -15000, 0);
@@ -431,17 +423,10 @@ namespace NST
             }
             else if (crashMode == 1)
             {
-                CGameEntity? levelEndTeleporter = sourceIgz.FindObject<CGameEntity>("C2_LevelEndTeleporter");
-                IgArchive levelEndArchive = sourceArchive;
-                IgzFile levelEndIgz = sourceIgz;
+                IgArchive levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L219_Ruination.pak"));
+                IgzFile levelEndIgz = levelEndArchive.FindFile("L219_Ruination.igz")!.ToIgzFile();
 
-                if (levelEndTeleporter == null)
-                {
-                    levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L219_Ruination.pak"));
-                    levelEndIgz = levelEndArchive.FindFile("L219_Ruination.igz")!.ToIgzFile();
-
-                    levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("C2_LevelEndTeleporter")!;
-                }
+                CGameEntity levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("C2_LevelEndTeleporter")!;
 
                 levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1400, 0, 0);
 
@@ -449,19 +434,11 @@ namespace NST
             }
             else if (crashMode == 2)
             {
-                CEntity? introCutscene = sourceIgz.FindObject<CEntity>("IntroCutsceneSequencePlayer");
-                CGameEntity? levelEndTeleporter = sourceIgz.FindObject<CGameEntity>("C3_LevelEndTeleporter");
-                IgArchive levelEndArchive = sourceArchive;
-                IgzFile levelEndIgz = sourceIgz;
+                IgArchive levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L321_GoneTomorrow.pak"));
+                IgzFile levelEndIgz = levelEndArchive.FindFile("L321_GoneTomorrow.igz")!.ToIgzFile();
 
-                if (levelEndTeleporter == null || introCutscene == null)
-                {
-                    levelEndArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L321_GoneTomorrow.pak"));
-                    levelEndIgz = levelEndArchive.FindFile("L321_GoneTomorrow.igz")!.ToIgzFile();
-
-                    introCutscene = levelEndIgz.FindObject<CEntity>("IntroCutsceneSequencePlayer")!;
-                    levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("C3_LevelEndTeleporter")!;
-                }
+                CEntity introCutscene = levelEndIgz.FindObject<CEntity>("IntroCutsceneSequencePlayer")!;
+                CGameEntity levelEndTeleporter = levelEndIgz.FindObject<CGameEntity>("C3_LevelEndTeleporter")!;
 
                 playerStart._parentSpacePosition = new igVec3fMetaField(0, 0, 560);
                 levelEndTeleporter._parentSpacePosition = new igVec3fMetaField(1400, 0, 0);

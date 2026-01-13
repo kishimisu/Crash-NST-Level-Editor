@@ -43,6 +43,7 @@ namespace NST
             { typeof(CPlayerTriggerRadiusComponentData), (c, m) =>             RenderComponent((CPlayerTriggerRadiusComponentData)c, m) },
             { typeof(CMovementControllerComponentData), (c, m) =>              RenderComponent((CMovementControllerComponentData)c, m) },
             { typeof(CSplineLaneMoverComponentData), (c, m) =>                 RenderComponent((CSplineLaneMoverComponentData)c, m) },
+            { typeof(CTriggerVolumeBoxComponentData), (c, m) =>                RenderComponent((CTriggerVolumeBoxComponentData)c, m) },
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
             { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
@@ -674,6 +675,35 @@ namespace NST
             manager.RenderAdvancedProperties(component, fields);
         }
 
+        private static void RenderComponent(CTriggerVolumeBoxComponentData component, NSTComponent manager)
+        {
+            bool updated = RenderFloat3("Offset:    ", ref component._offset, component, manager, true);
+            updated |=     RenderFloat3("Rotation:  ", ref component._rotation, component, manager, true, 0.1f);
+            updated |=     RenderFloat3("Dimensions:", ref component._dimensions, component, manager, true);
+
+            manager.RenderAdvancedProperties(component, component.GetFields().Skip(3).Take(8).ToList());
+
+            if (manager.Entity.TriggerVolumeBox == null) return;
+
+            if (manager.Entity.Object3D?.Children.Contains(manager.Entity.TriggerVolumeBox) == false)
+            {
+                manager.Entity.Object3D.Add(manager.Entity.TriggerVolumeBox);
+                manager.Explorer.RenderNextFrame = true;
+            }
+            
+            if (updated)
+            {
+                THREE.Vector3 position = component._offset.ToVector3();
+                THREE.Euler rotation = component._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
+                THREE.Vector3 scale = component._dimensions.ToVector3();
+
+                manager.Entity.TriggerVolumeBox.Position.Copy(position);
+                manager.Entity.TriggerVolumeBox.Rotation.Copy(rotation);
+                manager.Entity.TriggerVolumeBox.Scale.Copy(scale);
+                manager.Explorer.RenderNextFrame = true;
+            }
+        }
+
         private static void RenderComponent(common_C3_IntroSequenceData component, NSTComponent manager)
         {
             RenderFloat("Animation delay:", ref component._Float_0x30, component, manager);
@@ -1302,7 +1332,7 @@ namespace NST
             return false;
         }
 
-        private static bool RenderFloat3(string name, ref igVec3fMetaField value, igObject obj, NSTComponent manager, bool dragInput = false)
+        private static bool RenderFloat3(string name, ref igVec3fMetaField value, igObject obj, NSTComponent manager, bool dragInput = false, float speed = 1)
         {
             var tmp = value.ToNumericsVector3();
 
@@ -1310,7 +1340,7 @@ namespace NST
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
             if (!dragInput && ImGui.InputFloat3("##" + name, ref tmp) ||
-                 dragInput && ImGui.DragFloat3("##" + name, ref tmp))
+                 dragInput && ImGui.DragFloat3("##" + name, ref tmp, speed))
             {
                 value._x = tmp.X;
                 value._y = tmp.Y;

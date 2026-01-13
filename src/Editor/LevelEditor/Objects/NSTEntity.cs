@@ -31,6 +31,7 @@ namespace NST
         public bool IsSpawned => !IsPrefabTemplate && !IsTemplate && !IsHidden;
 
         public NSTSpline? Spline { get; private set; }
+        public THREE.Object3D? TriggerVolumeBox { get; private set; }
         private Dictionary<CWaypoint, NSTWaypoint> _waypoints = [];
 
         public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
@@ -144,6 +145,21 @@ namespace NST
                 mesh.ApplyMatrix4(ObjectToWorld());
 
                 return mesh;
+            }
+
+            if (Object.TryGetComponent(out CTriggerVolumeBoxComponentData? box))
+            {
+                THREE.Vector3 position = box._offset.ToVector3();
+                THREE.Euler rotation = box._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
+                THREE.Vector3 scale = box._dimensions.ToVector3();
+                THREE.Matrix4 localMatrix = new THREE.Matrix4().Compose(position, new THREE.Quaternion().SetFromEuler(rotation), scale);
+
+                THREE.Color color =  MathUtils.FromImGuiColor(box.GetType().GetUniqueColor());
+                THREE.Vector3 min = THREE.Vector3.One() * -0.5f;
+                THREE.Vector3 max = THREE.Vector3.One() * 0.5f;
+
+                TriggerVolumeBox = CreateBoxHelper(min, max, color, focused);
+                TriggerVolumeBox.ApplyMatrix4(localMatrix);
             }
 
             return null;
