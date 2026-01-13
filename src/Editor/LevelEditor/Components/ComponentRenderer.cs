@@ -765,8 +765,25 @@ namespace NST
         private static int _audioPlayerStatus = 0;
         private static igComponentData? _musicComponent;
         private static IgArchiveFile? _soundBankFile;
+        private static IgArchiveFile? _soundFile;
         private static IgzFile? _soundBankIgz;
         private static CSubSound? _subSound;
+        private static void InitAudioPlayer(LevelExplorer explorer)
+        {
+            string soundFileName = Path.GetFileNameWithoutExtension(_subSound!._fileName!);
+
+            _soundFile = explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
+
+            if (_soundFile != null)
+            {
+                AudioPlayerInstance.InitAudioPlayer(_soundFile.Uncompress());
+                _audioPlayerStatus = 1;
+            }
+            else
+            {
+                _audioPlayerStatus = -1;
+            }
+        }
         private static void RenderComponent(common_OnStartMusicData component, NSTComponent manager)
         {
             if (_musicComponent == null || _musicComponent != component)
@@ -788,18 +805,7 @@ namespace NST
 
                     _subSound = sound._subSoundList!._data[0];
 
-                    string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
-                    IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
-
-                    if (soundFile != null)
-                    {
-                        AudioPlayerInstance.InitAudioPlayer(soundFile.Uncompress());
-                        _audioPlayerStatus = 1;
-                    }
-                    else
-                    {
-                        _audioPlayerStatus = -1;
-                    }
+                    InitAudioPlayer(manager.Explorer);
                 })
                 .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
             }
@@ -826,33 +832,26 @@ namespace NST
                 {
                     _audioPlayerStatus = 0;
 
-                    Task.Run(() =>
-                    {
-                        string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
-                        IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
-
-                        if (soundFile != null)
-                        {
-                            AudioPlayerInstance.InitAudioPlayer(soundFile.Uncompress());
-                            _audioPlayerStatus = 1;
-                        }
-                        else
-                        {
-                            _audioPlayerStatus = -1;
-                        }
-                    })
-                    .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
+                    Task.Run(() => InitAudioPlayer(manager.Explorer))
+                        .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
                 }
             }
+
+            ImGui.Spacing();
 
             if (_audioPlayerStatus == 0)
             {
                 ImGui.Spacing();
                 ImGui.Text("Loading audio player...");
             }
-            else if (_audioPlayerStatus == 1)
+            else if (_audioPlayerStatus == 1 && _soundFile != null)
             {
-                AudioPlayerInstance.Render(false);
+                AudioPlayerInstance.Render(newAudioData =>
+                {
+                    _soundFile.SetData(newAudioData);
+                    manager.Explorer.ArchiveRenderer.SetFileUpdated(_soundFile);
+                    AudioPlayerInstance.InitAudioPlayer(_soundFile.Uncompress());
+                });
             }
             else
             {

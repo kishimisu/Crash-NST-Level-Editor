@@ -14,7 +14,7 @@ namespace NST
 
         public CSoundPreview(IgzRenderer renderer, CSound sound)
         {
-            List<CSubSoundPreview>? subSounds = sound._subSoundList?._data.Select(e => new CSubSoundPreview(renderer.FindNode(e)!)).ToList();
+            List<CSubSoundPreview>? subSounds = sound._subSoundList?._data.Select(e => new CSubSoundPreview(renderer.FindNode(e)!, renderer)).ToList();
 
             if (subSounds != null)
             {
@@ -86,7 +86,7 @@ namespace NST
             }
             else if (_subSounds.Count == 1)
             {
-                _subSounds[0].RenderPlayButton(renderer);
+                _subSounds[0].RenderPlayButton();
             }
 
             ImGui.Separator();

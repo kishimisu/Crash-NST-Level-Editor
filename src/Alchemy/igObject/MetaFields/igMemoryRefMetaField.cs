@@ -52,6 +52,7 @@ namespace Alchemy
         public List<T> ToList() => _elements.ToList();
         
         public void Set(List<T> elements) => _elements = elements;
+        public void Set(T[] elements) => _elements = elements.ToList();
         public List<T> GetElements() => _elements;
 
         // Bitfield manipulation

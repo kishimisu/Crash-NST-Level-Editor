@@ -1,6 +1,8 @@
 using Alchemy;
 using ImGuiNET;
+using NAudio.Lame;
 using NAudio.Wave;
+using NAudio.Wave.SampleProviders;
 
 namespace NST
 {
@@ -9,16 +11,27 @@ namespace NST
     /// </summary>
     public static class AudioPlayerInstance
     {
+        private struct FSB5Header
+        {
+            public u32 id; // 0x35425346 (FSB5)
+            public u32 version; // 1
+            public u32 numSamples; // 1
+            public u32 sampleHeadersSize; // 8
+            public u32 nameTableSize;
+            public u32 dataSize;
+            public u32 mode; // 11 (MPEG)
+        }
+        
         private static MemoryStream _audioStream;
         private static WaveStream _waveStream;
         private static IWavePlayer _waveOut = new WaveOutEvent();
+        private static byte[] _rawData;
 
         private static float _seekPosition = 0;
         private static float _duration;
         private static string? _name;
 
-        private static bool _errorLoadingFile = false;
-
+        public static bool ErrorLoadingFile { get; set; } = false;
         public static bool AutoPlayAudio { get; set; } = false;
 
         public static void Play() => _waveOut.Play();
@@ -44,6 +57,8 @@ namespace NST
                 MediaFoundationEncoder.EncodeToMp3(mediaFoundationReader, mp3PathTmp, 192000);
             }
 
+            _rawData = audioBuffer;
+
             audioBuffer = File.ReadAllBytes(mp3PathTmp);
 
             _audioStream = new MemoryStream(audioBuffer);
@@ -53,7 +68,7 @@ namespace NST
 
             _name = name;
             _seekPosition = 0;
-            _errorLoadingFile = false;
+            ErrorLoadingFile = false;
 
             _waveOut.Volume = 0.25f;
 
@@ -65,49 +80,12 @@ namespace NST
             InitAudioPlayer(soundSample._data.ToArray(), true, soundSample.ObjectName ?? "CSoundSample");
         }
 
-        public static void InitAudioPlayer(CSubSound subSound, bool autoPlay = false)
-        {
-            string? fileName = Path.GetFileNameWithoutExtension(subSound._fileName);
-
-            _errorLoadingFile = true;
-
-            if (fileName == null)
-            {
-                Console.Error.WriteLine($"Warning: Could not load audio, file name is null. ({subSound.ObjectName})");
-                return;
-            }
-
-            IgArchiveFile? file = App.FindFile(fileName, out _, FileSearchType.NameStartsWith);
-            if (file == null)
-            {
-                Console.Error.WriteLine($"Warning: Could not load audio, file not found. ({fileName})");
-                return;
-            }
-
-            if (file.GetName().EndsWith(".snd"))
-            {
-                InitAudioPlayer(file.Uncompress(), autoPlay, subSound._fileName);
-                return;
-            }
-
-            IgzFile igz = file.ToIgzFile();
-
-            CSoundSample? soundSample = igz.FindObject<CSoundSample>();
-            if (soundSample == null)
-            {
-                Console.Error.WriteLine($"Warning: Could not load audio, sound sample not found. ({fileName} in {igz.GetName()})");
-                return;
-            }
-
-            InitAudioPlayer(soundSample._data.ToArray(), autoPlay, subSound._fileName);
-        }
-
-        public static void Render(bool showExtract = true)
+        public static void Render(Action<byte[]>? onReplace = null)
         {
             ImGuiUtils.VerticalSpacing(10);
             ImGui.Separator();
 
-            if (_errorLoadingFile)
+            if (ErrorLoadingFile)
             {
                 ImGui.Text("Audio file not found: " + _name);
                 return;
@@ -132,9 +110,39 @@ namespace NST
                 Seek(_seekPosition);
             }
 
-            if (showExtract &&ImGui.Button("Extract audio"))
+            if(ImGui.Button("Extract audio"))
             {
                 ExportAudio();
+            }
+            
+            ImGui.SameLine();
+
+            if (ImGui.Button("Import audio"))
+            {
+                List<string> paths = FileExplorer.OpenFiles("", FileExplorer.EXT_AUDIO, false);
+                if (paths.Count == 1)
+                {
+                    ModalRenderer.ShowLoadingModal("Importing audio...");
+                    Task.Run(() =>
+                    {
+                        _rawData = ReplaceAudio(_rawData, paths[0]);
+                        onReplace?.Invoke(_rawData);
+                        ModalRenderer.CloseLoadingModal();
+                    })
+                    .ContinueWith(t => 
+                    {
+                        if (t.IsFaulted && t.Exception != null)
+                        {
+                            foreach (var ex in t.Exception.InnerExceptions)
+                            {
+                                CrashHandler.Log($"Error importing audio: {ex.Message}\n{ex.StackTrace}");
+                            }
+                            string logPath = CrashHandler.WriteLogsToFile();
+                            ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the audio\n\nLog file: {logPath}");
+                        }
+                    }, 
+                    TaskContinuationOptions.OnlyOnFaulted);
+                }
             }
 
             ImGui.Separator(); 
@@ -174,6 +182,78 @@ namespace NST
             if (path == null) return;
 
             File.WriteAllBytes(path, _audioStream.ToArray());
+        }
+
+        private static byte[] ReplaceAudio(byte[] data, string inputPath)
+        {
+            using var readStream = new MemoryStream(data);
+            using var reader = new BinaryReader(readStream);
+
+            var header = reader.ReadStruct<FSB5Header>();
+
+            if (header.id != 0x35425346) throw new Exception("Unsupported file format: " + header.id);
+            if (header.version != 1) throw new Exception("Unsupported version: " + header.version);
+            if (header.mode != 11) throw new Exception("Unsupported mode: " + header.mode);
+            if (header.numSamples != 1) throw new Exception("Unsupported sample count: " + header.numSamples);
+
+            int mpegFrameStart = 16;
+            do 
+            {
+                mpegFrameStart += 16;
+                if (mpegFrameStart >= reader.BaseStream.Length) throw new Exception("Reached end of stream");
+                reader.Seek(mpegFrameStart);
+            }
+            while (reader.ReadByte() != 0xFF || reader.ReadByte() < 0xFA);
+
+            byte[] mpegStream = ExtractMPEGFrames(inputPath);
+
+            using var writeStream = new MemoryStream();
+            using var writer = new BinaryWriter(writeStream);
+
+            writer.Write(data, 0, mpegFrameStart);
+
+            writer.Seek(20, SeekOrigin.Begin);
+            writer.Write(mpegStream.Length);
+
+            writer.Seek(mpegFrameStart, SeekOrigin.Begin);
+            writer.Write(mpegStream);
+
+            return writeStream.ToArray();
+        }
+
+        private static byte[] ExtractMPEGFrames(string inputPath)
+        {
+            using var reader = new AudioFileReader(inputPath);
+            
+            var sampleProvider = new WdlResamplingSampleProvider(reader, 48000);
+
+            int channels = reader.WaveFormat.Channels;
+            var pcmFormat = new WaveFormat(48000, 16, channels);
+            var pcmStream = new SampleToWaveProvider16(sampleProvider);
+
+            var mp3Config = new LameConfig
+            {
+                BitRate = 128,
+                OutputSampleRate = 48000,
+                Mode = channels == 1 ? MPEGMode.Mono : MPEGMode.Stereo,
+                VBR = VBRMode.ABR,
+                WriteVBRTag = false
+            };
+
+            using var output = new MemoryStream();
+            using var mp3Writer = new LameMP3FileWriter(output, pcmStream.WaveFormat, mp3Config);
+
+            byte[] buffer = new byte[pcmStream.WaveFormat.AverageBytesPerSecond];
+            int bytesRead;
+
+            while ((bytesRead = pcmStream.Read(buffer, 0, buffer.Length)) > 0)
+            {
+                mp3Writer.Write(buffer, 0, bytesRead);
+            }
+
+            mp3Writer.Flush();
+
+            return output.ToArray();
         }
 
         public static void Dispose()

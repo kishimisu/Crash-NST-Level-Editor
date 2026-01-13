@@ -332,7 +332,12 @@ namespace NST
             // .snd files
             if (_showAudioPlayer)
             {
-                AudioPlayerInstance.Render();
+                AudioPlayerInstance.Render(newAudioData =>
+                {
+                    _selectedFile.SetData(newAudioData);
+                    SetFileUpdated(_selectedFile, false);
+                    AudioPlayerInstance.InitAudioPlayer(_selectedFile.GetData(), true, _selectedFile.GetName(false));
+                });
             }
             // unsupported files
             else
@@ -502,6 +507,7 @@ namespace NST
             // Try to reuse an existing renderer
             FileUpdateInfos? infos = FileManager.GetInfos(file);
             FileRenderer? renderer = infos?.renderer;
+            IgzRenderer? igzRenderer = renderer as IgzRenderer;
 
             if (renderer == null)
             {
@@ -523,8 +529,12 @@ namespace NST
             {
                 ImGui.SetWindowFocus(renderer.GetWindowName());
             }
+            else if (igzRenderer?.TreeView.SelectedNode != null)
+            {
+                igzRenderer?.TreeView.SelectedNode.OnFocus(igzRenderer); // Re-focus to update audio player
+            }
 
-            if (reference != null && renderer is IgzRenderer igzRenderer)
+            if (reference != null && igzRenderer != null)
             {
                 // Focus igz object node
                 igzRenderer.TreeView.SelectNode(reference);

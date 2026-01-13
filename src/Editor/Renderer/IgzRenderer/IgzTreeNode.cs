@@ -76,11 +76,11 @@ namespace NST
         /// <summary>
         /// Called when this node becomes the currently focused node
         /// </summary>
-        private void OnFocus()
+        public void OnFocus(IgzRenderer renderer)
         {
-            if (Object is CSubSound subSound)
+            if (Object is CSubSound)
             {
-                SubSoundPreview = new CSubSoundPreview(this);
+                SubSoundPreview = new CSubSoundPreview(this, renderer);
                 SubSoundPreview.LoadAudio(false);
             }
             else if (Object is CSoundSample soundSample)
@@ -100,7 +100,7 @@ namespace NST
             NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
 
             // Setup node
-            ImGuiTreeNodeFlags? flags = SetupNode(tree, recursion, defaultOpen, OnFocus);
+            ImGuiTreeNodeFlags? flags = SetupNode(tree, recursion, defaultOpen, () => OnFocus(tree.Renderer));
 
             if (flags == null)  return;
 
@@ -339,7 +339,19 @@ namespace NST
             MaterialPreview?.Render(renderer, this, false);
             SoundPreview?.Render(renderer, true);
             SubSoundPreview?.Render(renderer, true);
-            if (_audioPreview) AudioPlayerInstance.Render();
+
+            if (_audioPreview)
+            {
+                AudioPlayerInstance.Render(newAudioData =>
+                {
+                    if (Object is CSoundSample sample)
+                    {
+                        sample._data.Set(newAudioData);
+                        renderer.SetUpdated(sample);
+                        AudioPlayerInstance.InitAudioPlayer(sample);
+                    }
+                });
+            }
 
             ImGui.Separator();
             ImGui.Spacing();
