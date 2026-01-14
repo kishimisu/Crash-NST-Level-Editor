@@ -206,7 +206,15 @@ namespace NST
 
         public void InitChildren(LevelExplorer explorer, List<NSTObject> objects)
         {
-            foreach (NamedReference reference in Object.GetComponents().SelectMany(c => c.GetHandles()))
+            var components = Object.GetComponents();
+            var handles = components.SelectMany(c => c.GetHandles()).ToList();
+
+            if (Object.TryGetComponent(out CMovementControllerComponentData? movementController) && movementController._controllerList?._data.Count > 0)
+            {
+                handles.AddRange(movementController._controllerList._data.SelectMany(c => c.GetHandles()));
+            }
+
+            foreach (NamedReference reference in handles)
             {
                 NSTObject? link = objects.Find(o => o.GetObject().ObjectName == reference.objectName && o.FileNamespace == reference.namespaceName);
 

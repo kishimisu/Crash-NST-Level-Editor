@@ -246,7 +246,8 @@ namespace NST
             // Step 1: Find entities (+ model names)
 
             List<IgArchiveFile> mapFiles = Archive.GetFiles()
-                .Where( f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && ArchiveRenderer.IncludeInPackageFile(f) )
+                .Where( f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") 
+                             && !f.GetName().Contains("LegacyCamera") && ArchiveRenderer.IncludeInPackageFile(f) )
                 .ToList();
 
             for (int i = 0; i < mapFiles.Count; i++)
@@ -906,7 +907,7 @@ namespace NST
             }
         }
         
-        public void RenderSettingsPanel()
+        private void RenderSettingsPanel()
         {
             if (_zoneInfo != null && _zoneInfoFile != null && ImGui.CollapsingHeader("Level infos"))
             {
@@ -1176,6 +1177,20 @@ namespace NST
             _treeView.SelectObject(hitEntities[0]);
         }
 
+        public string GetFileNameFromIdentifier(string fileIdentifier)
+        {
+            IgArchiveFile? existing = Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && f.GetName().Contains(fileIdentifier));
+            if (existing != null) return existing.GetName(false);
+
+            IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
+
+            string path = (mainMapFile == null)
+                ? $"maps/Custom/Custom_{fileIdentifier}.igz"
+                : mainMapFile.GetPath().Replace(".igz", $"_{fileIdentifier}.igz");
+
+            return Path.GetFileNameWithoutExtension(path);
+        }
+
         public void GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
         {
             IgArchiveFile? existing = Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && f.GetName().Contains(fileIdentifier));
@@ -1213,18 +1228,26 @@ namespace NST
             }
         }
 
-        public List<NSTObject> Clone(List<igObject> objects, IgArchive? sourceArchive, IgzFile? sourceIgz, IgArchiveFile destFile, IgzFile destIgz, float camDistance = 400, bool refreshInstances = false)
+        public List<NSTObject> Clone(
+            List<igObject> objects, 
+            IgArchive? sourceArchive, IgzFile? sourceIgz, 
+            IgArchiveFile destFile, IgzFile destIgz, 
+            float camDistance = 400, 
+            bool? addToSelection = false, 
+            bool refreshInstances = false, 
+            Dictionary<igObject, igObject>? clones = null)
         {
-            Dictionary<igObject, igObject> clones = [];
             Dictionary<NSTEntity, string?> newEntities = [];
             HashSet<(string, string)> modelNames = [];
             List<NSTObject> newObjects = [];
+
+            clones ??= [];
 
             foreach (igObject obj in objects)
             {
                 if (sourceArchive != null && sourceIgz != null)
                 {
-                    ArchiveRenderer.Clone(obj, sourceArchive, sourceIgz, destIgz, clones);
+                    ArchiveRenderer.Clone(obj, sourceArchive, sourceIgz, destIgz, clones, true);
                 }
                 else
                 {
@@ -1280,12 +1303,14 @@ namespace NST
 
             _treeView.RebuildTree(InstanceManager.AllObjects);
 
+            if (addToSelection == null) return allObjects;
+
             NSTObject? selected = newEntities.Keys.Union(newObjects).FirstOrDefault();
             if (selected == null) return [];
-
+            
             SelectObject(selected);
 
-            if (refreshInstances)
+            if (addToSelection == true)
             {
                 SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
@@ -1294,6 +1319,12 @@ namespace NST
             SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
 
             return allObjects;
+        }
+
+        public void MoveSelectionToCamera(float camDistance = 400)
+        {
+            SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
+            SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
         }
 
         public override void Dispose()

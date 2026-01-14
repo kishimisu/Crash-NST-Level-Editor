@@ -890,13 +890,14 @@ namespace NST
         /// <summary>
         /// Clone an object from an external archive, including all its dependencies
         /// </summary>
-        public T Clone<T>(T sourceObject, IgArchive sourceArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null) where T : igObject
+        public T Clone<T>(T sourceObject, IgArchive sourceArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null, bool excludeMapFiles = false) where T : igObject
         {
             T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out List<IgArchiveFile> newFiles, clones);
 
             foreach (IgArchiveFile file in newFiles)
             {
                 bool addToPkg = !file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/");
+                if (excludeMapFiles && file.GetPath().StartsWith("maps/")) continue;
                 AddFile(file, addToPkg);
             }
 

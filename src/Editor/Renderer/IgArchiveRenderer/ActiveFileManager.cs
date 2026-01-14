@@ -137,7 +137,21 @@ namespace NST
         /// <summary>
         /// Get the IGZ instance associated to a file, if it exists
         /// </summary>
-        public IgzFile? GetIgz(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file].igz ?? (_files[file].renderer as IgzRenderer)?.Igz : null;
+        public IgzFile? GetIgz(IgArchiveFile file)
+        {
+            if (!_files.TryGetValue(file, out FileUpdateInfos? infos))
+            {
+                infos = _files.FirstOrDefault(e => e.Key.GetPath() == file.GetPath()).Value;
+            }
+
+            if (infos != null)
+            {
+                if (infos.igz != null) return infos.igz;
+                if (infos.renderer is IgzRenderer r) return r.Igz;
+            }
+
+            return null;
+        }
 
         /// <summary>
         /// Get the list of updated files

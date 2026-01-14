@@ -13,6 +13,16 @@ namespace Alchemy
         NamespaceHash
     }
 
+    [Flags]
+    public enum FileSearchParams
+    {
+        All = 0,
+        Map = 1 << 0,
+        Igz = 1 << 1,
+        Hkx = 1 << 2,
+        MapIgz = Map | Igz
+    }
+
     /// <summary>
     /// Instance of a .pak file.
     /// Provides utilities for manipulating files within the archive.
@@ -63,7 +73,6 @@ namespace Alchemy
         public string GetPath() => _path;
         public void SetPath(string path) => _path = path;
 
-        public List<IgArchiveFile> GetFiles() => _files;
         public void AddFile(IgArchiveFile file) => _files.Add(file);
         public void RemoveFile(IgArchiveFile file) => _files.Remove(file);
 
@@ -249,6 +258,34 @@ namespace Alchemy
             AddFile(clone);
 
             return clone;
+        }
+        
+        /// <summary>
+        /// Returns a list of files in the archive verifying the specified filter
+        /// </summary>
+        public List<IgArchiveFile> GetFiles(FileSearchParams searchParams = FileSearchParams.All)
+        {
+            if (searchParams == FileSearchParams.All)
+            {
+                return _files;
+            }
+
+            bool includeIgz = searchParams.HasFlag(FileSearchParams.Igz);
+            bool includeHkx = searchParams.HasFlag(FileSearchParams.Hkx);
+            bool includeAll = !includeIgz && !includeHkx;
+
+            if (includeAll) includeIgz = includeHkx = true;
+
+            return _files.Where(f =>
+            {
+                if (searchParams.HasFlag(FileSearchParams.Map) && !f.GetPath().StartsWith("maps/")) return false;
+
+                string ext = Path.GetExtension(f.GetName());
+                if (ext == ".igz") return includeIgz;
+                else if (ext == ".hkx") return includeHkx;
+                else return includeAll;
+
+            }).ToList();
         }
 
         /// <summary>

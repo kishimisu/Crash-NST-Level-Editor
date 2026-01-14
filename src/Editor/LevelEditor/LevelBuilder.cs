@@ -375,6 +375,7 @@ namespace NST
                 {
                     levelManager._spawnEntity.Reference = null;
                     levelManager._Entity_0x48.Reference = null; // dark lighting
+                    levelManager._E_Zone_Collectible_Type = EZoneCollectibleType.eZCT_Gem_Clear;
                 }
                 else if (component is not global_WorldInstance_Enviromental_VFXData)
                 {
@@ -384,6 +385,7 @@ namespace NST
 
             (worldEntity._entityData as CWorldEntityData)!._startingGameplayMode = EWorldGameplayMode.eWGM_Traditional;
             (worldEntity._entityData as CWorldEntityData)!._worldEntityFlags = 0; // 0x8 = cutscene camera (l101) => black screen if not handled
+            (worldEntity._entityData as CWorldEntityData)!._killz = -500;
 
             archive.Clone(worldEntity, sourceArchive, sourceIgz, mainIgz, clones);
 
