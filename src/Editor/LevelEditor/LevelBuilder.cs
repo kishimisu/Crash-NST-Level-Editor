@@ -385,7 +385,7 @@ namespace NST
 
             (worldEntity._entityData as CWorldEntityData)!._startingGameplayMode = EWorldGameplayMode.eWGM_Traditional;
             (worldEntity._entityData as CWorldEntityData)!._worldEntityFlags = 0; // 0x8 = cutscene camera (l101) => black screen if not handled
-            (worldEntity._entityData as CWorldEntityData)!._killz = -500;
+            (worldEntity._entityData as CWorldEntityData)!._killz = -2000;
 
             archive.Clone(worldEntity, sourceArchive, sourceIgz, mainIgz, clones);
 

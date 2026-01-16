@@ -154,7 +154,7 @@ namespace Havok
                     shapeMax = cshape._data._meshTree._max.AsVector3();
 
                     THREE.Matrix4 scaledTransform = instance._transform.ToMatrix4()
-                        .PreMultiply(new THREE.Matrix4().MakeScale(scale.X, scale.Y, scale.Z));
+                        .Multiply(new THREE.Matrix4().MakeScale(scale.X, scale.Y, scale.Z));
 
                     THREE.Box3 shapeBounds = new THREE.Box3(
                         new THREE.Vector3(shapeMin.X, shapeMin.Y, shapeMin.Z),

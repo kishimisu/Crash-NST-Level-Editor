@@ -13,13 +13,14 @@ namespace NST
     {
         private struct FSB5Header
         {
-            public u32 id; // 0x35425346 (FSB5)
-            public u32 version; // 1
-            public u32 numSamples; // 1
-            public u32 sampleHeadersSize; // 8
-            public u32 nameTableSize;
-            public u32 dataSize;
-            public u32 mode; // 11 (MPEG)
+            public u32 id = 0x35425346; // FSB5
+            public u32 version = 1;
+            public u32 numSamples = 1;
+            public u32 sampleHeadersSize = 8;
+            public u32 nameTableSize = 0;
+            public u32 dataSize = 0;
+            public u32 mode = 11; // MPEG
+            public FSB5Header() {}
         }
         
         private static MemoryStream _audioStream;
