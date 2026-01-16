@@ -181,15 +181,6 @@ namespace NST
             return _waypoints[waypoint];
         }
 
-        public List<igEntity> GetPrefabChildren()
-        {
-            igPrefabComponentData? prefabComponent = Object.GetComponent<igPrefabComponentData>();
-
-            if (prefabComponent?._prefabEntities == null) return [];
-
-            return prefabComponent._prefabEntities._data.ToList();
-        }
-
         public NSTSpline? InitSpline()
         {
             CSplineComponentData? splineComponent = Object.GetComponent<CSplineComponentData>();
@@ -435,7 +426,7 @@ namespace NST
 
             ImGui.Spacing();
 
-            igEntityTransform transform = Object._transform ?? new igEntityTransform();
+            igEntityTransform transform = Object._transform ?? new igEntityTransform() { MemoryPool = Object.MemoryPool };
             THREE.Vector3 previousPosition = Object._parentSpacePosition.ToVector3();
 
             // Render position input

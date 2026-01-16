@@ -196,22 +196,68 @@ namespace NST
                     }
                     if (ImGui.BeginMenu("C2"))
                     {
-                        // if (ImGui.MenuItem("L201 Bonus (Platform Drop|Needs Collisions)")) AddC2BonusRound("L201_TurtleWoods", explorer);
-                        // if (ImGui.MenuItem("L202 Bonus (Trigger Zone)")) AddC2BonusRound("L201_TurtleWoods", explorer);
-                        if (ImGui.MenuItem("L203_HangEight")) AddC2BonusRound("L203_HangEight", explorer);
-                        // if (ImGui.MenuItem("L204 Bonus (Platform Drop|Needs Collisions)")) AddC2BonusRound("L204_ThePits", explorer);
-                        if (ImGui.MenuItem("L205_CrashDash")) AddC2BonusRound("L205_CrashDash", explorer);
+                        // L202, L206, L218, L221, L225: Trigger Zone Drop (snow, machinery)
+
+                        ImGui.SeparatorText("Platform Up");
+                        if (ImGui.MenuItem("L203_HangEight"))    AddC2BonusRound("L203_HangEight", explorer);
+                        if (ImGui.MenuItem("L205_CrashDash"))    AddC2BonusRound("L205_CrashDash", explorer);
+                        if (ImGui.MenuItem("L207_AirCrash"))     AddC2BonusRound("L207_AirCrash", explorer);
+                        if (ImGui.MenuItem("L211_PlantFood"))    AddC2BonusRound("L211_PlantFood", explorer);
+
+                        ImGui.SeparatorText("Platform Drop");
+                        // if (ImGui.MenuItem("L201_TurtleWoods (X)")) AddC2BonusRound("L201_TurtleWoods", explorer); // crash on exit
+                        if (ImGui.MenuItem("L204_ThePits"))      AddC2BonusRound("L204_ThePits", explorer);
+                        // if (ImGui.MenuItem("L209_CrashCrush (X)"))  AddC2BonusRound("L209_CrashCrush", explorer);  // no tp
+                        if (ImGui.MenuItem("L215_UnBearable"))   AddC2BonusRound("L215_UnBearable", explorer);
+                        if (ImGui.MenuItem("L217_DigginIt"))     AddC2BonusRound("L217_DigginIt", explorer);
+                        if (ImGui.MenuItem("L220_BeeHaving"))    AddC2BonusRound("L220_BeeHaving", explorer);
+                        if (ImGui.MenuItem("L223_NightFight"))   AddC2BonusRound("L223_NightFight", explorer);
+                        // if (ImGui.MenuItem("L227_TotallyFly (X)"))  AddC2BonusRound("L227_TotallyFly", explorer);  // no tp
+
+                        ImGui.SeparatorText("Platform Down");
+                        if (ImGui.MenuItem("L210_TheEelDeal"))   AddC2BonusRound("L210_TheEelDeal", explorer);
+                        if (ImGui.MenuItem("L212_SewerOrLater")) AddC2BonusRound("L212_SewerOrLater", explorer);
+                        if (ImGui.MenuItem("L216_HanginOut"))    AddC2BonusRound("L216_HanginOut", explorer);
+
+                        ImGui.SeparatorText("Platform Path");
+                        if (ImGui.MenuItem("L214_RoadToRuin"))   AddC2BonusRound("L214_RoadToRuin", explorer);
+                        // if (ImGui.MenuItem("L219_Ruination (X)")) AddC2BonusRound("L219_Ruination", explorer);     // crash
+
                         ImGui.EndMenu();
                     }
                     if (ImGui.BeginMenu("C3"))
                     {
-                        if (ImGui.MenuItem("L301_ToadVillage")) AddC2BonusRound("L301_ToadVillage", explorer);
-                        // if (ImGui.MenuItem("L304_BoneYard")) AddC2BonusRound("L304_BoneYard", explorer);
-                        // if (ImGui.MenuItem("Generic Platform Path")) AddPlatformPath("Generic", explorer);
-                        // if (ImGui.MenuItem("Bonus Platform Path")) AddPlatformPath("Bonus", explorer);
-                        // if (ImGui.MenuItem("Death Platform Path")) AddPlatformPath("Death", explorer);
+                        ImGui.SeparatorText("Medieval");
+                        if (ImGui.MenuItem("L301_ToadVillage"))     AddC2BonusRound("L301_ToadVillage", explorer);
+                        // if (ImGui.MenuItem("L306_GeeWiz"))       AddC2BonusRound("L306_GeeWiz", explorer);       // no tp
+                        // if (ImGui.MenuItem("L315_DoubleHeader")) AddC2BonusRound("L315_DoubleHeader", explorer); // no tp
+
+                        ImGui.SeparatorText("Prehistoric");
+                        if (ImGui.MenuItem("L304_BoneYard"))     AddC2BonusRound("L304_BoneYard", explorer); // (cam issue on exit)
+                        if (ImGui.MenuItem("L311_DinoMight"))    AddC2BonusRound("L311_DinoMight", explorer);
+
+                        ImGui.SeparatorText("Ancient Egypt");
+                        if (ImGui.MenuItem("L309_TombTime"))     AddC2BonusRound("L309_TombTime", explorer);
+                        if (ImGui.MenuItem("L316_Sphynxinator")) AddC2BonusRound("L316_Sphynxinator", explorer);
+                        if (ImGui.MenuItem("L320_TombWader"))    AddC2BonusRound("L320_TombWader", explorer);
+                        if (ImGui.MenuItem("L325_BugLite"))      AddC2BonusRound("L325_BugLite", explorer);
+                        
+                        ImGui.SeparatorText("Future");
+                        // if (ImGui.MenuItem("L319_FutureFrenzy")) AddC2BonusRound("L319_FutureFrenzy", explorer); // (missing background + platforms)
+                        // if (ImGui.MenuItem("L321_GoneTomorrow")) AddC2BonusRound("L321_GoneTomorrow", explorer); // (missing background + platforms)
+                        if (ImGui.MenuItem("L333_FutureTense"))  AddC2BonusRound("L333_FutureTense", explorer);
+
+                        // ImGui.SeparatorText("Middle Eastern");
+                        // if (ImGui.MenuItem("L307_HangemHigh"))     AddC2BonusRound("L307_HangemHigh", explorer);     // (missing background)
+                        // if (ImGui.MenuItem("L313_HighTime"))       AddC2BonusRound("L313_HighTime", explorer);       // (missing background)
+                        // if (ImGui.MenuItem("L323_FlamingPassion")) AddC2BonusRound("L323_FlamingPassion", explorer); // (missing background)
+
                         ImGui.EndMenu();
                     }
+
+                    // if (ImGui.MenuItem("Generic Platform Path")) AddPlatformPath("Generic", explorer);
+                    // if (ImGui.MenuItem("Bonus Platform Path")) AddPlatformPath("Bonus", explorer);
+                    // if (ImGui.MenuItem("Death Platform Path")) AddPlatformPath("Death", explorer);
                     
                     ImGui.EndMenu();
                 }
@@ -529,6 +575,8 @@ namespace NST
                     explorer.ArchiveRenderer.SetEntityUpdated(obj, shape);
                 }
 
+                explorer.InstanceManager.RefreshInstances(explorer.InstanceManager.AllObjects);
+
                 ModalRenderer.CloseLoadingModal();
             })
             .ContinueWith(t =>
@@ -546,11 +594,52 @@ namespace NST
         }
 
         private static readonly List<string> _bonusFileNames = [ 
-            "", "Art", "Camera", "BonusArea", "BonusAreas", "BonusRound", "Crates", "Collectibles", "Hazards" 
+            "", "Art", "Camera", "Art_Bonus", "Crates_Bonus", "Bonus",
+            "BonusArea", "BonusAreas", "BonusRound", "BonusPath", "BonusZone",
+            "Crates", "Collectibles", "Geo", "Hazards", "Platforms",
         ];
         private static readonly List<string> _bonusAdditionalObjects = [
-            "HolePitrim02", "Teleportbase"  
+            "HolePitrim02", "Teleportbase", "PineTree01_2480", "platform01_19"
         ];
+        private static readonly List<string> _bonusExcludedObjects = [
+            "CameraSpline_Main_F5", "CameraSpline_BonusAreaLong_H1", "CameraSpline_BonusAreaLong_H2", // L214_RoadToRuin
+            "BonusLarge_FireStatueRotating_StartTrigger" // L219_Ruination
+        ];
+        private static readonly Dictionary<string, (THREE.Vector3, THREE.Vector3, THREE.Vector3, bool)> _bonusBounds = new()
+        {
+            // { "L201_TurtleWoods_DeathRoute", (new THREE.Vector3(-27575, 25860, -1489), new THREE.Vector3(-9000, -3000, -2000), new THREE.Vector3(9000, 2000, 2000)) }
+            { "L201_TurtleWoods", (new THREE.Vector3(33750, 26993, 5579), new THREE.Vector3(-4000, -3000, 0), new THREE.Vector3(4000, 3000, 0), true ) },
+            { "L203_HangEight", (new THREE.Vector3(34914, 16492, 2071), new THREE.Vector3(-10000, -10000, 0), new THREE.Vector3(10000, 10000, 0), true ) },
+            { "L204_ThePits", (new THREE.Vector3(35965, 21361, 648), new THREE.Vector3(-10000, -10000, 0), new THREE.Vector3(10000, 10000, 0), true ) },
+            { "L205_CrashDash", (new THREE.Vector3(-38948, 26365, 1260), new THREE.Vector3(-10000, -10000, 0), new THREE.Vector3(10000, 10000, 0), true ) },
+            { "L207_AirCrash", (new THREE.Vector3(-13771, 32917, 19342), new THREE.Vector3(-8000, -6000, 0), new THREE.Vector3(8000, 6000, 0), true ) },
+            { "L209_CrashCrush", (new THREE.Vector3(-14949, 10000, -2923), new THREE.Vector3(-5000, -5000, 0), new THREE.Vector3(5000, 5000, 0), true ) },
+            { "L210_TheEelDeal", (new THREE.Vector3(-16478, 7707, 39891), new THREE.Vector3(-7000, -3000, 0), new THREE.Vector3(6000, 4000, 0), true ) },
+            { "L211_PlantFood", (new THREE.Vector3(-42910, 23331, 10836), new THREE.Vector3(-12000, -10000, 0), new THREE.Vector3(12000, 10000, 0), true ) },
+            { "L212_SewerOrLater", (new THREE.Vector3(-18379, 20428, 41868), new THREE.Vector3(-8000, -5000, 0), new THREE.Vector3(8000, 5000, 0), true ) },
+            { "L214_RoadToRuin", (new THREE.Vector3(16488, 11993, -258), new THREE.Vector3(-3744, -1200, 0), new THREE.Vector3(2945, 400, 0), false ) },
+            { "L215_UnBearable", (new THREE.Vector3(-16895, -441, 428), new THREE.Vector3(-5000, -5000, 0), new THREE.Vector3(5000, 5000, 0), true ) },
+            { "L216_HanginOut", (new THREE.Vector3(-13020, 12012, 33049), new THREE.Vector3(-8000, -2000, 0), new THREE.Vector3(6000, 4000, 0), true ) },
+            { "L217_DigginIt", (new THREE.Vector3(-13016, 70280, 3143), new THREE.Vector3(-5000, -5000, 0), new THREE.Vector3(5000, 5000, 0), true ) },
+            { "L219_Ruination", (new THREE.Vector3(1718, -2916, 22), new THREE.Vector3(-2742, -520, 0), new THREE.Vector3(2847, 1050, 0), false ) },
+            { "L220_BeeHaving", (new THREE.Vector3(41045, 43217, 3375), new THREE.Vector3(-5000, -3000, 0), new THREE.Vector3(5000, 2000, 0), true ) },
+            { "L223_NightFight", (new THREE.Vector3(-24033, 4957, 3281), new THREE.Vector3(-7000, -5000, 0), new THREE.Vector3(7000, 5000, 0), true ) },
+            { "L227_TotallyFly", (new THREE.Vector3(-28188, 43342, -5128), new THREE.Vector3(-7000, -5000, 0), new THREE.Vector3(7000, 5000, 0), true ) },
+            { "L301_ToadVillage", (new THREE.Vector3(-52727, 3608, 3579), new THREE.Vector3(-10000, -6000, 0), new THREE.Vector3(10000, 6000, 0), true ) },
+            { "L304_BoneYard", (new THREE.Vector3(34867, -10701, 372), new THREE.Vector3(-7000, -5000, 0), new THREE.Vector3(7000, 5000, 0), true ) },
+            { "L306_GeeWiz", (new THREE.Vector3(-44536, 80656, -3670), new THREE.Vector3(-10000, -7000, 0), new THREE.Vector3(10000, 7000, 0), true ) },
+            { "L307_HangemHigh", (new THREE.Vector3(13356, 11205, 2252), new THREE.Vector3(-3000, -1000, 0), new THREE.Vector3(5000, 1000, 0), false ) },
+            { "L309_TombTime", (new THREE.Vector3(7352, 11230, 312), new THREE.Vector3(-4000, -2000, 0), new THREE.Vector3(4000, 4000, 0), false ) },
+            { "L311_DinoMight", (new THREE.Vector3(41876, 66312, 480), new THREE.Vector3(-7000, -4000, 0), new THREE.Vector3(7000, 4000, 0), true ) },
+            { "L313_HighTime", (new THREE.Vector3(6321, 1272, 2311), new THREE.Vector3(-2700, -1500, 0), new THREE.Vector3(2700, 200, 0), false ) },
+            { "L315_DoubleHeader", (new THREE.Vector3(21404, 78981, -3997), new THREE.Vector3(-10000, -7000, 0), new THREE.Vector3(10000, 7000, 0), true ) },
+            { "L316_Sphynxinator", (new THREE.Vector3(-1953, 36027, 543), new THREE.Vector3(-4000, -3000, 0), new THREE.Vector3(3500, 3000, 0), false ) },
+            { "L319_FutureFrenzy", (new THREE.Vector3(32385, 14949, -778), new THREE.Vector3(-3500, -1600, -2000), new THREE.Vector3(3000, 1000, 1000), false ) },
+            { "L320_TombWader", (new THREE.Vector3(6311, 12373, 33), new THREE.Vector3(-4500, -3000, 0), new THREE.Vector3(6000, 3000, 0), false ) },
+            { "L323_FlamingPassion", (new THREE.Vector3(-3485, 16910, 4165), new THREE.Vector3(-3000, -1000, 0), new THREE.Vector3(3000, 1000, 0), false ) },
+            { "L325_BugLite", (new THREE.Vector3(37704, 40242, 54300), new THREE.Vector3(-4000, -1000, 0), new THREE.Vector3(4000, 2000, 0), false ) },
+            { "L333_FutureTense", (new THREE.Vector3(25651, 25118, 919), new THREE.Vector3(-4000, -1000, 0), new THREE.Vector3(4000, 6000, 0), true ) },
+        };
 
         private static void AddC2BonusRound(string archiveName, LevelExplorer explorer)
         {
@@ -578,14 +667,17 @@ namespace NST
         {
             var archive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, archiveName + ".pak"));
             var collisionData = StaticCollisionsUtils.GetCollisionData(archive);
-            var collisionFile = archive.FindCollisionFile(".hkx")!;
-            var havokFile = collisionFile.ToHavokFile();
-            var compoundShape = (hknpCompoundShape)havokFile.GetRootObjects().Find(e => e is hknpCompoundShape)!;
+            var collisionFile = archive.FindCollisionFile(".hkx")!.ToHavokFile();
+            var compoundShape = (hknpCompoundShape)collisionFile.GetRootObjects().Find(e => e is hknpCompoundShape)!;
 
-            string cameraFileName = explorer.GetFileNameFromIdentifier("Camera");
-            var mainBonusFile = archive.GetFiles(FileSearchParams.MapIgz).Find(f => f.GetName().Contains("_BonusArea") || f.GetName().Contains("_BonusRound"))!;
-            THREE.Vector3 bonusCenter = mainBonusFile.ToIgzFile().FindObject<CEntity>("BonusRound_Manager")!._parentSpacePosition.ToVector3();
-            float maxBonusDistance = 10000;
+            (THREE.Vector3 center, THREE.Vector3 min, THREE.Vector3 max, bool isTeleport) = _bonusBounds[archiveName];
+            THREE.Box3 bounds = new THREE.Box3(center + min, center + max);
+
+            if (min.Z == 0 && max.Z == 0)
+            {
+                bounds.Min.Z = -1e6f; 
+                bounds.Max.Z = 1e6f;
+            }
 
             List<NSTObject> selection = [];
 
@@ -602,10 +694,16 @@ namespace NST
                 foreach (igObject obj in srcIgz.Objects)
                 {
                     if (obj is not igEntity entity) continue;
+                    if (_bonusExcludedObjects.Any(e => e == entity.ObjectName)) continue;
 
-                    bool valid = entity.ObjectName?.Contains("Bonus") == true ||
-                                 entity._parentSpacePosition.ToVector3().DistanceTo(bonusCenter) < maxBonusDistance ||
-                                 _bonusAdditionalObjects.Any(e => entity.ObjectName == e);
+                    bool valid = bounds.ContainsPoint(entity._parentSpacePosition.ToVector3());
+                    
+                    if (!valid && entity.ObjectName?.StartsWith("Crate_") == false)
+                    {
+                        valid |= (entity.ObjectName?.Contains("Bonus") == true && entity.ObjectName?.Contains("Death") == false) ||
+                                  entity.ObjectName?.Contains("Path_AltCheckpointEntity") == true ||
+                                  _bonusAdditionalObjects.Any(e => entity.ObjectName == e);
+                    }
 
                     if (!valid) continue;
 
@@ -632,10 +730,14 @@ namespace NST
                     entities.Add(entity);
                 }
 
+                if (entities.Count == 0) continue;
+
+                // Clone objects
                 explorer.GetOrCreateIgzFile(fileName, out IgArchiveFile bonusFile, out IgzFile bonusIgz);
 
-                var objs = explorer.Clone(entities, archive, srcIgz, bonusFile, bonusIgz, refreshInstances: true, addToSelection: null, clones: clones);
+                var objs = explorer.Clone(entities, archive, srcIgz, bonusFile, bonusIgz, initializeObjects: true, addToSelection: null, clones: clones);
 
+                // Add new collisions
                 foreach ((igEntity entity, hknpShapeInstance shape) in collisionEntities)
                 {
                     igObject cloneObject = clones[entity];
@@ -643,14 +745,22 @@ namespace NST
                     explorer.ArchiveRenderer.SetEntityUpdated(cloneEntity, shape);
                 }
 
+                // Update handles
                 foreach ((igObject src, igObject dst) in clones)
                 {
                     foreach (var handle in dst.GetHandles())
                     {
-                        if (handle.namespaceName == $"{archiveName}_Camera")
+                        if (handle.namespaceName.StartsWith(archiveName))
                         {
-                            Console.WriteLine("Updated handle for " + dst);
-                            handle.namespaceName = cameraFileName;
+                            IgArchiveFile? refFile = archive.FindFile(handle.namespaceName, FileSearchType.Name);
+                            if (refFile == null || !refFile.GetPath().StartsWith("maps/")) continue;
+
+                            string id = handle.namespaceName.Replace(archiveName, "");
+                            
+                            id = explorer.GetFileNameFromIdentifier(id);
+                            // Console.WriteLine($"Updated handle for {dst} ({handle.namespaceName} => {id}) exid: {handle.isEXID}");
+                            handle.namespaceName = id;
+                            handle.isEXID = false;
                         }
                     }
                 }
@@ -659,22 +769,50 @@ namespace NST
                 {
                     igObject original = clones.First(e => e.Value == obj.GetObject()).Key;
 
-                    if (original.ObjectName == "Bonus_Path_Platform_Start_FadeOut" || original.ObjectName == "Bonus_Path_Drop_Platform_Start")
+                    // Update selection
+                    if (original.ObjectName == "Bonus_Path_Platform_Start_FadeOut" || 
+                        original.ObjectName == "Bonus_Path_Drop_Platform_Start" || 
+                        original.ObjectName == "Bonus_Path_Platform_Start")
                     {
                         selection.Insert(0, obj);
                     }
-                    else if (obj is NSTEntity entity && !entity.IsPrefabInstance && !entity.IsPrefabChild && entity.IsSpawned && entity.Position.DistanceTo(bonusCenter) > maxBonusDistance)
+                    else if (obj is NSTEntity entity && !entity.IsPrefabInstance && !entity.IsPrefabChild && entity.IsSpawned
+                             && (!isTeleport || !bounds.ContainsPoint(entity.Position))
+                             )
                     {
-                        // var m = entity.ObjectToWorld();
-                        // if (new THREE.Vector3(m.Elements[12], m.Elements[13], m.Elements[14]).DistanceTo(bonusCenter) > maxBonusDistance)
-                        // Console.WriteLine("[Select object] " + entity.Object);
                         selection.Add(obj);
+                    }
+
+                    if (obj is not NSTEntity e || !e.IsPrefabInstance) continue;
+
+                    // Find prefab collisions
+                    foreach (NSTEntity child in e.Children.OfType<NSTEntity>())
+                    {
+                        if (!child.IsPrefabChild) continue;
+
+                        var entityPos = new THREE.Vector3();
+                        child.ObjectToWorld().Decompose(entityPos, new THREE.Quaternion(), new THREE.Vector3());
+
+                        for (int i = 0; i < compoundShape._elements.Count; i++)
+                        {
+                            var shape = compoundShape._elements[i];
+                            var havokPos = new THREE.Vector3(shape._transform.M41, shape._transform.M42, shape._transform.M43);
+                            float distance = havokPos.DistanceTo(entityPos * 0.0254f);
+                            
+                            if (distance < 0.01f)
+                            {
+                                child.CollisionShapeIndex = i;
+                                child.CollisionPrefabHash = collisionData.First(e => e.Value == i).Key.objectHash;
+                                explorer.ArchiveRenderer.SetEntityUpdated(child, shape);
+                                break;
+                            }
+                        }
                     }
                 }
             }
 
             explorer.SelectionManager.UpdateSelection(selection);
-            explorer.MoveSelectionToCamera();
+            explorer.MoveSelectionToCamera(isTeleport ? 400 : 2000);
         }
 
         public static (CZoneInfo, igLocalizedInfo) CreateZoneInfo(string levelIdentifier, EGameYear crashMode)

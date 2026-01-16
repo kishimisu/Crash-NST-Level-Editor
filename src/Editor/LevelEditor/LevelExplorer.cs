@@ -905,6 +905,11 @@ namespace NST
             {
                 DeleteSelection();
             }
+            else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
+            {
+                SelectionManager.ClearSelection(true);
+                _gizmos.Visible = false;
+            }
         }
         
         private void RenderSettingsPanel()
@@ -1179,7 +1184,10 @@ namespace NST
 
         public string GetFileNameFromIdentifier(string fileIdentifier)
         {
-            IgArchiveFile? existing = Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && f.GetName().Contains(fileIdentifier));
+            IgArchiveFile? existing = string.IsNullOrEmpty(fileIdentifier)
+                ? Archive.FindMainMapFile()
+                : Archive.FindFile(fileIdentifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
+
             if (existing != null) return existing.GetName(false);
 
             IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
@@ -1193,27 +1201,20 @@ namespace NST
 
         public void GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
         {
-            IgArchiveFile? existing = Archive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") && f.GetName().Contains(fileIdentifier));
+            IgArchiveFile? existing = string.IsNullOrEmpty(fileIdentifier)
+                ? Archive.FindMainMapFile()
+                : Archive.FindFile(fileIdentifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
 
             if (existing != null)
             {
+                FileUpdateInfos infos = FileManager.Add(existing);
+                infos.igz ??= existing.ToIgzFile();
                 file = existing;
-
-                if (FileManager.GetInfos(existing) is FileUpdateInfos infos && infos.igz != null)
-                {
-                    Console.WriteLine("GetIgz: Found igz in update infos (active file) for " + file.GetPath());
-                    igz = infos.igz;
-                }
-                else
-                {
-                    Console.WriteLine("GetIgz: Found file in archive, creating igz for " + file.GetPath());
-                    igz = existing.ToIgzFile();
-                }
+                igz = infos.igz;
             }
             else
             {
                 IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
-
                 string path = (mainMapFile == null)
                     ? $"maps/Custom/Custom_{fileIdentifier}.igz"
                     : mainMapFile.GetPath().Replace(".igz", $"_{fileIdentifier}.igz");
@@ -1223,8 +1224,6 @@ namespace NST
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
-
-                Console.WriteLine("GetIgz: Created new igz file: " + file.GetPath());
             }
         }
 
@@ -1234,7 +1233,7 @@ namespace NST
             IgArchiveFile destFile, IgzFile destIgz, 
             float camDistance = 400, 
             bool? addToSelection = false, 
-            bool refreshInstances = false, 
+            bool initializeObjects = false, 
             Dictionary<igObject, igObject>? clones = null)
         {
             Dictionary<NSTEntity, string?> newEntities = [];
@@ -1242,7 +1241,8 @@ namespace NST
             List<NSTObject> newObjects = [];
 
             clones ??= [];
-
+            
+            // Clone objects
             foreach (igObject obj in objects)
             {
                 if (sourceArchive != null && sourceIgz != null)
@@ -1259,6 +1259,7 @@ namespace NST
             {
                 ArchiveRenderer.SetObjectUpdated(destFile, clone, true);
 
+                // Add new objects
                 if (clone is CCameraBox cameraBox)
                 {
                     newObjects.Add(new NSTCameraBox(cameraBox, destFile));
@@ -1272,6 +1273,7 @@ namespace NST
 
                 if (clone is not igEntity cloneEntity) continue;
 
+                // Add new entities
                 NSTEntity entity = new NSTEntity(cloneEntity, destFile);
 
                 string? modelPath = cloneEntity.GetModelName(destIgz, this);
@@ -1289,9 +1291,9 @@ namespace NST
             var allObjects = newEntities.Keys.Union(newObjects).ToList();
             if (allObjects.Count == 0) return [];
 
-            if (refreshInstances)
+            if (initializeObjects)
             {
-                InstanceManager.Register(allObjects);
+                InstanceManager.RegisterNew(allObjects);
             }
             else
             {
@@ -1301,9 +1303,9 @@ namespace NST
                 }
             }
 
-            _treeView.RebuildTree(InstanceManager.AllObjects);
-
             if (addToSelection == null) return allObjects;
+
+            _treeView.RebuildTree(InstanceManager.AllObjects);
 
             NSTObject? selected = newEntities.Keys.Union(newObjects).FirstOrDefault();
             if (selected == null) return [];
@@ -1321,8 +1323,10 @@ namespace NST
             return allObjects;
         }
 
-        public void MoveSelectionToCamera(float camDistance = 400)
+        public void MoveSelectionToCamera(float camDistance)
         {
+            _treeView.RebuildTree(InstanceManager.AllObjects);
+            InstanceManager.RefreshInstances(InstanceManager.AllObjects);
             SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
             SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
         }

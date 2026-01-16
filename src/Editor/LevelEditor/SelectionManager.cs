@@ -220,8 +220,6 @@ namespace NST
                     worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
                 }
 
-                Console.WriteLine($"Apply changes for {entity.ObjectName}");
-
                 entity._parentSpacePosition._x = worldPos.X;
                 entity._parentSpacePosition._y = worldPos.Y;
                 entity._parentSpacePosition._z = worldPos.Z;
@@ -301,8 +299,8 @@ namespace NST
                     List<NSTEntity> entities = objects.OfType<NSTEntity>().ToList();
                     IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
                     
-                    IgzFile? dstIgz = null;
-                    IgArchiveFile? dstFile = null;
+                    IgArchiveFile? dstFile;
+                    IgzFile dstIgz;
 
                     if (copyToSameFile)
                     {
@@ -479,7 +477,7 @@ namespace NST
                 {
                     if (copyToSameFile)
                     {
-                        if (_copyExplorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original.Object, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
+                        if (_copyExplorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
                         {
                             Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
                             renderer.SetEntityUpdated(clone, infos.shapeInstance);

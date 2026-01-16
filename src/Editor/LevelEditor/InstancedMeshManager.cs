@@ -172,6 +172,36 @@ namespace NST
             RefreshInstances(AllObjects);
         }
 
+        public void RegisterNew(List<NSTObject> objects)
+        {
+            foreach (NSTObject obj in objects)
+            {
+                Register(obj);
+            }
+
+            foreach (NSTEntity entity in objects.OfType<NSTEntity>())
+            {
+                entity.InitPrefabChildren(this);
+            }
+
+            foreach (NSTObject obj in objects)
+            {
+                if (obj is NSTEntity entity)
+                {
+                    entity.InitChildren(_explorer, AllObjects);
+                    entity.InitScriptTriggerEntity(_explorer, AllEntities);
+                }
+                else if (obj is NSTCamera camera)
+                {
+                    camera.Setup(AllEntities);
+                }
+                else if (obj is NSTCameraBox cameraBox)
+                {
+                    cameraBox.Setup(AllObjects);
+                }
+            }
+        }
+
         public void Register(NSTObject obj)
         {            
             AllObjects.Add(obj);

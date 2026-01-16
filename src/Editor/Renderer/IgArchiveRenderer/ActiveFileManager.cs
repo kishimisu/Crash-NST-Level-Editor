@@ -26,7 +26,7 @@ namespace NST
         public IgzFile? igz = null; // IGZ instance
 
         public List<object> updatedObjects = []; // All updated objects
-        public Dictionary<igEntity, CollisionUpdateInfos> updatedCollisions = []; // Updated entities
+        public Dictionary<NSTEntity, CollisionUpdateInfos> updatedCollisions = []; // Updated entities
 
         public bool updated = false; // Whether the file has been updated
         public bool keepActive = false; // Whether to keep the file active when it's not updated
@@ -196,29 +196,35 @@ namespace NST
         /// </summary>
         /// <param name="file">The file to add</param>
         /// <param name="renderer">For IGZ files, the renderer associated to the file</param>
-        public void Add(IgArchiveFile file, FileRenderer? renderer = null)
+        public FileUpdateInfos Add(IgArchiveFile file, FileRenderer? renderer = null)
         {
-            if (_files.ContainsKey(file) && renderer != null)
+            if (_files.TryGetValue(file, out FileUpdateInfos? value))
             {
-                _files[file].renderer = renderer;
-                return;
+                if (renderer != null)
+                {
+                    value.renderer = renderer;
+                }
+                return value;
             }
-            
-            _files.Add(file, new FileUpdateInfos(file, renderer));
+            var infos = new FileUpdateInfos(file, renderer);
+            _files.Add(file, infos);
+            return infos;
         }
 
         /// <summary>
         /// (Level-Editor) Add an IGZ file without a renderer to the list of active files
         /// </summary>
-        public void Add(IgArchiveFile file, IgzFile igz, bool keepActive = false)
+        public FileUpdateInfos Add(IgArchiveFile file, IgzFile igz, bool keepActive = false)
         {
-            if (_files.ContainsKey(file))
+            if (_files.TryGetValue(file, out FileUpdateInfos? value))
             {
-                _files[file].igz = igz;
-                _files[file].keepActive |= keepActive;
-                return;
+                value.igz = igz;
+                value.keepActive |= keepActive;
+                return value;
             }
-            _files.Add(file, new FileUpdateInfos(file, igz, keepActive));
+            var infos = new FileUpdateInfos(file, igz, keepActive);
+            _files.Add(file, infos);
+            return infos;
         }
 
 

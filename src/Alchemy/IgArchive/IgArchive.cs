@@ -294,24 +294,30 @@ namespace Alchemy
         /// <param name="name">The string to search for</param>
         /// <param name="searchType">How the string should be compared</param>
         /// <returns>The first file that matches the search criteria, or null if no match is found</returns>
-        public IgArchiveFile? FindFile(string name, FileSearchType searchType = FileSearchType.NameWithExtension, StringComparison comp = StringComparison.InvariantCultureIgnoreCase)
+        public IgArchiveFile? FindFile(
+            string name, 
+            FileSearchType searchType = FileSearchType.NameWithExtension, 
+            FileSearchParams searchParams = FileSearchParams.All, 
+            StringComparison comp = StringComparison.InvariantCultureIgnoreCase)
         {
+            var files = GetFiles(searchParams);
+
             IgArchiveFile? file = searchType switch
             {
                 FileSearchType.Name => 
-                    _files.Find(f => f.GetName(false).Equals(name, comp)),
+                    files.Find(f => f.GetName(false).Equals(name, comp)),
                 FileSearchType.NameContains =>
-                    _files.Find(f => f.GetName(false).Contains(name, comp)),
+                    files.Find(f => f.GetName(false).Contains(name, comp)),
                 FileSearchType.NameStartsWith =>
-                    _files.Find(f => f.GetName(false).StartsWith(name, comp)),
+                    files.Find(f => f.GetName(false).StartsWith(name, comp)),
                 FileSearchType.NameWithExtension =>
-                    _files.Find(f => f.GetName().Equals(name, comp)),
+                    files.Find(f => f.GetName().Equals(name, comp)),
                 FileSearchType.Path => 
-                    _files.Find(f => f.GetPath().Equals(name, comp)),
+                    files.Find(f => f.GetPath().Equals(name, comp)),
                 FileSearchType.FullPath => 
-                    _files.Find(f => f.GetFullPath().Equals(name, comp)),
+                    files.Find(f => f.GetFullPath().Equals(name, comp)),
                 FileSearchType.NamespaceHash =>
-                    _files.Find(f => NamespaceUtils.ComputeHash(f.GetName(false)).ToString() == name),
+                    files.Find(f => NamespaceUtils.ComputeHash(f.GetName(false)).ToString() == name),
 
                 _ => throw new ArgumentOutOfRangeException(nameof(searchType), searchType, null)
             };

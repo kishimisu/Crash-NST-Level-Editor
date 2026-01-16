@@ -25,7 +25,6 @@ namespace NST
         private uint _uuid;
         private bool _showAudioPlayer = false; // Used for .snd files
         private bool _hasBackup = false;
-        private bool _compressOnSave = true;
         private bool _rebuildPackageFile = true;
         private bool _hasPackageFile = false;
 
@@ -49,7 +48,6 @@ namespace NST
             
             IgArchiveFile? packageFile = Archive.FindPackageFile();
 
-            _compressOnSave = LocalStorage.Get("compress_on_save_" + Archive.GetPath(), true);
             _hasBackup = File.Exists(Archive.GetPath() + ".backup");
             _hasPackageFile = (packageFile != null);
             _rebuildPackageFile = _hasPackageFile;
@@ -174,22 +172,18 @@ namespace NST
                     if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
                     if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) SaveArchive(true);
                     if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(true);
+                    if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
 
                     ImGui.Separator();
 
                     if (ImGui.BeginMenu("Archive"))
                     {
-                        if (fromLevelEditor && ImGui.MenuItem("Open current archive"))
+                        if (fromLevelEditor && ImGui.MenuItem("Open level archive"))
                         {
                             App.OpenArchiveRenderer(this);
                         }
                         ImGui.Separator();
                         AudioPlayerInstance.RenderAudioMenu();
-                        if (ImGui.MenuItem("Compress on save", null, _compressOnSave))
-                        { 
-                            _compressOnSave = !_compressOnSave;
-                            LocalStorage.Set("compress_on_save_" + Archive.GetPath(), _compressOnSave);
-                        }
                         if (ImGui.MenuItem("Rebuild package file", null, _rebuildPackageFile))
                         {
                             _rebuildPackageFile = !_rebuildPackageFile;
@@ -399,13 +393,13 @@ namespace NST
 
             if (entity.CollisionShapeIndex == -1 && shapeInstance == null) return;
 
-            if (infos.updatedCollisions.TryGetValue(entity.Object, out CollisionUpdateInfos? collisionInfos))
+            if (infos.updatedCollisions.TryGetValue(entity, out CollisionUpdateInfos? collisionInfos))
             {
                 collisionInfos.removed |= removed;
             }
             else
             {
-                infos.updatedCollisions[entity.Object] = new CollisionUpdateInfos()
+                infos.updatedCollisions[entity] = new CollisionUpdateInfos()
                 {
                     entity = entity,
                     removed = removed,
@@ -576,9 +570,9 @@ namespace NST
         /// Try to save the current archive to disk.
         /// Will show a confirmation modal if it's a game archive.
         /// </summary>
-        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false)
+        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false, bool compress = false)
         {
-            if (!IsUpdated)
+            if (!IsUpdated && !compress)
             {
                 if (launchGame) Archive.TryRunLevel();
                 return;
@@ -591,13 +585,13 @@ namespace NST
                     fromLevelEditor
                         ? "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to create a copy of the original level\n(Save as...)."
                         : "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.",
-                    () =>  SaveArchive(true, launchGame), // Save as...
-                    () =>  SaveArchive(false, launchGame) // Overwrite
+                    () =>  SaveArchive(true, launchGame, compress), // Save as...
+                    () =>  SaveArchive(false, launchGame, compress) // Overwrite
                 );
             }
             else
             {
-                SaveArchive(false, launchGame);
+                SaveArchive(false, launchGame, compress);
             }
         }
 
@@ -605,7 +599,7 @@ namespace NST
         /// Save the current archive to disk
         /// </summary>
         /// <param name="saveAs">If true will open the file saving explorer, otherwise will overwrite the current file</param>
-        public void SaveArchive(bool saveAs = false, bool launchGame = false)
+        public void SaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false)
         {
             string? path = Archive.GetPath();
 
@@ -638,14 +632,9 @@ namespace NST
                 if (path == null) return;
                 LocalStorage.AddRecentFile(path, IsLevelArchive);
                 ForceSaveAs = false;
-
-                if (!_compressOnSave)
-                {
-                    LocalStorage.Set("compress_on_save_" + path, _compressOnSave);
-                }
             }
 
-            ModalRenderer.ShowLoadingModal("Saving archive...");
+            ModalRenderer.ShowLoadingModal($"Saving{(compress ? " compressed " : " ")}archive...");
 
             Task.Run(() =>
             {
@@ -686,13 +675,9 @@ namespace NST
                     if (newPackageFile != null) _treeView.AddFile(newPackageFile);
                 }
 
-                if (_compressOnSave)
+                if (compress)
                 {
                     Archive.CompressAll();
-                }
-                else
-                {
-                    Archive.UncompressAll();
                 }
 
                 if (launchGame)
