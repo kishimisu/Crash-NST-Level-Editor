@@ -123,7 +123,7 @@ namespace NST
 
             if (!selected)
             {
-                group.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.CameraBox));
+                group.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.Camera));
             }
 
             group.Traverse(e => e.UserData["entity"] = this);

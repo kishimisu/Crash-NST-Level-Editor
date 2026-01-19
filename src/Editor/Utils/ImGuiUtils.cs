@@ -94,6 +94,14 @@ namespace NST
             return ImGui.Button(text, buttonSize ?? Vector2.Zero);
         }
 
+        public static void ColoredSeparator(string text, uint col)
+        {
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff000000 | col);
+            ImGui.PushStyleColor(ImGuiCol.Separator, 0x66000000 | col);
+            ImGui.SeparatorText(text);
+            ImGui.PopStyleColor(2);
+        }
+
         /// <summary>
         /// Truncate text to fit in a given width, adding "..."
         /// </summary>

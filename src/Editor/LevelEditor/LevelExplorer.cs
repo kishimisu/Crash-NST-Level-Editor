@@ -49,12 +49,13 @@ namespace NST
             AllEntities = 1, 
             Splines = 2, 
             ClipEntities = 3,
-            CameraBox = 4, 
-            Triggers = 5, 
-            Templates = 6, 
-            Clouds = 7, 
-            Shadows = 8, 
-            Hidden = 9
+            Camera = 4, 
+            CameraBox = 5,
+            Triggers = 6, 
+            Templates = 7, 
+            Clouds = 8, 
+            Shadows = 9, 
+            Hidden = 10
         };
 
         private readonly Dictionary<string, bool> _layers = new()
@@ -62,8 +63,9 @@ namespace NST
             { "All Entities", true },
             { "Splines", true },
             { "DynamicClipEntity", true },
-            { "Cameras", false },
-            { "Triggers", false },
+            { "Camera", false },
+            { "CameraBox", false },
+            { "CScriptTriggerEntity", false },
             { "Templates", false },
             { "Clouds", false },
             { "Shadows", false },
@@ -187,7 +189,6 @@ namespace NST
             _camera.Far = 120000.0f;
             _scene.Fog.Far = _camera.Far;
             _camera.UpdateProjectionMatrix();
-            UpdateActiveLayers(_camera.Layers);
 
             // Add ambient light
             var ambientLight = new THREE.AmbientLight(0x525255);
@@ -211,6 +212,12 @@ namespace NST
                 SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
             };
 
+            foreach ((string layerName, bool active) in _layers)
+            {
+                _layers[layerName] = LocalStorage.Get("layer_" + layerName, active);
+            }
+            UpdateActiveLayers(_camera.Layers);
+            
             _scene.Add(_gizmos);
 
             _outlinePass.gizmos = _gizmos;
@@ -591,12 +598,12 @@ namespace NST
             return compoundShape._elements[entity.CollisionShapeIndex];
         }
 
-        private void PasteObjects(bool keepOriginalPosition = false)
+        private void PasteObjects(bool keepOriginalPosition = false, bool moveSelection = false)
         {
             const float maxDistance = 5000.0f;
             THREE.Vector3? spawnPoint = null;
 
-            bool moveSelection = keepOriginalPosition && SelectionManager.CopyFromSameFile();
+            moveSelection &= SelectionManager.CopyFromSameFile();
 
             // Raycast to find spawn point
             if (!keepOriginalPosition || moveSelection)
@@ -916,7 +923,11 @@ namespace NST
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.V))
             {
-                PasteObjects(true);
+                PasteObjects(keepOriginalPosition: true);
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.X))
+            {
+                PasteObjects(moveSelection: true);
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
@@ -943,10 +954,14 @@ namespace NST
         
         private void RenderSettingsPanel()
         {
+            const uint levelColor = 0xffcc66;
+            const uint editorColor = 0x88ff22;
+            const uint controlsColor = 0x00bbff;
+
             if (_zoneInfo != null && _zoneInfoFile != null && ImGui.CollapsingHeader("Level infos"))
             {
                 ImGui.PushItemWidth(-1);
-                ImGui.SeparatorText("Level name");
+                ImGuiUtils.ColoredSeparator("Level name", levelColor);
 
                 ImGuiUtils.Prefix("Name:");
                 if (ImGui.InputText("##levelName", ref _zoneInfo._displayName, 256)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
@@ -954,7 +969,7 @@ namespace NST
                 ImGuiUtils.Prefix("Hint:");
                 if (ImGui.InputText("##levelHint", ref _zoneInfo._hint, 256)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
 
-                ImGui.SeparatorText("Level settings");
+                ImGuiUtils.ColoredSeparator("Level settings", levelColor);
                 ImGuiUtils.Prefix("Character: ");
                 if (ImGui.Combo("##defaultCharacter", ref _defaultCharacter, LevelBuilder.CrashCharacters, LevelBuilder.CrashCharacters.Length))
                 {
@@ -969,7 +984,7 @@ namespace NST
                     ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
                 }
 
-                ImGui.SeparatorText("Time trial");
+                ImGuiUtils.ColoredSeparator("Time trial", levelColor);
                 
                 ImGuiUtils.Prefix("Platinum time:", 110);
                 if (ImGui.InputFloat("##platinumTime", ref _zoneInfo._platinumTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
@@ -986,18 +1001,19 @@ namespace NST
 
             if (ImGui.CollapsingHeader("Editor settings"))
             {
-                ImGui.Text($"FPS: {(_controls.Focused() ? (int)ImGui.GetIO().Framerate : "0")}" + (_renderer == null ? "" : $"({_renderer.Width}x{_renderer.Height})"));
+                ImGui.Spacing();
+                ImGui.Text($"FPS: {(_controls.Focused() ? (int)ImGui.GetIO().Framerate : "0")}" + (_renderer == null ? "" : $" ({_renderer.Width}x{_renderer.Height})"));
+                ImGui.Spacing();
 
                 ImGui.PushItemWidth(-1);
 
-                ImGui.Spacing();
                 ImGuiUtils.Prefix("Free memory on close:");
                 if (ImGui.Checkbox("##clearMemory", ref _clearMemoryOnExit))
                 {
                     LocalStorage.Set("clear_memory_on_exit", _clearMemoryOnExit);
                 }
 
-                ImGui.SeparatorText("Render settings");
+                ImGuiUtils.ColoredSeparator("Render settings", editorColor);
 
                 ImGuiUtils.Prefix("Render distance:");
                 if (ImGui.SliderFloat("##renderDistance", ref _camera.Far, 4000, 200000, $"%.0f"))
@@ -1021,7 +1037,7 @@ namespace NST
 
                 ImGui.PopItemWidth();
 
-                ImGui.SeparatorText("Visible camera layers");
+                ImGuiUtils.ColoredSeparator("Visible camera layers", editorColor);
 
                 foreach (KeyValuePair<string, bool> layer in _layers)
                 {
@@ -1030,6 +1046,7 @@ namespace NST
                         _layers[layer.Key] = enabled;
                         RenderNextFrame = true;
                         UpdateActiveLayers(_camera.Layers);
+                        LocalStorage.Set("layer_" + layer.Key, enabled);
                     }
                 }
                 ImGui.Spacing();
@@ -1037,39 +1054,31 @@ namespace NST
 
             if (ImGui.CollapsingHeader("Controls"))
             {
-                var Separator = (string name) =>
-                {
-                    ImGui.PushStyleColor(ImGuiCol.Text, 0xff00aaff);
-                    ImGui.SeparatorText(name);
-                    ImGui.PopStyleColor();
-                };
-
-                ImGui.PushStyleColor(ImGuiCol.Separator, 0x6600aaff);
-                Separator("Camera");
+                ImGuiUtils.ColoredSeparator("Camera", controlsColor);
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
-                Separator("Selection");
+                ImGuiUtils.ColoredSeparator("Selection", controlsColor);
                 ImGui.BulletText("Left click: select object");
                 ImGui.BulletText("(Click multiple times focus child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
                 ImGui.BulletText("Ctrl: align/snap selected crates");
-                Separator("Objects");
+                ImGuiUtils.ColoredSeparator("Objects", controlsColor);
                 ImGui.BulletText("Right click: add objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
                 ImGui.BulletText("Ctrl + V: paste selected objects (current position)");
                 ImGui.BulletText("Ctrl+Shift + V: paste selected objects (original position)");
+                ImGui.BulletText("Ctrl+Shift + X: move selected objects");
                 ImGui.BulletText("Del/Suppr: delete selected objects");
-                Separator("Gizmos");
+                ImGuiUtils.ColoredSeparator("Gizmos", controlsColor);
                 ImGui.BulletText("Ctrl + E: translate mode");
                 ImGui.BulletText("Ctrl + R: rotate mode");
                 ImGui.BulletText("Ctrl + T: scale mode");
-                Separator("Save & launch");
+                ImGuiUtils.ColoredSeparator("Save & launch", controlsColor);
                 ImGui.BulletText("Ctrl + S: save level");
                 ImGui.BulletText("Ctrl + Shift + S: save level as...");
                 ImGui.BulletText("Ctrl + L: backup, save and launch");
                 ImGui.Spacing();
-                ImGui.PopStyleColor();
             }
         }
 
