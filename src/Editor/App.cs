@@ -226,7 +226,7 @@ namespace NST
 
             _editors.Remove(explorer);
 
-            if (_editors.Count == 0 || LocalStorage.Get("clear_memory", true))
+            if (_editors.Count == 0 || LocalStorage.Get("clear_memory_on_exit", false))
             {
                 ThreeSceneRenderer.DisposeRenderer();
                 _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);

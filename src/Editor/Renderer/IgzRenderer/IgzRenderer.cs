@@ -87,7 +87,7 @@ namespace NST
 
             currentIndex = 0;
 
-            foreach (IgzTreeNode node in TreeView.ObjectNodes)
+            foreach (IgzTreeNode node in TreeView.ObjectNodes.ToList())
             {
                 if (node.Object == null) continue;
                 

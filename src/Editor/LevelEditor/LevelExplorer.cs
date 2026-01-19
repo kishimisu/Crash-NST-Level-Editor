@@ -7,8 +7,12 @@ namespace NST
 {
     public class LevelExplorer : ThreeSceneRenderer
     {
-        public static SortedDictionary<string, NSTModel> _cachedModels = [];
-        public static Dictionary<NamedReference, NSTMaterial> _cachedMaterials = [];
+        private static Dictionary<string, NSTModel> _cachedModels = [];
+        private static Dictionary<NamedReference, NSTMaterial> _cachedMaterials = [];
+
+        public static Dictionary<string, NSTModel> CachedModels { get; private set; }
+        public static List<string> CachedModelNames { get; private set; }
+        private bool _updateCachedModels = true;
 
         public Dictionary<igComponentData, List<NSTEntity>> CachedComponents { get; } = [];
 
@@ -149,10 +153,10 @@ namespace NST
         {
             InitScene();
 
-            _clearMemoryOnExit = LocalStorage.Get("clear_memory", true);
+            _clearMemoryOnExit = LocalStorage.Get("clear_memory_on_exit", false);
 
             KeyDown   += (_, e) => _isDragging = _clickInsideScene;
-            MouseMove += (_, e) => _isDragging = _clickInsideScene;
+            MouseMove += (_, e) => _isDragging = true;
             MouseDown += (_, e) => { _isDragging = false; _clickInsideScene = IsSceneFocused; };
             MouseUp   += (_, e) =>
             {
@@ -168,6 +172,7 @@ namespace NST
                     else
                     {
                         _openContextMenu = true;
+                        (_controls as FirstPersonControls)?.ResetMousePos();
                     }
                 }
 
@@ -560,7 +565,7 @@ namespace NST
                             entity.CollisionShapeIndex = index;
 
                             found = true;
-                            Console.WriteLine($"Found prefab collision shape: {entity.ParentPrefabInstance?.Object.ObjectName} -> {entity.Object.ObjectName} (index: {index}, dist: {distance})");
+                            // Console.WriteLine($"Found prefab collision shape: {entity.ParentPrefabInstance?.Object.ObjectName} -> {entity.Object.ObjectName} (index: {index}, dist: {distance}, hash: {reference})");
                             break;
                         }
                     }
@@ -591,12 +596,21 @@ namespace NST
             const float maxDistance = 5000.0f;
             THREE.Vector3? spawnPoint = null;
 
+            bool moveSelection = keepOriginalPosition && SelectionManager.CopyFromSameFile();
+
             // Raycast to find spawn point
-            if (!keepOriginalPosition)
+            if (!keepOriginalPosition || moveSelection)
             {
                 var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
                 float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
                 spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+
+                if (moveSelection)
+                {
+                    SelectionManager._selectionContainer.Position.Copy(spawnPoint);
+                    SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+                    return;
+                }
             }
 
             // Paste selection
@@ -754,6 +768,12 @@ namespace NST
                     ImGui.End();
                     return;
                 }
+                else if (_updateCachedModels)
+                {
+                    CachedModels = _cachedModels.ToDictionary();
+                    CachedModelNames = _cachedModels.Keys.ToList();
+                    CachedModelNames.Sort();
+                }
 
                 ArchiveRenderer?.RenderMenuBar(true);
 
@@ -795,10 +815,19 @@ namespace NST
                     else if (RebuildState == RebuildStatus.NeedsRebuild)
                     {
                         _renderBounds = new System.Numerics.Vector4(0, 0, _width, _height);
-                        IsSceneFocused = ImGui.TableGetHoveredColumn() == 1;
-                        ImGuiUtils.CenteredText("Memory cleared, hover to reload the scene");
+                        
+                        if (ImGui.TableGetHoveredColumn() == 1 && ImGui.IsMouseClicked(ImGuiMouseButton.Left))
+                        {
+                            RebuildState = RebuildStatus.Rebuild;
+                            RenderNextFrame = true;
+                        }
+                        else
+                        {
+                            ImGuiUtils.CenteredText("Memory cleared, click to reload the scene");
+                        }
                     }
-                    else
+                    
+                    if (RebuildState == RebuildStatus.Rebuild)
                     {
                         ImGuiUtils.CenteredText("Reloading scene, please wait...");
                     }
@@ -965,7 +994,7 @@ namespace NST
                 ImGuiUtils.Prefix("Free memory on close:");
                 if (ImGui.Checkbox("##clearMemory", ref _clearMemoryOnExit))
                 {
-                    LocalStorage.Set("clear_memory", _clearMemoryOnExit);
+                    LocalStorage.Set("clear_memory_on_exit", _clearMemoryOnExit);
                 }
 
                 ImGui.SeparatorText("Render settings");
@@ -1113,7 +1142,7 @@ namespace NST
         public void SelectObject(NSTObject obj, bool selectInTree = false, bool fromTree = false)
         {
             List<NSTObject> selected = InstanceManager.Select(obj, fromTree);
-            SelectionManager.UpdateSelection(selected);
+            SelectionManager.UpdateSelection(selected, !fromTree || !ImGui.IsKeyDown(ImGuiKey.LeftShift));
             if (selectInTree) _treeView.SelectObject(obj);
             RenderNextFrame = true;
         }
@@ -1314,7 +1343,7 @@ namespace NST
 
             if (addToSelection == true)
             {
-                SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
+                SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e != selected && e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
 
             SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);

@@ -662,7 +662,7 @@ namespace NST
                     StaticCollisionsUtils.RebuildCollisions(Archive, updatedCollisions);
                 }
 
-                if (IsLevelArchive && Archive.FindCustomZoneInfoFile() == null)
+                if (IsLevelArchive && !path.StartsWith(LocalStorage.ArchivePath) && Archive.FindCustomZoneInfoFile() == null)
                 {
                     LevelBuilder.ConvertToCustomLevel(Archive);
                 }
@@ -680,7 +680,7 @@ namespace NST
                     Archive.CompressAll();
                 }
 
-                if (launchGame)
+                if (launchGame && File.Exists(Archive.GetPath()))
                 {
                     try
                     {

@@ -95,7 +95,14 @@ namespace NST
         {
             if (!_alwaysRender && !RenderNextFrame && !_controls.Focused()) return;
 
-            if (CheckRebuildStatus() || _renderer == null) return;
+            if (RebuildState == RebuildStatus.Rebuild)
+            {
+                _renderer ??= new GLRenderer(SilkWindow.instance._window, _width, _height);
+                _composer.Renderer = _renderer;
+                RebuildState = RebuildStatus.None;
+            }
+
+            if (_renderer == null) return;
 
             SilkWindow.instance.SetViewport(0, 0, _width, _height);
 
@@ -118,28 +125,6 @@ namespace NST
             RenderNextFrame = false;
 
             SilkWindow.instance.RestoreViewport();
-        }
-
-        /// <summary>
-        /// Check if the current GL renderer should be rebuilt after another renderer has been disposed
-        /// </summary>
-        private bool CheckRebuildStatus()
-        {
-            if (RebuildState == RebuildStatus.NeedsRebuild)
-            {
-                RenderNextFrame = true;
-                RebuildState = RebuildStatus.Rebuild;
-                return true;
-            }
-
-            if (RebuildState == RebuildStatus.Rebuild)
-            {
-                _renderer ??= new GLRenderer(SilkWindow.instance._window, _width, _height);
-                _composer.Renderer = _renderer;
-                RebuildState = RebuildStatus.None;
-            }
-
-            return false;
         }
 
         /// <summary>

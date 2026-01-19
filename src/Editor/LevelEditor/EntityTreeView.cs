@@ -318,6 +318,8 @@ namespace NST
                 return;
             }
 
+            if (Object.IsSelected) flags |= ImGuiTreeNodeFlags.Selected;
+
             string displayName = Object is NSTEntity entity && entity.IsPrefabInstance ? $"[Prefab] {Name}" : Name;
 
             IsOpen = ImGui.TreeNodeEx("###" + Name, flags);

@@ -488,7 +488,7 @@ namespace NST
             {
                 modelName = Path.GetFileNameWithoutExtension(modelName).ToLower();
 
-                    if (!LevelExplorer._cachedModels.TryGetValue(modelName, out model))
+                if (!LevelExplorer.CachedModels.TryGetValue(modelName, out model))
                 {
                     Console.WriteLine($"Warning: Model not found ({modelName})");
                 }

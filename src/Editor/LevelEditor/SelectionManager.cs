@@ -5,8 +5,8 @@ namespace NST
 {
     public class SelectionManager
     {
-        static List<NSTObject> _copyPaste = [];
-        static LevelExplorer _copyExplorer;
+        private static List<NSTObject> _copyPaste = [];
+        private static LevelExplorer _copyExplorer;
 
         public List<NSTObject> _selection = [];
         public THREE.Group _selectionContainer = new THREE.Group();
@@ -15,6 +15,8 @@ namespace NST
         private readonly THREE.Silk.TransformControls _gizmos;
         private readonly THREE.OutlinePass _outlinePass;
         private bool _revertGizmos = false;
+
+        public bool CopyFromSameFile() => _explorer == _copyExplorer;
 
         public SelectionManager(THREE.Object3D rootObject, THREE.Silk.TransformControls gizmos, THREE.OutlinePass outlinePass, LevelExplorer explorer)
         {
@@ -389,7 +391,7 @@ namespace NST
                         // Paste to external archive
                         else
                         {
-                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones);
+                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true);
                         }
                     }
 

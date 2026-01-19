@@ -375,24 +375,8 @@ namespace NST
             explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, clone, true);
         }
 
-        public void RefreshModel(LevelExplorer explorer, NSTModel? model = null)
+        public void RefreshModel(LevelExplorer explorer, NSTModel model)
         {
-            string? fileName = Object.GetComponent<CModelComponentData>()?._fileName;
-
-            if (fileName == null)
-            {
-                Console.WriteLine("[RefreshModel] Could not refresh model, CModelComponentData not found or file name is null");
-                return;
-            }
-
-            model ??= LevelExplorer._cachedModels.Values.FirstOrDefault(v => v.OriginalPath == fileName);
-
-            if (model == null)
-            {
-                Console.WriteLine("[RefreshModel] Could not refresh model, file not found: " + fileName);
-                return;
-            }
-
             if (explorer.Archive.FindFile(model.FilePath, FileSearchType.Path) == null)
             {
                 Console.WriteLine("Model not found in current explorer: " + model.Name);
@@ -491,11 +475,9 @@ namespace NST
                 ImGui.Separator();
             }
 
-            // Render _canSpawn
-
-            ImGui.Text("Can Spawn");
-            ImGui.SameLine();
-            ImGui.Checkbox("##_canSpawn", ref Object._bitfield._canSpawn);
+            // ImGui.Text("Can Spawn");
+            // ImGui.SameLine();
+            // ImGui.Checkbox("##_canSpawn", ref Object._bitfield._canSpawn);
 
             RenderEntityData(explorer);
         }
@@ -503,6 +485,50 @@ namespace NST
         public override void RenderEntityData(LevelExplorer explorer)
         {
             if (Object._entityData == null) return;
+
+            // Render model
+
+            if (Object._entityData is CGameEntityData entityData && (entityData._modelName != null || entityData._skinName != null))
+            {
+                ImGui.Text("Model:");
+                ImGui.SameLine();
+                ImGui.SetNextItemWidth(-1);
+
+                string displayName = Model?.Name ?? Path.GetFileNameWithoutExtension(entityData._modelName ?? entityData._skinName!);
+
+                ImGuiUtils.RenderComboWithSearch("##model", displayName, LevelExplorer.CachedModelNames, true, (_, name) =>
+                {
+                    MakeUnique(explorer);
+
+                    NSTModel model = LevelExplorer.CachedModels[name];
+                    
+                    if (entityData._modelName != null)
+                    {
+                        entityData._modelName = model.OriginalPath;
+                    }
+                    else
+                    {
+                        entityData._skinName = model.OriginalPath;
+                    }
+
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
+
+                    if (IsSpawned)
+                    {
+                        RefreshModel(explorer, model);
+                    }
+                    else
+                    {
+                        foreach (NSTEntity p in Parents.OfType<NSTEntity>())
+                        {
+                            if (p.Object.TryGetComponent(out common_Spawner_TemplateData? s) && s._EntityToSpawn.Reference?.objectName == Object.ObjectName)
+                            {
+                                p.RefreshModel(explorer, model);
+                            }
+                        }
+                    }
+                });
+            }
 
             ImGui.PushID("EntityData" + Object.ObjectName);
 

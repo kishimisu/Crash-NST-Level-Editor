@@ -12,7 +12,7 @@ namespace NST
         public hknpShapeInstance? shapeInstance = null; // Full shape instance if not in the same archive
         public bool removed = false; // Whether the entity has been removed
 
-        public HashedReference reference => entity.ToReference().ToEXID();
+        public HashedReference reference => new HashedReference(NamespaceUtils.ComputeHash(entity.FileNamespace), objectHash);
         public uint objectHash => entity.CollisionPrefabHash != 0 ? entity.CollisionPrefabHash : reference.objectHash;
     }
 

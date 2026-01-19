@@ -47,7 +47,10 @@ namespace NST
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
             { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
+            { typeof(common_Generic_Path_Platform_SwapGameModeData), (c, m) => RenderComponent((common_Generic_Path_Platform_SwapGameModeData)c, m) },
+            { typeof(common_Path_Platform_Mover), (c, m) =>                    RenderComponent((common_Path_Platform_Mover)c, m) },
             { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
+            { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
         };
 
         private static readonly HashSet<Type> _emptyComponents = new ()
@@ -136,9 +139,6 @@ namespace NST
         }
 
 #region Static objects
-        
-        private static Dictionary<string, NSTModel>? _models = null;
-        private static int _modelCount = 0;
 
         private static void RenderComponent(CModelComponentData component, NSTComponent manager)
         {
@@ -148,15 +148,9 @@ namespace NST
 
             string displayName = Path.GetFileNameWithoutExtension(component._fileName) ?? "";
 
-            if (_models == null || _modelCount != LevelExplorer._cachedModels.Count)
+            ImGuiUtils.RenderComboWithSearch("##model", displayName, LevelExplorer.CachedModelNames, true, (index, name) =>
             {
-                _modelCount = LevelExplorer._cachedModels.Count;
-                _models = LevelExplorer._cachedModels.ToDictionary().Where(e => e.Value.OriginalPath.StartsWith("models:")).ToDictionary();
-            }
-
-            ImGuiUtils.RenderComboWithSearch("##model", displayName, _models.Keys.ToList(), true, (index) =>
-            {
-                NSTModel model = _models.Values.ElementAt(index);
+                NSTModel model = LevelExplorer.CachedModels[name];
 
                 component._fileName = model.OriginalPath;
                 
@@ -480,16 +474,22 @@ namespace NST
         }
 
 #endregion
+#region Levels
+
+        private static void RenderComponent(L201_TurtleWoods_MousePit_CameraTriggerData component, NSTComponent manager)
+        {
+            RenderObjectReference("Enable camera:", component._Camera_Base_0x28, typeof(CCameraBase), manager);
+            RenderObjectReference("Disable camera:", component._Camera_Base_0x38, typeof(CCameraBase), manager);
+            RenderFloat("Transition speed in:", ref component._Float_0x30, component, manager);
+            RenderFloat("Transition speed out:", ref component._Float_0x40, component, manager);
+        }
+
+#endregion
 #region Other
         
         private static void RenderComponent(common_Spawner_TemplateData component, NSTComponent manager)
         {
-            RenderObjectReference("Template:", component._EntityToSpawn.Reference, typeof(igEntity), manager.Explorer, (value) => 
-            {
-                component._EntityToSpawn.Reference = value;
-                manager.SetUpdated(true);
-            }, 
-            defaultOpen: true);
+            RenderObjectReference("Template:", component._EntityToSpawn, typeof(igEntity), manager, defaultOpen: true);
         }
 
         private static void RenderComponent(Multiple_Spawner_Template_c component, NSTComponent manager)
@@ -760,6 +760,71 @@ namespace NST
                 component._Entity.Reference = value;
                 manager.SetUpdated(true);
             });
+        }
+
+        private static void RenderComponent(common_Generic_Path_Platform_SwapGameModeData component, NSTComponent manager)
+        {
+            RenderEnum("Action:", ref component._NewEnum16_id_9et3dr1r, component, manager);
+            RenderEnum("Game Mode:", ref component._E_World_Gameplay_Mode, component, manager);
+        }
+
+        private static void RenderComponent(common_Path_Platform_Mover component, NSTComponent manager)
+        {
+            RenderObjectReference("Spline Camera 1:", component._common_Gem_Platform_SplineDatas002, typeof(CCamera), manager);
+            RenderObjectReference("Spline Camera 2:", component._common_Gem_Platform_SplineDatas001, typeof(CCamera), manager);
+            RenderFloat("Initial Delay: ", ref component._common_Gem_Platform_SplineDatas007, component, manager);
+
+            if (component._common_Gem_Platform_SplineDatas006.Reference != null)
+            {
+                IgzFile? igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile);
+                if (igz != null)
+                {
+                    if (igz.FindObject(component._common_Gem_Platform_SplineDatas006.Reference) is CSplineVelocityMover mover)
+                    {
+                        if (mover is CSplineConstantVelocityMover constantMover)
+                        {
+                            RenderFloat("Velocity:", ref constantMover._velocity, constantMover, manager);
+                        }
+                        else if (mover is CSplineTimeBasedMover timeMover)
+                        {
+                            RenderFloat("Time:", ref timeMover._time, timeMover, manager);
+                            RenderFloat("Ease-in time:", ref timeMover._easeInTime, timeMover, manager);
+                            RenderFloat("Ease-in velocity:", ref timeMover._easeInVelocityScale, timeMover, manager);
+                            RenderFloat("Ease-out time:", ref timeMover._easeOutTime, timeMover, manager);
+                            RenderFloat("Ease-out velocity:", ref timeMover._easeOutVelocityScale, timeMover, manager);
+                        }
+                    }
+                    else ImGui.TextDisabled("Could not find the referenced object.");
+                }
+                else ImGui.TextDisabled("An error occured.");
+            }
+
+            RenderCheckbox("Lock Player:", ref component._Bool_0x58, component, manager);
+            RenderCheckbox("Is Entrance:", ref component._Bool_0x5a, component, manager);
+            RenderCheckbox("Is Arrival:", ref component._Bool_0x59, component, manager);
+            
+            RenderObjectReference("Proxy Camera:", component._CameraProxy, typeof(CEntity), manager);
+            RenderObjectReference("Proxy Spline:", component._Spline, typeof(CEntity), manager);
+            RenderEnum("Type:", ref component._NewEnum4_id_6yu8wy7t, component, manager);
+
+            RenderCheckbox("Bool_0x74", ref component._Bool_0x74, component, manager);
+            RenderFloat("Float_0x78", ref component._Float_0x78, component, manager);
+            RenderFloat("Float_0x7c", ref component._Float_0x7c, component, manager);
+
+            RenderCheckbox("Bool_0x98", ref component._Bool_0x98, component, manager);
+
+            RenderCheckbox("Bool_0xb8", ref component._Bool_0xb8, component, manager);
+            RenderCheckbox("Bool_0xb9", ref component._Bool_0xb9, component, manager);
+
+            RenderCheckbox("Bool_0xd0", ref component._Bool_0xd0, component, manager);
+            RenderCheckbox("Bool_0xd1", ref component._Bool_0xd1, component, manager);
+            RenderCheckbox("Bool_0xd2", ref component._Bool_0xd2, component, manager);
+
+            RenderObjectReference("Entity:", component._Entity, typeof(igEntity), manager);
+            // RenderObjectReference("Component Data:", component._Component_Data, typeof(igEntity), manager);
+
+            RenderCheckbox("Bool_0xf0", ref component._Bool_0xf0, component, manager);
+            RenderFloat("Float_0xf4", ref component._Float_0xf4, component, manager);
         }
 
         private static int _audioPlayerStatus = 0;
@@ -1072,6 +1137,25 @@ namespace NST
 
         public static NSTObject? RenderObjectReference(
             string label,
+            igHandleMetaField metaField, 
+            Type type,
+            NSTComponent manager,
+            string? fileNamespace = null,
+            bool skipIfNotFound = false,
+            bool defaultOpen = false,
+            bool readOnly = false
+        )
+        {
+            return RenderObjectReference(label, metaField.Reference, type, manager.Explorer, value =>
+            {
+                metaField.Reference = value;
+                manager.SetUpdated(true);
+                
+            }, fileNamespace, skipIfNotFound, defaultOpen, readOnly);
+        }
+
+        public static NSTObject? RenderObjectReference(
+            string label,
             NamedReference? reference, 
             Type type,
             LevelExplorer explorer,
@@ -1094,7 +1178,7 @@ namespace NST
                 
                 // Dropdown
                 var objects = explorer.InstanceManager.AllObjects.Where(e => (fileNamespace == null || e.FileNamespace == fileNamespace) && e.GetObject().GetType().IsAssignableTo(type)).ToList();
-                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.Select(e => e.GetObject().ObjectName!).ToList(), false, (index) =>
+                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.Select(e => e.GetObject().ObjectName!).ToList(), false, (index, _) =>
                 {
                     NSTObject obj = objects[index];
                     callback(obj.ToReference());

@@ -182,6 +182,29 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.BeginMenu("New platform..."))
+                {
+                    if (ImGui.MenuItem("Floating Gem Platform")) AddPlatform("Gem_Platform_Clear", explorer);
+                    // if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Platform_Spline_Clear_Spline_gen", explorer);
+                    if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Path_Platform_Start_Clear", explorer);
+                    // if (ImGui.MenuItem("Moving Gem Platform End")) AddPlatform("Gem_Path_Platform_End_Clear", explorer);
+                    if (ImGui.MenuItem("Fade In/Out Teleporter")) AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
+                    {
+                        if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
+                        {
+                            end.Object._parentSpacePosition = new igVec3fMetaField(start.Position.X + 600, start.Position.Y, start.Position.Z - 500);
+                            explorer.SelectionManager.UpdateSelection([end], false);
+                        }
+                    });
+                    ImGui.EndMenu();
+                }
+
+                if (ImGui.BeginMenu("New vehicle..."))
+                {
+                    if (ImGui.MenuItem("JetBoard")) AddGeneric("L203_HangEight", "L203_HangEight", "Spawner_RideBoard", "Vehicles", explorer);
+                    ImGui.EndMenu();
+                }
+
                 if (ImGui.BeginMenu("New bonus round..."))
                 {
                     if (ImGui.BeginMenu("C1"))
@@ -591,6 +614,31 @@ namespace NST
                     ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the bonus round\n\nLog file: {logPath}");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private static void AddPlatform(string type, LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+
+            CGameEntity platform = templateIgz!.FindObject<CGameEntity>(type)!;
+
+            explorer.GetOrCreateIgzFile("Platforms", out IgArchiveFile platformFile, out IgzFile platformIgz);
+
+            explorer.Clone([platform], templateArchive, templateIgz, platformFile, platformIgz);
+        }
+
+        private static void AddGeneric(string archiveName, string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile(fileName, FileSearchType.Name, FileSearchParams.MapIgz)!.ToIgzFile();
+            
+            igObject obj = sourceIgz.FindObject<igObject>(objectName)!;
+
+            explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile platformFile, out IgzFile platformIgz);
+
+            var clones = explorer.Clone([obj], sourceArchive, sourceIgz, platformFile, platformIgz, addToSelection: false, initializeObjects: true);
+
+            callback?.Invoke(clones);
         }
 
         private static readonly List<string> _bonusFileNames = [ 

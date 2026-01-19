@@ -167,35 +167,71 @@ namespace NST
             Queue<IgArchiveFile> files = [];
             List<IgArchiveFile> added = [];
             HashSet<string> visited = [];
+            HashSet<string> behaviors = [];
 
             foreach (IgArchiveFile f in destinationArchive.GetFiles())
             {
                 visited.Add(f.GetPath());
             }
 
+            var AddSourceFile = (IgArchiveFile file, string name) =>
+            {
+                if (!fileNamespaces.TryGetValue(name, out List<IgArchiveFile>? value))
+                {
+                    value = [];
+                    fileNamespaces[name] = value;
+                }
+                value.Add(file);
+            };
+
             foreach (IgArchiveFile f in sourceArchive.GetFiles())
             {
-                string name = f.GetName(false).ToLowerInvariant();
-
-                if (!fileNamespaces.ContainsKey(name)) fileNamespaces[name] = [];
-                fileNamespaces[name].Add(f);
+                string originalName = f.GetName(false).ToLowerInvariant();
+                string name = originalName;
 
                 if (name.StartsWith("shared")) name = name.Substring(6);
-                else if (name.EndsWith("_character")) name = name.Substring(0, name.Length - 10);
+                if (name.EndsWith("_character")) name = name.Substring(0, name.Length - 10);
                 else if (name.EndsWith("_behavior")) name = name.Substring(0, name.Length - 9);
-                else continue;
+                else if (name.EndsWith("_script")) name = name.Substring(0, name.Length - 7);
 
-                if (!fileNamespaces.ContainsKey(name)) fileNamespaces[name] = [];
-                fileNamespaces[name].Add(f);
+                AddSourceFile(f, originalName);
+
+                if (name != originalName)
+                {
+                    AddSourceFile(f, name);
+                    behaviors.Add(f.GetPath().Replace(f.GetName(), ""));
+                }
             }
 
-            foreach (string name in dependencies)
+            var AddDependency = (string name) =>
             {
-                if (!fileNamespaces.ContainsKey(name)) continue;
+                if (!fileNamespaces.TryGetValue(name, out var outFiles)) return;
 
                 foreach (IgArchiveFile dependency in fileNamespaces[name])
                 {
                     files.Enqueue(dependency);
+
+                    string? dir = dependency.GetPath().Replace(dependency.GetName(), "");
+
+                    if (behaviors.Contains(dir))
+                    {
+                        foreach (IgArchiveFile other in sourceArchive.GetFiles().Where(f => f.GetPath().StartsWith(dir) && !files.Contains(f)))
+                        {
+                            files.Enqueue(other);
+                        }
+                    }
+                }
+            };
+
+            foreach (string originalName in dependencies)
+            {
+                string name = originalName.Replace("_", "");
+
+                AddDependency(originalName);
+
+                if (name != originalName)
+                {
+                    AddDependency(name);
                 }
             }
 

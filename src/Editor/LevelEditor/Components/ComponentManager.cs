@@ -421,9 +421,13 @@ namespace NST
                         
                         explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, components[0].Object, true);
 
-                        if (_components[0].Object is CModelComponentData)
+                        if (_components[0].Object is CModelComponentData modelComponent)
                         {
-                            Entity.RefreshModel(explorer);
+                            NSTModel? model = LevelExplorer.CachedModels.Values.FirstOrDefault(m => m.OriginalPath == modelComponent._fileName);
+                            if (model != null)
+                            {
+                                Entity.RefreshModel(explorer, model);
+                            }
                         }
                     }
                 }

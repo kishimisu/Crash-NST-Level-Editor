@@ -24,6 +24,7 @@ namespace NST
         private bool _focused = false;
         public bool Focused() => _focused || _velocity.LengthSq() > 0.01f;
         public void SetFocus(bool focused) => _focused = focused;
+        public void ResetMousePos() => _firstMouse = true;
 
         public FirstPersonControls(IControlsContainer control, THREE.Camera camera)
         {
