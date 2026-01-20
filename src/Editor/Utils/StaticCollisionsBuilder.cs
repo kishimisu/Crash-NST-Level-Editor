@@ -89,9 +89,11 @@ namespace NST
 
             foreach (CollisionUpdateInfos updateInfos in updatedCollisionData)
             {
+                HashedReference reference = updateInfos.GetReference();
+
                 if (updateInfos.removed)
                 {
-                    if (updateInfos.entity.CollisionShapeIndex == -1 || !existing.Contains(updateInfos.reference))
+                    if (updateInfos.entity.CollisionShapeIndex == -1 || !existing.Contains(reference))
                     {
                         continue;
                     }
@@ -113,21 +115,21 @@ namespace NST
 
                     hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, updateInfos.shapeInstance);
 
-                    u64 key = ((u64)updateInfos.reference.fileHash << 32) | (u64)updateInfos.objectHash;
+                    u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
                     shapes.Add(shape, key);
                     rebuildHashMap = true;
 
                     Console.WriteLine($"Added new collision shape for {updateInfos.entity.Object.ObjectName}{(updateInfos.entity.ParentPrefabInstance != null ? $", prefab hash: {updateInfos.entity.CollisionPrefabHash}" : "")}, key: {key}");
                 }
-                else if (!existing.Contains(updateInfos.reference))
+                else if (!existing.Contains(reference))
                 {
                     // Add new instance of existing shape
 
                     hknpShapeInstance original = shapesById[updateInfos.entity.CollisionShapeIndex];
                     hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, original);
 
-                    u64 key = ((u64)updateInfos.reference.fileHash << 32) | (u64)updateInfos.reference.objectHash;
+                    u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
                     shapes.Add(shape, key);
                     rebuildHashMap = true;

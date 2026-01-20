@@ -12,8 +12,19 @@ namespace NST
         public hknpShapeInstance? shapeInstance = null; // Full shape instance if not in the same archive
         public bool removed = false; // Whether the entity has been removed
 
-        public HashedReference reference => new HashedReference(NamespaceUtils.ComputeHash(entity.FileNamespace), objectHash);
-        public uint objectHash => entity.CollisionPrefabHash != 0 ? entity.CollisionPrefabHash : reference.objectHash;
+        /// <summary>
+        /// Get the hashed reference corresponding to the entity
+        /// </summary>
+        public HashedReference GetReference()
+        {
+            uint namespaceHash = NamespaceUtils.ComputeHash(entity.FileNamespace);
+
+            uint objectHash = entity.CollisionPrefabHash != 0 
+                ? entity.CollisionPrefabHash 
+                : NamespaceUtils.ComputeHash(entity.Object.ObjectName!);
+
+            return new HashedReference(namespaceHash, objectHash);
+        }
     }
 
     /// <summary>
