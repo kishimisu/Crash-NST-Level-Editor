@@ -237,7 +237,7 @@ namespace NST
                 BitRate = 320,
                 OutputSampleRate = 48000,
                 Mode = channels == 1 ? MPEGMode.Mono : MPEGMode.Stereo,
-                VBR = VBRMode.CBR,
+                VBR = VBRMode.VBR,
                 WriteVBRTag = false
             };
 
