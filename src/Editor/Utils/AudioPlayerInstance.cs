@@ -234,7 +234,7 @@ namespace NST
 
             var mp3Config = new LameConfig
             {
-                BitRate = 128,
+                BitRate = 320,
                 OutputSampleRate = 48000,
                 Mode = channels == 1 ? MPEGMode.Mono : MPEGMode.Stereo,
                 VBR = VBRMode.ABR,
