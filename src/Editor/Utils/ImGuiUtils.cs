@@ -10,8 +10,7 @@ namespace NST
     {
         public static uint id = 0;
 
-        private static string comboLabel = "";
-        private static string comboSearch = "";
+        private static Dictionary<string, string> _comboSearches = [];
 
         public static uint Uuid()
         {
@@ -135,12 +134,11 @@ namespace NST
             return nodePosY >= scrollTop && nodePosY <= scrollBottom;
         }
 
-        public static void RenderComboWithSearch(string label, string preview, List<string> options, bool fullWidth, Action<int, string> callback)
+        public static void RenderComboWithSearch(string label, string preview, List<string> options, bool fullWidth, Action<int, string> callback, string? firstOption = null)
         {
-            if (label != comboLabel)
+            if (!_comboSearches.TryGetValue(label, out string? comboSearch))
             {
                 comboSearch = "";
-                comboLabel = label;
             }
 
             if (fullWidth)
@@ -151,9 +149,18 @@ namespace NST
             if (ImGui.BeginCombo(label, preview))
             {
                 ImGui.SetNextItemWidth(-1);
-                ImGui.InputTextWithHint("##input" + label, "Search...", ref comboSearch, 256);
+
+                if (ImGui.InputTextWithHint(label, "Search...", ref comboSearch, 256))
+                {
+                    _comboSearches[label] = comboSearch;
+                }
 
                 string searchLower = comboSearch.ToLower();
+
+                if (firstOption != null && ImGui.Selectable(firstOption))
+                {
+                    callback(-1, firstOption);
+                }
 
                 for (int i = 0; i < options.Count; i++)
                 {
@@ -163,6 +170,7 @@ namespace NST
 
                     if (ImGui.Selectable(name))
                     {
+                        _comboSearches.Remove(label);
                         callback(i, name);
                     }
                 }

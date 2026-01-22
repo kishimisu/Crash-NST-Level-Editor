@@ -549,7 +549,7 @@ namespace NST
 
         private void OnKeyDown(object? sender, THREE.Silk.KeyboardKeyEventArgs e)
         {
-            if (e.Key != Silk.NET.Input.Key.ControlLeft) return;
+            if (e.Key != Silk.NET.Input.Key.AltLeft) return;
             if (_selection.Count == 0 || _selection[0] is not NSTEntity entity) return;
             if (entity.Model == null || entity.Object3D == null || entity.Object.ObjectName?.StartsWith("Crate_") != true) return;
 

@@ -470,9 +470,9 @@ namespace NST
             }
         }
         
-        public void RefreshModel(NSTEntity entity, NSTModel? model = null)
+        public void RefreshModel(NSTEntity entity, NSTModel? model = null, bool findMissingModel = true)
         {
-            if (model == null)
+            if (model == null && findMissingModel)
             {
                 IgzFile? igz = _explorer.FileManager.GetIgz(entity.ArchiveFile);
 
@@ -484,15 +484,15 @@ namespace NST
 
                 string? modelName = entity.Object.GetModelName(igz, _explorer);
 
-            if (modelName != null)
-            {
-                modelName = Path.GetFileNameWithoutExtension(modelName).ToLower();
-
-                if (!LevelExplorer.CachedModels.TryGetValue(modelName, out model))
+                if (modelName != null)
                 {
-                    Console.WriteLine($"Warning: Model not found ({modelName})");
+                    modelName = Path.GetFileNameWithoutExtension(modelName).ToLower();
+
+                    if (!LevelExplorer.CachedModels.TryGetValue(modelName, out model))
+                    {
+                        Console.WriteLine($"Warning: Model not found ({modelName})");
+                    }
                 }
-            }
             }
 
             Unregister(entity);

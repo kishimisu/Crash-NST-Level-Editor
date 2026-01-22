@@ -65,7 +65,7 @@ namespace NST
             { "DynamicClipEntity", true },
             { "Camera", false },
             { "CameraBox", false },
-            { "CScriptTriggerEntity", false },
+            { "ScriptTriggerEntity", false },
             { "Templates", false },
             { "Clouds", false },
             { "Shadows", false },
@@ -778,8 +778,9 @@ namespace NST
                 else if (_updateCachedModels)
                 {
                     CachedModels = _cachedModels.ToDictionary();
-                    CachedModelNames = _cachedModels.Keys.ToList();
+                    CachedModelNames = _cachedModels.Values.Select(e => e.Name).ToList();
                     CachedModelNames.Sort();
+                    _updateCachedModels = false;
                 }
 
                 ArchiveRenderer?.RenderMenuBar(true);
@@ -1062,7 +1063,7 @@ namespace NST
                 ImGui.BulletText("Left click: select object");
                 ImGui.BulletText("(Click multiple times focus child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
-                ImGui.BulletText("Ctrl: align/snap selected crates");
+                ImGui.BulletText("Left Alt: align/snap selected crates");
                 ImGuiUtils.ColoredSeparator("Objects", controlsColor);
                 ImGui.BulletText("Right click: add objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
@@ -1076,8 +1077,8 @@ namespace NST
                 ImGui.BulletText("Ctrl + T: scale mode");
                 ImGuiUtils.ColoredSeparator("Save & launch", controlsColor);
                 ImGui.BulletText("Ctrl + S: save level");
-                ImGui.BulletText("Ctrl + Shift + S: save level as...");
-                ImGui.BulletText("Ctrl + L: backup, save and launch");
+                ImGui.BulletText("Ctrl + L: backup + save + launch");
+                ImGui.BulletText("Ctrl+Shift + S: save level as...");
                 ImGui.Spacing();
             }
         }

@@ -375,9 +375,9 @@ namespace NST
             explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, clone, true);
         }
 
-        public void RefreshModel(LevelExplorer explorer, NSTModel model)
+        public void RefreshModel(LevelExplorer explorer, NSTModel? model, bool findMissingModel = true)
         {
-            if (explorer.Archive.FindFile(model.FilePath, FileSearchType.Path) == null)
+            if (model != null && explorer.Archive.FindFile(model.FilePath, FileSearchType.Path) == null)
             {
                 Console.WriteLine("Model not found in current explorer: " + model.Name);
                 
@@ -395,7 +395,7 @@ namespace NST
                 }
             }
 
-            explorer.InstanceManager.RefreshModel(this, model);
+            explorer.InstanceManager.RefreshModel(this, model, findMissingModel);
         }
 
         public override void Render(LevelExplorer explorer)
@@ -494,36 +494,41 @@ namespace NST
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(-1);
 
-                string displayName = Model?.Name ?? Path.GetFileNameWithoutExtension(entityData._modelName ?? entityData._skinName!);
+                string displayName = Model?.Name ?? "(null)";
 
-                ImGuiUtils.RenderComboWithSearch("##model", displayName, LevelExplorer.CachedModelNames, true, (_, name) =>
+                ImGuiUtils.RenderComboWithSearch("##entityDataModel" + Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, firstOption: "(null)", callback: (i, name) =>
                 {
                     MakeUnique(explorer);
 
-                    NSTModel model = LevelExplorer.CachedModels[name];
-                    
+                    NSTModel? model = null;
+                    string modelPath = "";
+
+                    if (i >= 0)
+                    {
+                        model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
+                        modelPath = model.OriginalPath;
+                    }
+
                     if (entityData._modelName != null)
                     {
-                        entityData._modelName = model.OriginalPath;
+                        entityData._modelName = modelPath;
                     }
                     else
                     {
-                        entityData._skinName = model.OriginalPath;
+                        entityData._skinName = modelPath;
                     }
 
                     explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
 
-                    if (IsSpawned)
-                    {
-                        RefreshModel(explorer, model);
-                    }
-                    else
+                    RefreshModel(explorer, model, i >= 0);
+
+                    if (!IsSpawned)
                     {
                         foreach (NSTEntity p in Parents.OfType<NSTEntity>())
                         {
                             if (p.Object.TryGetComponent(out common_Spawner_TemplateData? s) && s._EntityToSpawn.Reference?.objectName == Object.ObjectName)
                             {
-                                p.RefreshModel(explorer, model);
+                                p.RefreshModel(explorer, model, i >= 0);
                             }
                         }
                     }

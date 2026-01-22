@@ -146,11 +146,19 @@ namespace NST
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
 
-            string displayName = Path.GetFileNameWithoutExtension(component._fileName) ?? "";
+            string displayName = string.IsNullOrEmpty(component._fileName) ? "(null)" : Path.GetFileNameWithoutExtension(component._fileName);
 
-            ImGuiUtils.RenderComboWithSearch("##model", displayName, LevelExplorer.CachedModelNames, true, (index, name) =>
+            ImGuiUtils.RenderComboWithSearch("##model" + manager.Entity.Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, firstOption: "(null)", callback: (index, name) =>
             {
-                NSTModel model = LevelExplorer.CachedModels[name];
+                if (index < 0)
+                {
+                    component._fileName = "";
+                    manager.SetUpdated();
+                    manager.Entity.RefreshModel(manager.Explorer, null, false);
+                    return;
+                }
+
+                NSTModel model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
 
                 component._fileName = model.OriginalPath;
                 
@@ -163,6 +171,14 @@ namespace NST
         {
             bool hasCollision = manager.Entity.CollisionShapeIndex != -1;
             bool enabled = hasCollision && !component._flagsBitfield._disableCollision;
+
+            if (hasCollision && manager.Entity.IsPrefabChild)
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, 0xff00bbff);
+                ImGui.TextWrapped("This entity is part of a prefab, collisions won't be kept if you make copies of it.");
+                ImGui.PopStyleColor();
+                ImGui.Spacing();
+            }
 
             if (!hasCollision) ImGui.BeginDisabled();
 
@@ -188,9 +204,21 @@ namespace NST
                 return;
             }
 
+            if (manager.Entity.Children.Any(c => c is NSTEntity e && e.CollisionShapeIndex != -1))
+            {
+                ImGui.PushStyleColor(ImGuiCol.Text, 0xff00bbff);
+                ImGui.TextWrapped("(!) This prefab contains children with collisions, which isn't fully supported yet.");
+                ImGui.TextWrapped("- You can move this prefab around and keep collisions.");
+                ImGui.TextWrapped("- You can copy this prefab to a different level *once* and keep collisions.");
+                ImGui.TextWrapped("- You *cannot* keep collisions if you copy this prefab to the same level.");
+                ImGui.PopStyleColor();
+                ImGui.Separator();
+                ImGui.Spacing();
+            }
+
             ImGui.Text("Prefab children:");
 
-            ImGui.TextDisabled("(?)");
+            ImGui.TextDisabled("(?) Infos");
             if (ImGui.BeginItemTooltip())
             {
                 ImGui.Text("Editing prefabs using the GUI is currently not supported.\n");

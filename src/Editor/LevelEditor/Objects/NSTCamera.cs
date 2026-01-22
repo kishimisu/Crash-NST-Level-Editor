@@ -49,6 +49,11 @@ namespace NST
 
             group.Traverse(e => e.UserData["entity"] = this);
 
+            if (Object3D != null)
+            {
+                Object3D.Parent?.Remove(Object3D);
+            }
+
             Object3D = group;
 
             return group;
@@ -127,6 +132,11 @@ namespace NST
             }
 
             group.Traverse(e => e.UserData["entity"] = this);
+
+            if (Object3D != null)
+            {
+                Object3D.Parent?.Remove(Object3D);
+            }
 
             Object3D = group;
 

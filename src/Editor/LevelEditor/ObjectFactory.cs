@@ -109,6 +109,7 @@ namespace NST
         };
 
         private static string _floatMode = "None";
+        private static string _gemColor = "Clear";
         private static bool _outlinedCrate = false;
         private static bool _bonusCrate = false;
 
@@ -139,6 +140,8 @@ namespace NST
                     {
                         if (ImGui.MenuItem(displayName)) AddCrate(objectName, explorer);
                     }
+
+                    if (ImGui.MenuItem("Big TNT")) AddBigTNTCrate(explorer);
 
                     ImGui.Separator();
 
@@ -184,10 +187,23 @@ namespace NST
 
                 if (ImGui.BeginMenu("New platform..."))
                 {
-                    if (ImGui.MenuItem("Floating Gem Platform")) AddPlatform("Gem_Platform_Clear", explorer);
-                    // if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Platform_Spline_Clear_Spline_gen", explorer);
-                    if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Path_Platform_Start_Clear", explorer);
-                    // if (ImGui.MenuItem("Moving Gem Platform End")) AddPlatform("Gem_Path_Platform_End_Clear", explorer);
+                    if (ImGui.BeginMenu("Gem Platform..."))
+                    {
+                        ImGuiUtils.Prefix("Gem Color:");
+                        if (ImGui.BeginCombo("##GemColor", _gemColor))
+                        {
+                            foreach (string col in _gemNames)
+                            {
+                                if (ImGui.MenuItem(col)) _gemColor = col;
+                            }
+                            ImGui.EndCombo();
+                        }
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Floating Gem Platform")) AddPlatform("Gem_Platform_" + _gemColor, explorer);
+                        if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Path_Platform_Start_" + _gemColor, explorer);
+                        ImGui.EndMenu();
+                    }
+
                     if (ImGui.MenuItem("Fade In/Out Teleporter")) AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
                     {
                         if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
@@ -290,6 +306,7 @@ namespace NST
                     if (ImGui.MenuItem("Relative camera")) AddRelativeCamera(explorer);
                     if (ImGui.MenuItem("Spline camera")) AddSplineCamera(explorer);
                     if (ImGui.MenuItem("Stack camera")) AddStackCamera(explorer);
+                    if (ImGui.MenuItem("Camera Box")) AddCameraBox(explorer);
                     ImGui.EndMenu();
                 }
 
@@ -408,6 +425,32 @@ namespace NST
                 templateIgz = templateFile?.ToIgzFile();
             }
         }
+
+        private static void AddBigTNTCrate(LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+
+            CEntity spawner = templateIgz!.FindObject<CEntity>("Crate_BigTNT")!;
+
+            IgArchive ripperRooArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "B102_RipperRoo.pak"));
+            IgArchiveFile ripperRooFile = ripperRooArchive.FindFile("B102_RipperRoo.igz")!;
+            IgzFile ripperRooIgz = ripperRooFile.ToIgzFile();
+
+            CPhysicalEntity template = ripperRooIgz.FindObject<CPhysicalEntity>("BossRipperRoo_BigTNT_Character_gen")!;
+
+            explorer.GetOrCreateIgzFile("Crates", out IgArchiveFile crateFile, out IgzFile crateIgz);
+
+            var spawnerClone = explorer.Clone([spawner], templateArchive, templateIgz, crateFile, crateIgz).FirstOrDefault();
+            var templateClone = explorer.Clone([template], ripperRooArchive, ripperRooIgz, crateFile, crateIgz, addToSelection: null).FirstOrDefault();
+
+            if (spawnerClone is NSTEntity spawnerEntity && templateClone is NSTEntity templateEntity)
+            {
+                templateEntity.Object.RemoveComponent("archetype_Scripts.Graph.BossRipperRoo_CrateHandlerData");
+
+                spawnerEntity.Object.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference = templateEntity.ToReference();
+                spawnerEntity.RefreshModel(explorer, templateEntity.Model!);
+            }
+        }
     
         private static void AddCollectible(string name, LevelExplorer explorer)
         {
@@ -477,6 +520,27 @@ namespace NST
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone([stackCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
+        }
+
+        private static void AddCameraBox(LevelExplorer explorer)
+        {
+            CCameraBox cameraBox = new CCameraBox() { ObjectName = "CameraBox" };
+
+            cameraBox._rotation = new igVec3fMetaField(0, 0, 90);
+            cameraBox._min = new igVec3fMetaField(-200, -500, 0);
+            cameraBox._max = new igVec3fMetaField(200, 500, 1200);
+
+            cameraBox._cameraBlends = new CCameraBlendList();
+
+            cameraBox._cameraModel._unknown_0xa0 = new igVec3fMetaField(4000, 8000, 16000);
+            cameraBox._cameraModel._unknown_0xac = new igVec3fMetaField(24000, 500, 1);
+            cameraBox._cameraModel._unknown_0xb8 = new igVec3fMetaField(1000, 1000, 1500);
+
+            cameraBox.MemoryPool.alignment = 16;
+            cameraBox._cameraBlends.MemoryPool.alignment = 16;
+
+            explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
+            explorer.Clone([cameraBox], null, null, cameraFile, cameraIgz, 800);
         }
 
         private static void AddCDynamicClipEntity(LevelExplorer explorer)
