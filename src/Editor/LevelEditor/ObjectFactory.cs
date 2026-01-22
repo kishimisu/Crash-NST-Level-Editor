@@ -199,8 +199,8 @@ namespace NST
                             ImGui.EndCombo();
                         }
                         ImGui.Separator();
-                        if (ImGui.MenuItem("Floating Gem Platform")) AddPlatform("Gem_Platform_" + _gemColor, explorer);
-                        if (ImGui.MenuItem("Moving Gem Platform")) AddPlatform("Gem_Path_Platform_Start_" + _gemColor, explorer);
+                        if (ImGui.MenuItem("Floating Gem Platform")) AddGenericTemplate("Gem_Platform_" + _gemColor, "Platforms", explorer);
+                        if (ImGui.MenuItem("Moving Gem Platform")) AddGenericTemplate("Gem_Path_Platform_Start_" + _gemColor, "Platforms", explorer);
                         ImGui.EndMenu();
                     }
 
@@ -305,15 +305,18 @@ namespace NST
                 {
                     if (ImGui.MenuItem("Relative camera")) AddRelativeCamera(explorer);
                     if (ImGui.MenuItem("Spline camera")) AddSplineCamera(explorer);
-                    if (ImGui.MenuItem("Stack camera")) AddStackCamera(explorer);
+                    if (ImGui.MenuItem("Free camera")) AddStackCamera(explorer);
                     if (ImGui.MenuItem("Camera Box")) AddCameraBox(explorer);
                     ImGui.EndMenu();
                 }
 
                 if (ImGui.BeginMenu("Other..."))
                 {
-                    if (ImGui.MenuItem("New CDynamicClipEntity")) AddCDynamicClipEntity(explorer);
+                    if (ImGui.MenuItem("New DynamicClipEntity")) AddCDynamicClipEntity(explorer);
                     if (ImGui.MenuItem("New Death Trigger")) AddDeathTrigger(explorer);
+                    ImGui.Separator();
+                    if (ImGui.MenuItem("New Boost Pad")) AddGenericTemplate("Chase_BoostPad", "Platforms", explorer);
+                    if (ImGui.MenuItem("New Bounce Mine")) AddGenericTemplate("Chase_BounceMine", "Hazards", explorer);
                     ImGui.EndMenu();
                 }
 
@@ -329,6 +332,7 @@ namespace NST
                 templateFile = templateArchive.FindFile("Crash_Crates.igz")!;
                 templateIgz = templateFile.ToIgzFile();
                 templateIgz.FindObject<CEntityHandleList>("Crate_Switch_entityData_componentData_CommonCrateSwitchIron_OulinedCrates")!._data.Clear();
+                templateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Checkpoint";
             }
         }
 
@@ -502,12 +506,12 @@ namespace NST
             }
 
             splineCamera.ObjectName = "Spline_Camera";
-            splineEntity.ObjectName = "Spline_Camera_Entity";
+            splineEntity.ObjectName = "Spline_Camera_Path";
             splineCamera._splineEntity.Reference!.objectName = splineEntity.ObjectName;
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
-            explorer.Clone([splineCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
+            explorer.Clone([splineCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz, initializeObjects: true);
         }
 
         private static void AddStackCamera(LevelExplorer explorer)
@@ -516,6 +520,7 @@ namespace NST
             IgzFile sourceIgz = sourceArchive.FindFile("L305_MakinWaves.igz")!.ToIgzFile();
 
             CStackCamera stackCamera = sourceIgz.FindObject<CStackCamera>()!;
+            stackCamera.ObjectName = "StackCamera";
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
@@ -680,17 +685,6 @@ namespace NST
             }, TaskContinuationOptions.OnlyOnFaulted);
         }
 
-        private static void AddPlatform(string type, LevelExplorer explorer)
-        {
-            SetupTemplateArchive();
-
-            CGameEntity platform = templateIgz!.FindObject<CGameEntity>(type)!;
-
-            explorer.GetOrCreateIgzFile("Platforms", out IgArchiveFile platformFile, out IgzFile platformIgz);
-
-            explorer.Clone([platform], templateArchive, templateIgz, platformFile, platformIgz);
-        }
-
         private static void AddGeneric(string archiveName, string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
         {
             IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
@@ -698,11 +692,22 @@ namespace NST
             
             igObject obj = sourceIgz.FindObject<igObject>(objectName)!;
 
-            explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile platformFile, out IgzFile platformIgz);
+            explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile dstFile, out IgzFile dstIgz);
 
-            var clones = explorer.Clone([obj], sourceArchive, sourceIgz, platformFile, platformIgz, addToSelection: false, initializeObjects: true);
+            var clones = explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: false, initializeObjects: true);
 
             callback?.Invoke(clones);
+        }
+
+        private static void AddGenericTemplate(string name, string identifier, LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+            
+            igObject obj = templateIgz!.FindObject<igObject>(name)!;
+
+            explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile dstFile, out IgzFile dstIgz);
+
+            explorer.Clone([obj], templateArchive, templateIgz, dstFile, dstIgz);
         }
 
         private static readonly List<string> _bonusFileNames = [ 

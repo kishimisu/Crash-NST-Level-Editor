@@ -63,7 +63,7 @@ namespace NST
             { "All Entities", true },
             { "Splines", true },
             { "DynamicClipEntity", true },
-            { "Camera", false },
+            { "Camera", true },
             { "CameraBox", false },
             { "ScriptTriggerEntity", false },
             { "Templates", false },
@@ -486,17 +486,23 @@ namespace NST
                 checkpointModel.Meshes.RemoveAt(0);
             }
 
-            // (Step 7b) Fix TNT & Nitro colors
-            NamedReference tntMatRef = new NamedReference("Crash_Crates_materials,TNTCrate,0000100", "GrayWood");
-            NamedReference nitroMatRef = new NamedReference("Crash_Crates_materials,Crash_Crate_Nitro,0000210", "GrayWood01E");
+            // (Step 7b) Fix missing crate colors
+            Dictionary<NamedReference, THREE.Vector4> _colorOverrides = new()
+            {
+                { new NamedReference("Crash_Crates_materials,TNTCrate,0000100", "GrayWood"), new THREE.Vector4(.8f, .2f, .1f, 1) },
+                { new NamedReference("Crash_Crates_materials,Crash_Crate_Nitro,0000210", "GrayWood01E"), new THREE.Vector4(.15f, .9f, .15f, 1) },
+                { new NamedReference("Crash_Crates_materials,BossRipperRoo_BigTNT,0004008", "newwood"), new THREE.Vector4(.8f, .2f, .1f, 1) },
+                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerOne,00c0100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
+                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerTwo,0240100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
+                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerThree,0140100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
+            };
 
-            if (materials.TryGetValue(tntMatRef, out NSTMaterial? tntMat))
+            foreach ((NamedReference matRef, THREE.Vector4 colorOverride) in _colorOverrides)
             {
-                tntMat.color = new THREE.Vector4(.8f, .2f, .1f, 1);
-            }
-            if (materials.TryGetValue(nitroMatRef, out NSTMaterial? nitroMat))
-            {
-                nitroMat.color = new THREE.Vector4(.1f, .8f, .2f, 1);
+                if (materials.TryGetValue(matRef, out NSTMaterial? mat))
+                {
+                    mat.color = colorOverride;
+                }
             }
         }
 
@@ -1278,6 +1284,7 @@ namespace NST
             Dictionary<NSTEntity, string?> newEntities = [];
             HashSet<(string, string)> modelNames = [];
             List<NSTObject> newObjects = [];
+            List<NSTObject> allObjects = [];
 
             clones ??= [];
             
@@ -1301,12 +1308,16 @@ namespace NST
                 // Add new objects
                 if (clone is CCameraBox cameraBox)
                 {
-                    newObjects.Add(new NSTCameraBox(cameraBox, destFile));
+                    var cam = new NSTCameraBox(cameraBox, destFile);
+                    newObjects.Add(cam);
+                    allObjects.Add(cam);
                     continue;
                 }
                 if (clone is CCamera camera)
                 {
-                    newObjects.Add(new NSTCamera(camera, destFile));
+                    var cam = new NSTCamera(camera, destFile);
+                    newObjects.Add(cam);
+                    allObjects.Add(cam);
                     continue;
                 }
 
@@ -1323,11 +1334,11 @@ namespace NST
                 }
 
                 newEntities.Add(entity, modelName);
+                allObjects.Add(entity);
             }
 
             LoadModels(newEntities, modelNames);
 
-            var allObjects = newEntities.Keys.Union(newObjects).ToList();
             if (allObjects.Count == 0) return [];
 
             if (initializeObjects)
@@ -1346,10 +1357,9 @@ namespace NST
 
             _treeView.RebuildTree(InstanceManager.AllObjects);
 
-            NSTObject? selected = newEntities.Keys.Union(newObjects).FirstOrDefault();
-            if (selected == null) return [];
+            NSTObject? selected = allObjects[0];
             
-            SelectObject(selected);
+            SelectObject(selected, true);
 
             if (addToSelection == true)
             {

@@ -376,6 +376,13 @@ namespace NST
                 Console.WriteLine("Select spline");
                 return [ spline.Parent ];
             }
+            else if (obj is NSTCamera cam)
+            {
+                if (obj.GetObject() is CSplineCamera splineCamera && cam.Children.FirstOrDefault() is NSTObject splineEntity && (!cam.IsSelected || !splineEntity.IsSelected))
+                {
+                    return [ cam, splineEntity ];
+                }
+            }
 
             return [ obj ];
         }
