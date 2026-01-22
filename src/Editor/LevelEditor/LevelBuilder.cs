@@ -474,6 +474,8 @@ namespace NST
             IgArchiveFile sourceCrateFile = sourceCrateArchive.FindFile("Crash_Crates.igz")!;
             IgzFile sourceCrateIgz = sourceCrateFile.ToIgzFile();
 
+            sourceCrateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Woah!";
+
             CEntity basicCrate = sourceCrateIgz.FindObject<CEntity>("Crate_Basic")!;
             CEntity bounceCrate = sourceCrateIgz.FindObject<CEntity>("Crate_Bounce")!;
             CEntity randomCrate = sourceCrateIgz.FindObject<CEntity>("Crate_Random")!;
@@ -525,35 +527,10 @@ namespace NST
                 ironCrateClone._parentSpacePosition = new igVec3fMetaField(600 + (i+1) * 75.5f, 0, 0);
             }
 
-            crateIgz.Objects.Add( new igLocalizedInfo() { ObjectName = "localizationMarker" } );
-
             checkpointCrateClone.GetComponent<CDynamicCheckpointComponentData>()!._camera = new CCameraBase() { Reference = new NamedReference("Custom_Level_Camera", "Camera") };
             checkpointCrateClone.GetComponent<CDynamicCheckpointComponentData>()!._dynamicCheckpointOffset = new igVec3fMetaField(0, 0, 200);
 
             progress.SetProgress("newlevel", 5/8f, $"Creating new level (5/8)...");
-
-            // Add lang files for checkpoints
-
-            string[] languages = new string[] { "de", "en", "es", "fr", "it", "ja" };
-            foreach (string lang in languages)
-            {
-                string lngPath = $"{basePath}/Custom_Level/Custom_Level_Crates_{lang}.lng";
-                IgArchiveFile lngFile = new IgArchiveFile(lngPath);
-
-                var dataList = new igLocalizedStringDataList() { ObjectName = "igLocalizedStringDataList0"};
-                var data = new igLocalizedStringData()
-                {
-                    _string = "Checkpoint",
-                    _object = new igHandleMetaField() { Reference = new NamedReference("Custom_Level_Crates", "Crate_Checkpoint_entityData_componentData_VfxText_gen")},
-                    _field = new igStringMetaFieldInstance() { Reference = new NamedReference("metafield", "CVfxTextComponentData::_displayText") }
-                };
-                dataList._data.Add(data);
-
-                IgzFile lngIgz = new IgzFile(lngPath, [ dataList ]);
-
-                lngFile.SetData(lngIgz.Save());
-                archive.AddFile(lngFile);
-            }
 
             // Music
 

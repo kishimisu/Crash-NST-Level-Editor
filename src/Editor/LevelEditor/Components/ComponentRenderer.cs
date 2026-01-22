@@ -38,6 +38,7 @@ namespace NST
             { typeof(DDA_CheckpointData), (c, m) =>                            RenderComponent((DDA_CheckpointData)c, m) },
             { typeof(CVisualDataBoxComponentData), (c, m) =>                   RenderComponent((CVisualDataBoxComponentData)c, m) },
             { typeof(Scripts_SpawnCollectiblesComponentData), (c, m) =>        RenderComponent((Scripts_SpawnCollectiblesComponentData)c, m) },
+            { typeof(CVfxTextComponentData), (c, m) =>                         RenderComponent((CVfxTextComponentData)c, m) },
             { typeof(common_CameraDistanceFadeEntityData), (c, m) =>           RenderComponent((common_CameraDistanceFadeEntityData)c, m) },
             { typeof(CDynamicCheckpointComponentData), (c, m) =>               RenderComponent((CDynamicCheckpointComponentData)c, m) },
             { typeof(CPlayerTriggerRadiusComponentData), (c, m) =>             RenderComponent((CPlayerTriggerRadiusComponentData)c, m) },
@@ -498,6 +499,26 @@ namespace NST
                 }
 
                 ImGui.TreePop();
+            }
+        }
+
+        private static void RenderComponent(CVfxTextComponentData component, NSTComponent manager)
+        {
+            RenderString("Display Text:", ref component._displayText, component, manager);
+            RenderCheckbox("Enabled At Start:", ref component._enabledAtStart, component, manager);
+            RenderCheckbox("Face Camera:", ref component._faceCamera, component, manager);
+            RenderEnum("Text Alignment:", ref component._textAlignment, component, manager);
+            RenderFloat("Seconds per character:", ref component._secondsPerCharacter, component, manager);
+            RenderFloat("Max Width:", ref component._maxWidth, component, manager, 1, 10);
+            RenderFloat("Curve Radius:", ref component._curveRadius, component, manager, 1, 10);
+
+            if (component._endBolt.Reference != null)
+            {
+                IgzFile? igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile);
+                if (igz?.FindObject(component._endBolt.Reference) is CBoltPoint boltPoint)
+                {
+                    RenderFloat3("Text Offset:", ref boltPoint._offset, component, manager);
+                }
             }
         }
 
@@ -1507,6 +1528,17 @@ namespace NST
             return changed;
         }
 
+        private static bool RenderString(string name, ref string? text, igComponentData component, NSTComponent manager)
+        {
+            string str = text ?? "";
+            if (RenderString(name, ref str))
+            {
+                text = str;
+                manager.SetUpdated();
+                return true;
+            }
+            return false;
+        }
         private static bool RenderString(string name, ref string value)
         {
             ImGui.Text(name);
