@@ -663,7 +663,7 @@ namespace NST
                     StaticCollisionsUtils.RebuildCollisions(Archive, updatedCollisions);
                 }
 
-                if (IsLevelArchive && !path.StartsWith(LocalStorage.ArchivePath) && Archive.FindCustomZoneInfoFile() == null)
+                if (IsLevelArchive && saveAs && Archive.FindCustomZoneInfoFile() == null)
                 {
                     LevelBuilder.ConvertToCustomLevel(Archive);
                 }

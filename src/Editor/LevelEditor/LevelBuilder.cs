@@ -171,7 +171,7 @@ namespace NST
 
         public static string ConvertToCustomLevel(IgArchive archive)
         {
-            string newLevelName = $"{archive.GetName(false)}_Custom";
+            string newLevelName = archive.FindPackageFile()!.GetName(false).Replace("_pkg", "_Custom");
 
             // Rename collision files
 
