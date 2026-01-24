@@ -333,6 +333,7 @@ namespace NST
                 templateIgz = templateFile.ToIgzFile();
                 templateIgz.FindObject<CEntityHandleList>("Crate_Switch_entityData_componentData_CommonCrateSwitchIron_OulinedCrates")!._data.Clear();
                 templateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Checkpoint";
+                templateIgz.FindObject<common_Collectible_TimeTrial_StartData>("Collectible_TimeTrial_Start_entityData_componentData_CommonCollectibleTimeTrialStart_gen")!._Bool = true;
             }
         }
 

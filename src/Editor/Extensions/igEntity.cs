@@ -69,17 +69,22 @@ namespace NST
         /// <summary>
         /// Compute this entity's object-to-world matrix
         /// </summary>
-        public static THREE.Matrix4 GetTransformMatrix(this igEntity entity)
+        public static THREE.Matrix4 GetTransformMatrix(this igEntity entity, THREE.Vector3? overrideScale = null)
         {
             THREE.Vector3 position = entity._parentSpacePosition.ToVector3();
 
             if (entity._transform == null)
             {
+                if (overrideScale != null)
+                {
+                    return new THREE.Matrix4().Compose(position, new THREE.Quaternion(), overrideScale);    
+                }
+
                 return new THREE.Matrix4().MakeTranslation(position.X, position.Y, position.Z);
             }
 
             THREE.Quaternion rotation = entity._transform._parentSpaceRotation.ToQuaternion();
-            THREE.Vector3 scale = entity._transform._nonUniformPersistentParentSpaceScale.ToVector3();
+            THREE.Vector3 scale = overrideScale ?? entity._transform._nonUniformPersistentParentSpaceScale.ToVector3();
 
             return new THREE.Matrix4().Compose(position, rotation, scale);
         }

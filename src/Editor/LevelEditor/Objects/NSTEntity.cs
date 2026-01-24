@@ -300,9 +300,29 @@ namespace NST
             }
         }
 
+        public NSTEntity? GetChildTemplate()
+        {
+            if (Object.GetType() == typeof(igEntity)) return null;
+            
+            string? name = Object.GetComponent<common_Spawner_TemplateData>()?._EntityToSpawn.Reference?.objectName;
+            if (name == null) return null;
+
+            return Children.OfType<NSTEntity>().FirstOrDefault(c => c.Object.ObjectName == name);
+        }
+
+        private IEnumerable<NSTEntity> GetParentSpawners()
+        {
+            if (IsSpawned || Object.GetType() == typeof(igEntity)) return [];
+
+            return Parents
+                .OfType<NSTEntity>()
+                .Where(p => p.Object.GetComponent<common_Spawner_TemplateData>()?._EntityToSpawn.Reference?.objectName == Object.ObjectName);
+        }
+
         public THREE.Matrix4 ObjectToWorld()
         {
-            THREE.Matrix4 modelMatrix = Object.GetTransformMatrix();
+            THREE.Vector3? overrideScale = GetChildTemplate()?.Object._transform?._nonUniformPersistentParentSpaceScale.ToVector3();
+            THREE.Matrix4 modelMatrix = Object.GetTransformMatrix(overrideScale);
 
             if (ParentPrefabInstance == null)
             {
@@ -375,6 +395,30 @@ namespace NST
             explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, clone, true);
         }
 
+        /// <summary>
+        /// Clone the template referenced by this object's common_Spawner_TemplateData component if it exists
+        /// </summary>
+        public NSTEntity MakeChildTemplateUnique(LevelExplorer explorer, NSTEntity childTemplate)
+        {
+            if (Components == null || childTemplate.GetParentSpawners().Count() <= 1) return childTemplate;
+            if (Components.GetComponent<common_Spawner_TemplateData>() is not NSTComponent component) return childTemplate;
+
+            Components.MakeUnique(component);
+
+            Children.Remove(childTemplate);
+            childTemplate.Parents.Remove(this);
+
+            IgzFile igz = explorer.FileManager.GetIgz(childTemplate.ArchiveFile)!;
+            NSTEntity uniqueTemplate = (NSTEntity)explorer.Clone([childTemplate.Object], explorer.Archive, igz, childTemplate.ArchiveFile, igz, addToSelection: null)[0]!;
+            
+            Children.Add(uniqueTemplate);
+            uniqueTemplate.Parents.Add(this);
+
+            Object.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference!.objectName = uniqueTemplate.Object.ObjectName!;
+
+            return uniqueTemplate;
+        }
+
         public void RefreshModel(LevelExplorer explorer, NSTModel? model, bool findMissingModel = true)
         {
             if (model != null && explorer.Archive.FindFile(model.FilePath, FileSearchType.Path) == null)
@@ -426,7 +470,7 @@ namespace NST
             // Render rotation input
 
             igVec3fMetaField rotationDegrees = transform._parentSpaceRotation.Mul(THREE.MathUtils.RAD2DEG);
-            if (RenderVector3("Rotation", ref rotationDegrees, 0.01f))
+            if (RenderVector3("Rotation", ref rotationDegrees, 0.1f))
             {
                 if (Object._transform == null)
                 {
@@ -443,8 +487,32 @@ namespace NST
 
             // Render scale input
 
-            if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, 0.01f))
+            if (GetChildTemplate() is NSTEntity childTemplate)
             {
+                var scale = childTemplate.Object._transform?._nonUniformPersistentParentSpaceScale ?? new igVec3fMetaField(1, 1, 1);
+
+                if (RenderVector3("Scale   ", ref scale, 0.01f))
+                {
+                    childTemplate = MakeChildTemplateUnique(explorer, childTemplate);
+
+                    if (childTemplate.Object._transform == null)
+                    {
+                        childTemplate.Object._transform = new igEntityTransform() { MemoryPool = childTemplate.Object.MemoryPool };
+                        explorer.ArchiveRenderer.SetObjectUpdated(childTemplate.ArchiveFile, childTemplate.Object, true);
+                    }
+                    explorer.ArchiveRenderer.SetEntityUpdated(childTemplate);
+
+                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = scale;
+
+                    Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
+                    childTemplate.Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
+                    explorer.RenderNextFrame = true;
+                }
+            }
+            else if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, 0.01f))
+            {
+                explorer.InstanceManager.RefreshInstances(GetParentSpawners().Cast<NSTObject>().ToList());
+
                 if (Object._transform == null)
                 {
                     Object._transform = transform;
@@ -452,7 +520,7 @@ namespace NST
                 }
                 explorer.ArchiveRenderer.SetEntityUpdated(this);
 
-                Object3D?.Scale.Set(transform._nonUniformPersistentParentSpaceScale._x, transform._nonUniformPersistentParentSpaceScale._y, transform._nonUniformPersistentParentSpaceScale._z);
+                Object3D?.Scale.Copy(transform._nonUniformPersistentParentSpaceScale.ToVector3());
                 explorer.RenderNextFrame = true;
             }
 
@@ -522,16 +590,7 @@ namespace NST
 
                     RefreshModel(explorer, model, i >= 0);
 
-                    if (!IsSpawned)
-                    {
-                        foreach (NSTEntity p in Parents.OfType<NSTEntity>())
-                        {
-                            if (p.Object.TryGetComponent(out common_Spawner_TemplateData? s) && s._EntityToSpawn.Reference?.objectName == Object.ObjectName)
-                            {
-                                p.RefreshModel(explorer, model, i >= 0);
-                            }
-                        }
-                    }
+                    GetParentSpawners().ToList().ForEach(p => p.RefreshModel(explorer, model, i >= 0));
                 });
             }
 

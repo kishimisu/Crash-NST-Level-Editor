@@ -13,6 +13,7 @@ namespace THREE
         public Color hiddenEdgeColor;
         public float edgeGlow;
         public bool usePatternTexture;
+        public bool showCenterDot;
         public float edgeThickness;
         public float edgeStrength;
         float downSampleRatio;
@@ -55,6 +56,7 @@ namespace THREE
             this.hiddenEdgeColor = new Color(0.1f, 0.04f, 0.02f);
             this.edgeGlow = 0.0f;
             this.usePatternTexture = false;
+            this.showCenterDot = false;
             this.edgeThickness = 1.0f;
             this.edgeStrength = 3.0f;
             this.downSampleRatio = 2.0f;
@@ -363,6 +365,8 @@ namespace THREE
                 (this.overlayMaterial.Uniforms["edgeStrength"] as GLUniform)["value"] = this.edgeStrength;
                 (this.overlayMaterial.Uniforms["edgeGlow"] as GLUniform)["value"] = this.edgeGlow;
                 (this.overlayMaterial.Uniforms["usePatternTexture"] as GLUniform)["value"] = this.usePatternTexture;
+                (this.overlayMaterial.Uniforms["showCenterDot"] as GLUniform)["value"] = this.showCenterDot;
+                (this.overlayMaterial.Uniforms["aspect"] as GLUniform)["value"] = (float)readBuffer.Width / readBuffer.Height;
 
 
                 if (maskActive != null && maskActive.Value) renderer.state.buffers.stencil.SetTest(true);
@@ -382,6 +386,8 @@ namespace THREE
                 (this.overlayMaterial.Uniforms["edgeStrength"] as GLUniform)["value"] = 0;
                 (this.overlayMaterial.Uniforms["edgeGlow"] as GLUniform)["value"] = 0;
                 (this.overlayMaterial.Uniforms["usePatternTexture"] as GLUniform)["value"] = false;
+                (this.overlayMaterial.Uniforms["showCenterDot"] as GLUniform)["value"] = this.showCenterDot;
+                (this.overlayMaterial.Uniforms["aspect"] as GLUniform)["value"] = (float)readBuffer.Width / readBuffer.Height;
                 renderer.SetRenderTarget(readBuffer);
                 this.fullScreenQuad.Render(renderer);
             }
@@ -627,7 +633,9 @@ namespace THREE
                     { "sceneTexture", new GLUniform{{ "value", null } } },
                     { "edgeStrength",  new GLUniform{{"value", 1.0 } } },
                     { "edgeGlow",  new GLUniform {{"value", 1.0 } } },
-                    { "usePatternTexture", new GLUniform {{ "value", 0.0 } } }
+                    { "usePatternTexture", new GLUniform {{ "value", 0.0 } } },
+                    { "showCenterDot", new GLUniform {{ "value", 0.0 } } },
+                    { "aspect", new GLUniform {{ "value", 1.0 } } }
                 },
 
                 VertexShader = @"
@@ -649,6 +657,8 @@ namespace THREE
 				uniform float edgeStrength;
 				uniform float edgeGlow;
 				uniform bool usePatternTexture;
+                uniform bool showCenterDot;
+                uniform float aspect;
 				
 				void main()
 				{
@@ -662,7 +672,16 @@ namespace THREE
 					vec4 finalColor = edgeStrength * maskColor.r * edgeValue;
 					if (usePatternTexture)
 						finalColor += +visibilityFactor * (1.0 - maskColor.r) * (1.0 - patternColor.r);
-                    gl_FragColor = vec4(sceneColor.rgb + finalColor.rgb, 1);
+                    vec3 outputColor = finalColor.rgb += sceneColor.rgb;
+
+                    if (showCenterDot) {
+                        vec2 uv = vUv * 2. - 1.;
+                        uv.x *= aspect;
+                        float inv = smoothstep(.006, .004, length(uv));
+                        outputColor = mix(outputColor, 1. - outputColor, inv);
+                    }
+                    
+                    gl_FragColor = vec4(outputColor, 1);
 				}
 				",
                 // Blending = Constants.AdditiveBlending,

@@ -78,8 +78,8 @@ namespace NST
         public bool IsOpen = true;
         public bool ReOpen = false;
         private bool _isDragging = false;
-        private bool _clickInsideScene = false;
-        private bool _openContextMenu = false;
+        private bool _clickedInsideScene = false;
+        private bool _shouldOpenContextMenu = false;
         private static bool _clearMemoryOnExit = false;
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
@@ -157,12 +157,25 @@ namespace NST
 
             _clearMemoryOnExit = LocalStorage.Get("clear_memory_on_exit", false);
 
-            KeyDown   += (_, e) => _isDragging = _clickInsideScene;
-            MouseMove += (_, e) => _isDragging = true;
-            MouseDown += (_, e) => { _isDragging = false; _clickInsideScene = IsSceneFocused; };
+            KeyDown   += (_, e) => _isDragging = _clickedInsideScene;
+            MouseMove += (_, e) => 
+            { 
+                _isDragging = true; 
+                _outlinePass.showCenterDot = ImGui.IsMouseDown(ImGuiMouseButton.Right); 
+            };
+            MouseDown += (_, e) =>
+            {
+                _isDragging = false;
+                _clickedInsideScene = IsSceneFocused;
+
+                if (e.Button == Silk.NET.Input.MouseButton.Right)
+                {
+                    _gizmos.StopDragging();
+                }
+            };
             MouseUp   += (_, e) =>
             {
-                if (IsSceneFocused && !_isDragging)
+                if (IsSceneFocused && !_isDragging && _clickedInsideScene)
                 {
                     if (e.Button == Silk.NET.Input.MouseButton.Left)
                     {
@@ -173,12 +186,13 @@ namespace NST
                     }
                     else
                     {
-                        _openContextMenu = true;
+                        _shouldOpenContextMenu = true;
                         (_controls as FirstPersonControls)?.ResetMousePos();
                     }
                 }
 
-                _clickInsideScene = false;
+                _outlinePass.showCenterDot =  false;
+                _clickedInsideScene = false;
                 _isDragging = false;
             };
         }
@@ -209,7 +223,7 @@ namespace NST
 
             _gizmos._mouseUpEvent += (string obj) =>
             {
-                SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+                SelectionManager.ApplyChanges(ArchiveRenderer);
             };
 
             foreach ((string layerName, bool active) in _layers)
@@ -609,8 +623,6 @@ namespace NST
             const float maxDistance = 5000.0f;
             THREE.Vector3? spawnPoint = null;
 
-            moveSelection &= SelectionManager.CopyFromSameFile();
-
             // Raycast to find spawn point
             if (!keepOriginalPosition || moveSelection)
             {
@@ -621,7 +633,7 @@ namespace NST
                 if (moveSelection)
                 {
                     SelectionManager._selectionContainer.Position.Copy(spawnPoint);
-                    SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+                    SelectionManager.ApplyChanges(ArchiveRenderer);
                     return;
                 }
             }
@@ -846,12 +858,12 @@ namespace NST
                         ImGuiUtils.CenteredText("Reloading scene, please wait...");
                     }
 
-                    _controls.SetFocus(IsSceneFocused || _clickInsideScene);
+                    _controls.SetFocus(IsSceneFocused || _clickedInsideScene);
 
-                    if (_openContextMenu)
+                    if (_shouldOpenContextMenu)
                     {
                         ImGui.OpenPopup("ObjectFactoryContextMenu");
-                        _openContextMenu = false;
+                        _shouldOpenContextMenu = false;
                     }
                     ObjectFactory.RenderContextMenu(this);
 
@@ -1367,7 +1379,7 @@ namespace NST
             }
 
             SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
-            SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+            SelectionManager.ApplyChanges(ArchiveRenderer);
 
             return allObjects;
         }
@@ -1377,7 +1389,7 @@ namespace NST
             _treeView.RebuildTree(InstanceManager.AllObjects);
             InstanceManager.RefreshInstances(InstanceManager.AllObjects);
             SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
-            SelectionManager.ApplyChanges(FileManager, ArchiveRenderer);
+            SelectionManager.ApplyChanges(ArchiveRenderer);
         }
 
         public override void Dispose()

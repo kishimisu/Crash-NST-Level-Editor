@@ -767,8 +767,7 @@ namespace NST
 
         private static void RenderComponent(common_Collectible_TimeTrial_StartData component, NSTComponent manager)
         {
-            RenderCheckbox("Unknown:", ref component._Bool, component, manager);
-            ImGui.SetItemTooltip("True in:\n- L226_TotallyBear\n- L227_TotallyFly\n- L326_SkiCrazed\n- L328_Area51\n- L330_RingsOfPower\n- L331_HotCoco\n- L332_EggipusRex");
+            RenderCheckbox("Always spawn:", ref component._Bool, component, manager);
         }
 
         private static void RenderComponent(common_BonusRoundTeleporterData component, NSTComponent manager)

@@ -40,9 +40,18 @@ namespace NST
             group.Position.Copy(Object._position.ToVector3());
             group.Rotation.SetFromVector3(Object._rotation.ToVector3().MultiplyScalar(THREE.MathUtils.DEG2RAD), THREE.RotationOrder.ZYX);
 
-            group.Add(CreateBoxHelper(Object._min.ToVector3(), Object._max.ToVector3(), color, selected, LevelExplorer.CameraLayer.CameraBox));
-
-            if (!selected)
+            var min = Object._min.ToVector3();
+            var max = Object._max.ToVector3();
+            group.Add(CreateBoxHelper(min, max, color, selected, LevelExplorer.CameraLayer.CameraBox));
+            
+            if (selected)
+            {
+                var arrow = CreateArrow(color);
+                arrow.RotateZ(-MathF.PI * 0.5f);
+                arrow.TranslateZ((min.Z + max.Z) * 0.5f);
+                group.Add(arrow);
+            }
+            else
             {
                 group.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.CameraBox));
             }
@@ -57,6 +66,25 @@ namespace NST
             Object3D = group;
 
             return group;
+        }
+
+        private THREE.Object3D CreateArrow(THREE.Color color)
+        {
+            const float baseLength = 1000;
+            const float arrowLength = 180;
+            const float baseRadius = 14;
+            const float arrowRadius = 80;
+
+            THREE.CylinderGeometry baseGeo = new THREE.CylinderGeometry(baseRadius, baseRadius, baseLength);
+            THREE.ConeGeometry coneGeo = new THREE.ConeGeometry(arrowRadius, arrowLength, 8);
+            THREE.Material mat = new THREE.MeshPhongMaterial() { Color = color, Shininess = NSTMaterial.DefaultShininess };
+
+            THREE.Mesh baseMesh = new THREE.Mesh(baseGeo, mat);
+            THREE.Mesh coneMesh = new THREE.Mesh(coneGeo, mat);
+
+            coneMesh.TranslateY(baseLength * 0.5f);
+
+            return new THREE.Group() { baseMesh, coneMesh };
         }
 
         public override void Render(LevelExplorer explorer)

@@ -23,6 +23,7 @@ namespace NST
 
         public int Count => _components.Count;
         public string GetID() => _uuid.ToString();
+        public NSTComponent? GetComponent<T>() where T : igComponentData => _components.Find(c => c.Object is T);
 
         public ComponentManager(NSTEntity entity)
         {

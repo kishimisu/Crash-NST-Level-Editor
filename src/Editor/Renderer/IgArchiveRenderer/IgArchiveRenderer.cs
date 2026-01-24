@@ -464,7 +464,7 @@ namespace NST
             }
             catch (Exception e)
             {
-                ModalRenderer.ShowMessageModal("Could not open file", $"An error occured while opening {node.File.GetName()}:\n\n{e.Message}");
+               ModalRenderer.ShowMessageModal("Warning", $"An error occured while opening {node.File.GetName()}:\n\n{e.Message}");
             }
         }
         
@@ -509,13 +509,14 @@ namespace NST
                 if (infos?.igz == null)
                 {
                     renderer = FileRenderer.Create(file, this);
+                    igzRenderer = renderer as IgzRenderer;
                     FileManager.Add(file, renderer);
                 }
                 // Create a new renderer using an open igz file
                 else
                 {
-                    renderer = new IgzRenderer(infos.igz, file, this);
-                    infos.renderer = renderer;
+                    igzRenderer = new IgzRenderer(infos.igz, file, this);
+                    renderer = infos.renderer = igzRenderer;
                 }
             }
             // Focus the renderer

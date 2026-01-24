@@ -16,8 +16,6 @@ namespace NST
         private readonly THREE.OutlinePass _outlinePass;
         private bool _revertGizmos = false;
 
-        public bool CopyFromSameFile() => _explorer == _copyExplorer;
-
         public SelectionManager(THREE.Object3D rootObject, THREE.Silk.TransformControls gizmos, THREE.OutlinePass outlinePass, LevelExplorer explorer)
         {
             _gizmos = gizmos;
@@ -139,7 +137,7 @@ namespace NST
             }
         }
 
-        public void ApplyChanges(ActiveFileManager fileManager, IgArchiveRenderer archiveRenderer)
+        public void ApplyChanges(IgArchiveRenderer archiveRenderer)
         {
             HashSet<NSTSpline> refreshSplines = [];
 
@@ -222,25 +220,48 @@ namespace NST
                     worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
                 }
 
-                entity._parentSpacePosition._x = worldPos.X;
-                entity._parentSpacePosition._y = worldPos.Y;
-                entity._parentSpacePosition._z = worldPos.Z;
+                bool hasRotation = worldEuler.ToVector3().LengthSq() > 1e-3f;
+                bool hasScale = (worldScale - THREE.Vector3.One()).LengthSq() > 1e-3f;
 
-                if (entity._transform == null && (worldEuler.ToVector3().LengthSq() > 1e-3f || (worldScale - THREE.Vector3.One()).LengthSq() > 1e-3f))
+                // Child template scale overrides parent spawner scale
+                NSTEntity? childTemplate = null;
+                if (hasScale)
+                {
+                    childTemplate = entity3D.GetChildTemplate();
+                    
+                    if (childTemplate != null)
+                    {
+                        childTemplate = entity3D.MakeChildTemplateUnique(_explorer, childTemplate);
+
+                        if (childTemplate.Object._transform == null)
+                        {
+                            childTemplate.Object._transform = new igEntityTransform();
+                            childTemplate.Object._transform.MemoryPool = childTemplate.Object.MemoryPool;
+                        }
+                        childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
+                    }
+                }
+
+                // Update position
+                entity._parentSpacePosition = worldPos.ToVec3MetaField();
+
+                // Create transform object if necessary
+                if (entity._transform == null && (hasRotation || (hasScale && childTemplate == null)))
                 {
                     entity._transform = new igEntityTransform();
                     entity._transform.MemoryPool = entity.MemoryPool;
                 }
 
                 if (entity._transform != null)
-                {
-                    entity._transform._parentSpaceRotation._x = worldEuler.X;
-                    entity._transform._parentSpaceRotation._y = worldEuler.Y;
-                    entity._transform._parentSpaceRotation._z = worldEuler.Z;
+                {   
+                    // Update rotation
+                    entity._transform._parentSpaceRotation = worldEuler.ToVec3MetaField();
 
-                    entity._transform._nonUniformPersistentParentSpaceScale._x = worldScale.X;
-                    entity._transform._nonUniformPersistentParentSpaceScale._y = worldScale.Y;
-                    entity._transform._nonUniformPersistentParentSpaceScale._z = worldScale.Z;
+                    if (childTemplate == null)
+                    {
+                        // Update scale
+                        entity._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
+                    }
                 }
 
                 archiveRenderer.SetEntityUpdated(entity3D);
@@ -527,7 +548,7 @@ namespace NST
                     _selectionContainer.Position.Copy(spawnPoint);
                 }
 
-                ApplyChanges(fileManager, renderer);
+                ApplyChanges(renderer);
 
                 ModalRenderer.CloseLoadingModal();
                 
@@ -579,7 +600,7 @@ namespace NST
 
             _selectionContainer.Position.Add(snappedPosition - worldPos);
 
-            ApplyChanges(_explorer.FileManager, _explorer.ArchiveRenderer);
+            ApplyChanges(_explorer.ArchiveRenderer);
 
             _gizmos.StopDragging();
         }
