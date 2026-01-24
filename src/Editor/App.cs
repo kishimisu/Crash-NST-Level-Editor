@@ -1,4 +1,5 @@
 using Alchemy;
+using Havok;
 using ImGuiNET;
 using System.Diagnostics;
 
@@ -16,6 +17,8 @@ namespace NST
         private static MainMenu _mainMenu = new MainMenu();
 
         private static bool _showDemo = false;
+
+        private static HavokRenderer? havokRenderer;
 
         public static void Initialize()
         {
@@ -51,6 +54,13 @@ namespace NST
                 viewer.Render(deltaTime);
             }
 
+            if (havokRenderer != null)
+            {
+                ImGui.Begin(havokRenderer.GetWindowName());
+                havokRenderer.Render();
+                ImGui.EndChild();
+            }
+
             // Render modals if any
             ModalRenderer.RenderModals();
 
@@ -76,6 +86,13 @@ namespace NST
             {
                 if (ImGui.MenuItem("New mod")) OnClickNew();
                 if (ImGui.MenuItem("Open archive")) OnClickOpen();
+                if (ImGui.MenuItem("Open havok file"))
+                {
+                    List<string> paths = FileExplorer.OpenFiles("", FileExplorer.EXT_ALL, false);
+                    if (paths.Count == 0) return;
+                    HavokFile f = new HavokFile(File.ReadAllBytes(paths[0]));
+                    havokRenderer = new HavokRenderer(f, new IgArchiveFile(paths[0]), new IgArchiveRenderer(new IgArchive(paths[0])));
+                }
                 RenderOpenRecent(true);
                 ImGui.Separator();
                 if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
