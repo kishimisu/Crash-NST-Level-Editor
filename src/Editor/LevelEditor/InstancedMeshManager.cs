@@ -459,7 +459,7 @@ namespace NST
                         }
                         continue;
                     }
-                    if (obj is NSTWaypoint)
+                    if (obj is NSTWaypoint || obj is NSTSplineVelocityKeyFrame)
                     {
                         continue;
                     }

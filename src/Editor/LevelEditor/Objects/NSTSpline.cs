@@ -13,16 +13,20 @@ namespace NST
 
         public List<NSTSplineControlPoint> _controlPoints = [];
         public List<NSTSplineRotationKeyFrame> _rotationKeyFrames = [];
+        public List<NSTSplineVelocityKeyFrame> _velocityKeyFrames = [];
         public List<NSTSplineMarker> _markers = [];
         private NSTSplineControlPoint? _selectedControlPoint;
         private NSTSplineRotationKeyFrame? _selectedRotationKeyFrame;
 
         private igSplineRotationKeyframeTrack? _rotationTrack;
+        private igSplineFloatKeyframeTrack? _velocityTrack;
 
         public bool OpenControlPointList { get; set; } = false;
         public bool OpenRotationList { get; set; } = false;
+        public bool OpenVelocityList { get; set; } = false;
         public bool OpenMarkerList { get; set; } = false;
         private bool _isRotationListOpen = false;
+        private bool _isVelocityListOpen = false;
         private bool _isMarkerListOpen = false;
 
         public NSTSpline(NSTEntity parent, igSpline2 spline)
@@ -42,6 +46,7 @@ namespace NST
             if (hasData)
             {
                 SetupRotationKeyFrames();
+                SetupVelocityKeyFrames();
                 SetupMarkers();
                 ComputeDistances();
             }
@@ -82,6 +87,30 @@ namespace NST
             }
 
             _rotationKeyFrames.Sort((a, b) => (int)(a.Object._distance - b.Object._distance));
+        }
+
+        private void SetupVelocityKeyFrames()
+        {
+            if (Object._floatTracks == null || Object._floatTracks.Dict.Count == 0) return;
+
+            _velocityKeyFrames.Clear();
+
+            foreach (igSplineFloatKeyframeTrack track in Object._floatTracks.Dict.Values)
+            {
+                if (track._data?._data == null || track._data._data.Count == 0) continue;
+                if (track._data._data[0].GetType() != typeof(CSplineVelocityKeyframe)) continue;
+
+                foreach (CSplineVelocityKeyframe rotation in track._data._data)
+                {
+                    _velocityKeyFrames.Add(new NSTSplineVelocityKeyFrame(this, rotation));
+                }
+
+                _velocityTrack = track;
+
+                break;
+            }
+
+            _velocityKeyFrames.Sort((a, b) => (int)(a.Object._distance - b.Object._distance));
         }
 
         private void SetupMarkers()
@@ -228,6 +257,25 @@ namespace NST
                     totalDistance += dist;
                 }
             }
+            
+            foreach (NSTSplineVelocityKeyFrame vel in _velocityKeyFrames)
+            {
+                float totalDistance = 0;
+
+                for (int i = 0; i < _controlPoints.Count - 1; i++)
+                {
+                    float dist = _controlPoints[i].Object._position.ToVector3().DistanceTo(_controlPoints[i + 1].Object._position.ToVector3());
+
+                    if (totalDistance + dist >= vel.Object._distance || i == _controlPoints.Count - 2)
+                    {
+                        float k = (vel.Object._distance - totalDistance) / dist;
+                        THREE.Vector3 midPoint =_controlPoints[i].Object._position.ToVector3().Lerp(_controlPoints[i + 1].Object._position.ToVector3(), k);
+                        vel.Position = midPoint;
+                        break;
+                    }
+                    totalDistance += dist;
+                }
+            }
 
             foreach (NSTSplineMarker marker in _markers)
             {
@@ -258,7 +306,7 @@ namespace NST
                     totalDistance += dist;
                 }
 
-                Console.WriteLine($"Updated distance from {Object._length} {totalDistance}");
+                // Console.WriteLine($"Updated distance from {Object._length} to {totalDistance}");
 
                 Object._length = totalDistance;
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
@@ -372,6 +420,43 @@ namespace NST
             return newRotationKeyframe;
         }
 
+        private NSTSplineVelocityKeyFrame CreateNewVelocityKeyFrame(LevelExplorer explorer, int index, bool insertBefore = false)
+        {
+            IgzFile igz = explorer.FileManager.GetIgz(ArchiveFile)!;
+            var newObject = igz.AddClone(_velocityKeyFrames[index].Object);
+            var newVelocity = new NSTSplineVelocityKeyFrame(this, newObject);
+
+            int insertionIndex = int.Clamp(insertBefore ? index : index + 1, 0, _velocityKeyFrames.Count);
+
+            if (_velocityKeyFrames.Count > 1)
+            {
+                if (insertBefore)
+                {
+                    if (index <= 0) newObject._distance = _velocityKeyFrames[0].Object._distance * 0.5f;
+                    else newObject._distance = (_velocityKeyFrames[index].Object._distance + _velocityKeyFrames[index - 1].Object._distance) * 0.5f;
+                }
+                else
+                {
+                    if (index >= _velocityKeyFrames.Count - 1) newObject._distance = _velocityKeyFrames[_velocityKeyFrames.Count - 1].Object._distance + 200;
+                    else newObject._distance = (_velocityKeyFrames[index].Object._distance + _velocityKeyFrames[index + 1].Object._distance) * 0.5f;
+                }
+            }
+
+            _velocityTrack!._data!._data.Insert(insertionIndex, newObject);
+            _velocityKeyFrames.Insert(insertionIndex, newVelocity);
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, _velocityTrack._data, true);
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, newObject);
+
+            ComputeDistances(explorer, true);
+
+            if (!Parent.IsSelected)
+            {
+                RefreshSpline();
+            }
+
+            return newVelocity;
+        }
+
         private NSTSplineMarker CreateNewMarker(LevelExplorer explorer, int index, bool insertBefore = false)
         {
             IgzFile igz = explorer.FileManager.GetIgz(ArchiveFile)!;
@@ -467,6 +552,21 @@ namespace NST
             explorer.SelectionManager.UpdateSelection(explorer.SelectionManager._selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == this).ToList());
         }
 
+        private void RefreshVelocity(NSTSplineVelocityKeyFrame vel, LevelExplorer explorer)
+        {
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, vel.Object);
+
+            ComputeDistances(explorer, true);
+            RefreshSpline();
+            explorer.RenderNextFrame = true;
+
+            if (explorer.SelectionManager._selection.Count == 0 || !vel.IsSelected) return;
+            if (explorer.SelectionManager._selection[0] is NSTSplineVelocityKeyFrame root && root.Parent == this)
+            {
+                explorer.SelectionManager.UpdateSelection([root]);
+            }
+        }
+
         private void RefreshMarker(NSTSplineMarker marker, LevelExplorer explorer)
         {
             explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, marker.Object);
@@ -476,7 +576,6 @@ namespace NST
             explorer.RenderNextFrame = true;
 
             if (explorer.SelectionManager._selection.Count == 0 || !marker.IsSelected) return;
-
             if (explorer.SelectionManager._selection[0] is NSTSplineMarker root && root.Parent == this)
             {
                 explorer.SelectionManager.UpdateSelection([root]);
@@ -495,12 +594,14 @@ namespace NST
         {
             List<NSTSplineControlPoint> controlPoints = [];
             List<NSTSplineRotationKeyFrame> rotationKeyFrames = [];
+            List<NSTSplineVelocityKeyFrame> velocityKeyFrames = [];
             List<NSTSplineMarker> markers = [];
 
             foreach (NSTObject obj in objects)
             {
                 if (obj is NSTSplineControlPoint controlPoint) controlPoints.Add(controlPoint);
                 if (obj is NSTSplineRotationKeyFrame rotationKeyFrame) rotationKeyFrames.Add(rotationKeyFrame);
+                if (obj is NSTSplineVelocityKeyFrame velocityKeyFrame) velocityKeyFrames.Add(velocityKeyFrame);
                 if (obj is NSTSplineMarker marker) markers.Add(marker);
             }
 
@@ -518,6 +619,13 @@ namespace NST
                 _rotationKeyFrames.Remove(rotationKeyFrame);
                 igz.Remove(rotationKeyFrame.Object);
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, _rotationTrack!._data, true);
+            }
+
+            foreach (NSTSplineVelocityKeyFrame velocityKeyFrame in velocityKeyFrames)
+            {
+                _velocityKeyFrames.Remove(velocityKeyFrame);
+                igz.Remove(velocityKeyFrame.Object);
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, _velocityTrack!._data, true);
             }
 
             foreach (NSTSplineMarker marker in markers)
@@ -550,6 +658,21 @@ namespace NST
                 return;
             }
 
+            ImGui.TextDisabled("Right click to add new elements (?)");
+            if (ImGui.IsItemHovered() && ImGui.BeginTooltip())
+            {
+                ImGui.Text("GUI controls:");
+                ImGui.BulletText("Click any item to select it.");
+                ImGui.BulletText("Shift+click: select range (position & rotation only)");
+                ImGui.BulletText("Ctrl+click: add/remove from selection");
+                ImGui.BulletText("Suppr/Del: delete selection");
+                ImGui.Separator();
+                ImGui.BulletText("Right click: add new items");
+                ImGui.BulletText("Double click: focus in the scene");
+                ImGui.BulletText("Click and drag to edit number fields");
+                ImGui.EndTooltip();
+            }
+
             // float distance = 0.0f;
             // for (int i = 0; i < Object._data._data.Count - 1; i++)
             // {
@@ -567,32 +690,27 @@ namespace NST
                 OpenControlPointList = false;
             }
 
-            if (ImGui.TreeNodeEx($"Positions ({_controlPoints.Count})###Positions", ImGuiTreeNodeFlags.NoTreePushOnOpen))
-            {
-                ImGui.TextDisabled("Right click to add new elements (?)");
-                if (ImGui.IsItemHovered() && ImGui.BeginTooltip())
-                {
-                    ImGui.Text("GUI controls:");
-                    ImGui.BulletText("Click any item to select it.");
-                    ImGui.BulletText("Shift+click: select range");
-                    ImGui.BulletText("Ctrl+click: add/remove from selection");
-                    ImGui.BulletText("Suppr/Del: delete selection");
-                    ImGui.Separator();
-                    ImGui.BulletText("Right click: add new items");
-                    ImGui.BulletText("Double click: focus in the scene");
-                    ImGui.BulletText("Click and drag to edit number fields");
-                    ImGui.EndTooltip();
-                }
+            float indexWidth = ImGui.CalcTextSize("999.").X;
+            var tableFlags = ImGuiTableFlags.BordersOuterH | ImGuiTableFlags.BordersInnerV | ImGuiTableFlags.NoBordersInBody;
+            var selectableFlags = ImGuiSelectableFlags.AllowDoubleClick | ImGuiSelectableFlags.AllowOverlap | ImGuiSelectableFlags.SpanAllColumns;
 
-                ImGui.Spacing();
-                ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(2.0f, 0.0f));
+            if (ImGui.TreeNodeEx($"Positions ({_controlPoints.Count})###Positions", ImGuiTreeNodeFlags.NoTreePushOnOpen) && ImGui.BeginTable("PositionTable", 4, tableFlags))
+            {
+                ImGui.TableSetupColumn("id", ImGuiTableColumnFlags.WidthFixed, indexWidth);
+                ImGui.TableSetupColumn("x", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("y", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("z", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableHeadersRow();
+
+                ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(0, 0));
 
                 for (int i = 0; i < _controlPoints.Count; i++)
                 {
                     NSTSplineControlPoint controlPoint = _controlPoints[i];
+                    THREE.Vector3 previousPosition = controlPoint.Object._position.ToVector3();
 
-                    ImGui.SetNextItemAllowOverlap();
-                    if (ImGui.Selectable($"##Position {i+1}", controlPoint.IsSelected, ImGuiSelectableFlags.AllowDoubleClick))
+                    ImGui.TableNextColumn();
+                    if (ImGui.Selectable($"{i+1}##pid", controlPoint.IsSelected, selectableFlags))
                     {
                         // Double click: focus object
                         if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
@@ -621,7 +739,7 @@ namespace NST
                         }
                     }
 
-                    if (ImGui.BeginPopupContextItem("PositionActions" + i))
+                    if (ImGui.BeginPopupContextItem($"PositionActions{i}"))
                     {
                         if (ImGui.Selectable("Create new (before)"))
                         {
@@ -636,25 +754,16 @@ namespace NST
                         ImGui.EndPopup();
                     }
 
-                    ImGui.SameLine();
-                    ImGui.Text($"{(i < 9 ? " " : "")}{i+1}.");
-                    ImGui.SameLine();
-
-                    igSplineControlPoint2 point = controlPoint.Object;
-                    THREE.Vector3 previousPosition = point._position.ToVector3();
-
-                    float w = ImGui.GetContentRegionAvail().X / 3 - ImGui.GetStyle().FramePadding.X * 4;
-                    ImGui.SetNextItemWidth(w);
-
-                    if (ImGui.DragFloat("##xp" + i, ref point._position._x)) RefreshControlPoint(controlPoint, previousPosition, explorer);
-                    ImGui.SameLine(); 
-                    ImGui.SetNextItemWidth(w);
-                    if (ImGui.DragFloat("##yp" + i, ref point._position._y)) RefreshControlPoint(controlPoint, previousPosition, explorer);
-                    ImGui.SameLine();
-                    ImGui.SetNextItemWidth(w);
-                    if (ImGui.DragFloat("##zp" + i, ref point._position._z)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##px{i}", ref controlPoint.Object._position._x)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##py{i}", ref controlPoint.Object._position._y)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##pz{i}", ref controlPoint.Object._position._z)) RefreshControlPoint(controlPoint, previousPosition, explorer);
                 }
                 ImGui.PopStyleVar();
+                ImGui.EndTable();
+                ImGui.Spacing();
             }
 
             // Render rotations
@@ -675,19 +784,28 @@ namespace NST
                 explorer.RenderNextFrame = true;
             }
 
-            if (_isRotationListOpen)
+            if (_isRotationListOpen && ImGui.BeginTable("RotationTable", 5, tableFlags))
             {
+                ImGui.TableSetupColumn("id", ImGuiTableColumnFlags.WidthFixed, indexWidth);
+                ImGui.TableSetupColumn("distance", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("x", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("y", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("z", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableHeadersRow();
+
                 ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(2.0f, 0.0f));
+
                 for (int i = 0; i < _rotationKeyFrames.Count; i++)
                 {
                     NSTSplineRotationKeyFrame keyframe = _rotationKeyFrames[i];
+                    THREE.Vector3 previousRotation = keyframe.Object._value.ToVector3();
 
-                    ImGui.SetNextItemAllowOverlap();
-                    if (ImGui.Selectable($"##Rotation {i+1}", keyframe.IsSelected, ImGuiSelectableFlags.AllowDoubleClick))
+                    ImGui.TableNextColumn();
+                    if (ImGui.Selectable($"{i+1}##rid", keyframe.IsSelected, selectableFlags))
                     {
                         if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
                         {
-                            explorer.LookAtObject(_rotationKeyFrames[i]);
+                            explorer.LookAtObject(keyframe);
                         }
                         else if (ImGui.IsKeyDown(ImGuiKey.LeftShift) && _selectedRotationKeyFrame != null)
                         {
@@ -702,14 +820,14 @@ namespace NST
                         else
                         {
                             bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.LeftCtrl);
-                            explorer.SelectionManager.UpdateSelection([_rotationKeyFrames[i].IsSelected && !ctrlPressed ? Parent : _rotationKeyFrames[i]], !ctrlPressed);
+                            explorer.SelectionManager.UpdateSelection([keyframe.IsSelected && !ctrlPressed ? Parent : keyframe], !ctrlPressed);
                             explorer.RenderNextFrame = true;
-                            _selectedRotationKeyFrame = _rotationKeyFrames[i];
+                            _selectedRotationKeyFrame = keyframe;
                             OpenRotationList = true;
                         }
                     }
 
-                    if (ImGui.BeginPopupContextItem("RotationActions" + i))
+                    if (ImGui.BeginPopupContextItem($"RotationActions{i}"))
                     {
                         if (ImGui.Selectable("Create new (before)"))
                         {
@@ -724,41 +842,88 @@ namespace NST
                         ImGui.EndPopup();
                     }
 
-                    ImGui.SameLine();
-                    ImGui.Text($"{(i < 9 ? " " : "")}{i+1}.");
-                    ImGui.SameLine(); 
-
-                    igSplineRotationKeyframe point = _rotationKeyFrames[i].Object;
-                    THREE.Vector3 previousRotation = point._value.ToVector3();
-
-                    float w = ImGui.GetContentRegionAvail().X / 4 - ImGui.GetStyle().FramePadding.X * 5;
-                    ImGui.SetNextItemWidth(w);
-
-                    if (ImGui.DragFloat(" ##dr" + i, ref point._distance, 1.0f, 0.0f, float.MaxValue))
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##rd{i}", ref keyframe.Object._distance, 1.0f, 0.0f, float.MaxValue))
                     {
                         ComputeDistances();
-                        RefreshRotationKeyFrame(_rotationKeyFrames[i], previousRotation, explorer);
+                        RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
                     }
-                    ImGui.SameLine(); 
-                    ImGui.SetNextItemWidth(w);
-                    if (ImGui.DragFloat("##xr" + i, ref point._value._x))
-                    {
-                        RefreshRotationKeyFrame(_rotationKeyFrames[i], previousRotation, explorer);
-                    }
-                    ImGui.SameLine(); 
-                    ImGui.SetNextItemWidth(w);
-                    if (ImGui.DragFloat("##yr" + i, ref point._value._y))
-                    {
-                        RefreshRotationKeyFrame(_rotationKeyFrames[i], previousRotation, explorer);
-                    }
-                    ImGui.SameLine(); 
-                    ImGui.SetNextItemWidth(w);
-                    if (ImGui.DragFloat("##zr" + i, ref point._value._z))
-                    {
-                        RefreshRotationKeyFrame(_rotationKeyFrames[i], previousRotation, explorer);
-                    }
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##rx{i}", ref keyframe.Object._value._x)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##ry{i}", ref keyframe.Object._value._y)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##rz{i}", ref keyframe.Object._value._z)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
                 }
                 ImGui.PopStyleVar();
+                ImGui.EndTable();
+                ImGui.Spacing();
+            }
+
+            // Render velocity keyframes
+
+            if (OpenVelocityList)
+            {
+                ImGui.SetNextItemOpen(true);
+                OpenVelocityList = false;
+            }
+
+            _isVelocityListOpen = _velocityKeyFrames.Count > 0 && ImGui.TreeNodeEx($"Velocity ({_velocityKeyFrames.Count})", ImGuiTreeNodeFlags.NoTreePushOnOpen);
+
+            if (_isVelocityListOpen && ImGui.BeginTable("VelocityTable", 4, tableFlags))
+            {
+                ImGui.TableSetupColumn("id", ImGuiTableColumnFlags.WidthFixed, indexWidth);
+                ImGui.TableSetupColumn("distance", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("velocity", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableSetupColumn("tension", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableHeadersRow();
+
+                ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(2.0f, 0.0f));
+
+                for (int i = 0; i < _velocityKeyFrames.Count; i++)
+                {
+                    NSTSplineVelocityKeyFrame velocity = _velocityKeyFrames[i];
+
+                    ImGui.TableNextColumn();
+                    if (ImGui.Selectable($"{i+1}##vid", velocity.IsSelected, selectableFlags))
+                    {
+                        if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                        {
+                            explorer.LookAtObject(_velocityKeyFrames[i]);
+                        }
+                        else
+                        {
+                            OpenVelocityList = true;
+                            explorer.SelectionManager.UpdateSelection([ velocity.IsSelected ? Parent : velocity ]);
+                            explorer.RenderNextFrame = true;
+                        }
+                    }
+
+                    if (ImGui.BeginPopupContextItem($"VelocityActions{i}"))
+                    {
+                        if (ImGui.Selectable("Create new (before)"))
+                        {
+                            OpenVelocityList = true;
+                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, true)]);
+                        }
+                        if (ImGui.Selectable("Create new (after)"))
+                        {
+                            OpenVelocityList = true;
+                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, false)]);
+                        }
+                        ImGui.EndPopup();
+                    }
+
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##vd{i}", ref velocity.Object._distance, 1.0f, 0.0f, float.MaxValue)) RefreshVelocity(velocity, explorer);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##vv{i}", ref velocity.Object._value, 0.01f)) explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, velocity.Object);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
+                    if (ImGui.DragFloat($"##vt{i}", ref velocity.Object._tension, 0.01f)) explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, velocity.Object);
+                }
+                ImGui.PopStyleVar();
+                ImGui.EndTable();
+                ImGui.Spacing();
             }
 
             // Render markers
@@ -770,7 +935,7 @@ namespace NST
             }
 
             prevOpen = _isMarkerListOpen;
-            _isMarkerListOpen = _markers.Count > 0 && ImGui.TreeNodeEx($"Markers ({_markers.Count})");
+            _isMarkerListOpen = _markers.Count > 0 && ImGui.TreeNodeEx($"Markers ({_markers.Count})", ImGuiTreeNodeFlags.NoTreePushOnOpen);
 
             if (prevOpen != _isMarkerListOpen && Object3D != null && Markers3D != null)
             {
@@ -779,30 +944,34 @@ namespace NST
                 explorer.RenderNextFrame = true;
             }
 
-            if (_isMarkerListOpen)
+            if (_isMarkerListOpen && ImGui.BeginTable("MarkerTable", 2, tableFlags))
             {
+                ImGui.TableSetupColumn("id", ImGuiTableColumnFlags.WidthFixed, indexWidth);
+                ImGui.TableSetupColumn("distance", ImGuiTableColumnFlags.WidthStretch);
+                ImGui.TableHeadersRow();
+
                 ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(2.0f, 0.0f));
 
                 for (int i = 0; i < _markers.Count; i++)
                 {
                     NSTSplineMarker marker = _markers[i];
 
-                    ImGui.SetNextItemAllowOverlap();
-                    if (ImGui.Selectable($"##Marker {i+1}", marker.IsSelected, ImGuiSelectableFlags.AllowDoubleClick))
+                    ImGui.TableNextColumn();
+                    if (ImGui.Selectable($"{i+1}##mid", marker.IsSelected, selectableFlags))
                     {
                         if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
                         {
-                            explorer.LookAtObject(_markers[i]);
+                            explorer.LookAtObject(marker);
                         }
                         else
                         {
                             OpenMarkerList = true;
-                            explorer.SelectionManager.UpdateSelection([ _markers[i].IsSelected ? Parent : _markers[i] ]);
+                            explorer.SelectionManager.UpdateSelection([ marker.IsSelected ? Parent : marker ]);
                             explorer.RenderNextFrame = true;
                         }
                     }
 
-                    if (ImGui.BeginPopupContextItem("MarkerActions" + i))
+                    if (ImGui.BeginPopupContextItem($"MarkerActions{i}"))
                     {
                         if (ImGui.Selectable("Create new (before)"))
                         {
@@ -817,49 +986,23 @@ namespace NST
                         ImGui.EndPopup();
                     }
 
-                    ImGui.SameLine();
-                    ImGui.Text($"{(i < 9 ? " " : "")}{i+1}.");
-                    ImGui.SameLine(); 
-
-                    ImGui.SetNextItemWidth(-1);
+                    ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat("##marker_dist" + i, ref marker.Object._distance))
                     {
                         RefreshMarker(marker, explorer);
                     }
                 }
-                ImGui.TreePop();
                 ImGui.PopStyleVar();
+                ImGui.EndTable();
             }
-
-            // Render keyframes
-
-            // igSplineVec3fKeyframeTrack? vec3Tracks = (igSplineVec3fKeyframeTrack?)Object._vec3fTracks?.Dict.Values.FirstOrDefault();
-
-            // if (vec3Tracks?._data != null && vec3Tracks._data._data.Count > 0 && ImGui.TreeNodeEx($"Keyframes ({vec3Tracks._data._data.Count})"))
-            // {
-            //     for (int i = 0; i < vec3Tracks._data._data.Count; i++)
-            //     {
-            //         igSplineVec3fKeyframe point = vec3Tracks._data._data[i];
-            //         System.Numerics.Vector3 position = point._value.ToNumericsVector3();
-            //         System.Numerics.Vector4 dpos = new System.Numerics.Vector4(point._distance, position.X, position.Y, position.Z);
-
-            //         ImGui.SetNextItemWidth(-1);
-            //         if (ImGui.InputFloat4("##" + i, ref dpos))
-            //         {
-            //             point._distance = dpos.X;
-            //             point._value._x = dpos.Y;
-            //             point._value._y = dpos.Z;
-            //             point._value._z = dpos.W;
-            //         }
-            //     }
-            //     ImGui.TreePop();
-            // }
         }
     }
 
     public class NSTSplineControlPoint : NSTObject<igSplineControlPoint2>
     {
         public NSTSpline Parent { get; }
+
+        public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
         public NSTSplineControlPoint(NSTSpline parent, igSplineControlPoint2 point)
         {
@@ -891,6 +1034,8 @@ namespace NST
         public float LocalDistance { get; set; } = 0;
 
         public THREE.Vector3 Position { get; set; }
+
+        public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
         public NSTSplineRotationKeyFrame(NSTSpline parent, CSplineRotationKeyframe rotation)
         {
@@ -925,10 +1070,45 @@ namespace NST
         }
     }
 
+    public class NSTSplineVelocityKeyFrame : NSTObject<CSplineVelocityKeyframe>
+    {
+        public NSTSpline Parent { get; }
+        public THREE.Vector3 Position { get; set; }
+
+        public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
+
+        public NSTSplineVelocityKeyFrame(NSTSpline parent, CSplineVelocityKeyframe velocity)
+        {
+            Parent = parent;
+            Object = velocity;
+            ArchiveFile = parent.ArchiveFile;
+        }
+
+        public override THREE.Object3D CreateObject3D(bool selected = false)
+        {
+            const float height = 150;
+            var geo = new THREE.CylinderGeometry(4, 4, height);
+            var mat = new THREE.MeshBasicMaterial() { Color = new THREE.Color(.1f,1,.2f) };
+            var mesh = new THREE.Mesh(geo, mat);
+
+            mesh.Position.Copy(Position);
+            mesh.RotateX((float)Math.PI / 2);
+            if (selected) mesh.ApplyMatrix4(Parent.Parent.ObjectToWorld());
+
+            mesh.UserData["splineVelocity"] = this;
+
+            Object3D = mesh;
+
+            return mesh;
+        }
+    }
+
     public class NSTSplineMarker : NSTObject<igSplineEvent>
     {
         public NSTSpline Parent { get; }
         public THREE.Vector3 Position { get; set; }
+
+        public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
         public NSTSplineMarker(NSTSpline parent, igSplineEvent marker)
         {
@@ -962,6 +1142,8 @@ namespace NST
     public class NSTWaypoint : NSTObject<CWaypoint>
     {
         public NSTEntity Parent { get; }
+
+        public override void Render(LevelExplorer explorer) => Parent.Render(explorer);
 
         public NSTWaypoint(NSTEntity parent, CWaypoint waypoint)
         {

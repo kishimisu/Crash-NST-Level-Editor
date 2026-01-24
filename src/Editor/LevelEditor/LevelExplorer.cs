@@ -672,6 +672,12 @@ namespace NST
                     splines[kf.Parent].Add(selected);
                     continue;
                 }
+                if (selected is NSTSplineVelocityKeyFrame vkf)
+                {
+                    if (!splines.ContainsKey(vkf.Parent)) splines[vkf.Parent] = [];
+                    splines[vkf.Parent].Add(selected);
+                    continue;
+                }
                 if (selected is NSTSplineMarker marker)
                 {
                     if (!splines.ContainsKey(marker.Parent)) splines[marker.Parent] = [];
@@ -748,6 +754,10 @@ namespace NST
             else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineRotationKeyFrame kf)
             {
                 SelectionManager.UpdateSelection([kf.Parent.Parent], true);
+            }
+            else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineVelocityKeyFrame vkf)
+            {
+                SelectionManager.UpdateSelection([vkf.Parent.Parent], true);
             }
             else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineMarker marker)
             {
@@ -873,26 +883,7 @@ namespace NST
                     {
                         if (SelectionManager._selection.Count > 0)
                         {
-                            if (SelectionManager._selection[0] is NSTSplineControlPoint cp)
-                            {
-                                cp.Parent.Parent.Render(this);
-                            }
-                            else if (SelectionManager._selection[0] is NSTSplineRotationKeyFrame kf)
-                            {
-                                kf.Parent.Parent.Render(this);
-                            }
-                            else if (SelectionManager._selection[0] is NSTSplineMarker marker)
-                            {
-                                marker.Parent.Parent.Render(this);
-                            }
-                            else if (SelectionManager._selection[0] is NSTWaypoint waypoint)
-                            {
-                                waypoint.Parent.Render(this);
-                            }
-                            else
-                            {
-                                SelectionManager._selection[0].Render(this);
-                            }
+                            SelectionManager._selection[0].Render(this);
                         }
                     }
                     ImGui.EndChild();
