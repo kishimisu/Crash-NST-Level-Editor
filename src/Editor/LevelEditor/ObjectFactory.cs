@@ -138,10 +138,10 @@ namespace NST
 
                     foreach ((string displayName, string objectName) in _crateNames["Default"])
                     {
-                        if (ImGui.MenuItem(displayName)) AddCrate(objectName, explorer);
+                        if (ImGui.MenuItem(displayName)) TryAddObject(() => AddCrate(objectName, explorer));
                     }
 
-                    if (ImGui.MenuItem("Big TNT")) AddBigTNTCrate(explorer);
+                    if (ImGui.MenuItem("Big TNT")) TryAddObject(() => AddBigTNTCrate(explorer));
 
                     ImGui.Separator();
 
@@ -149,7 +149,7 @@ namespace NST
                     {
                         foreach ((string displayName, string objectName) in _crateNames["Iron"])
                         {
-                            if (ImGui.MenuItem(displayName)) AddCrate(objectName, explorer);
+                            if (ImGui.MenuItem(displayName)) TryAddObject(() => AddCrate(objectName, explorer));
                         }
                         ImGui.EndMenu();
                     }
@@ -159,7 +159,7 @@ namespace NST
                     {
                         foreach ((string displayName, string objectName) in _crateNames["Bonus"])
                         {
-                            if (ImGui.MenuItem(displayName)) AddCrate(objectName, explorer);
+                            if (ImGui.MenuItem(displayName)) TryAddObject(() => AddCrate(objectName, explorer));
                         }
                         ImGui.EndMenu();
                     }
@@ -171,14 +171,14 @@ namespace NST
                 {
                     foreach ((string displayName, string objectName) in _collectibleNames)
                     {
-                        if (ImGui.MenuItem(displayName)) AddCollectible(objectName, explorer);
+                        if (ImGui.MenuItem(displayName)) TryAddObject(() => AddCollectible(objectName, explorer));
                     }
 
                     if (ImGui.BeginMenu("Gem..."))
                     {
                         foreach (string name in _gemNames)
                         {
-                            if (ImGui.MenuItem(name + " Gem")) AddCollectible("Gem_" + name, explorer);
+                            if (ImGui.MenuItem(name + " Gem")) TryAddObject(() => AddCollectible("Gem_" + name, explorer));
                         }
                         ImGui.EndMenu();
                     }
@@ -199,25 +199,29 @@ namespace NST
                             ImGui.EndCombo();
                         }
                         ImGui.Separator();
-                        if (ImGui.MenuItem("Floating Gem Platform")) AddGenericTemplate("Gem_Platform_" + _gemColor, "Platforms", explorer);
-                        if (ImGui.MenuItem("Moving Gem Platform")) AddGenericTemplate("Gem_Path_Platform_Start_" + _gemColor, "Platforms", explorer);
+                        if (ImGui.MenuItem("Floating Gem Platform")) TryAddObject(() => AddGenericTemplate("Gem_Platform_" + _gemColor, "Platforms", explorer));
+                        if (ImGui.MenuItem("Moving Gem Platform"))
+                        {
+                            string platformName = (_gemColor == "Orange" ? "C2_" : "") + "Gem_Path_Platform_Start_";
+                            TryAddObject(() => AddGenericTemplate(platformName + _gemColor, "Platforms", explorer));
+                        }
                         ImGui.EndMenu();
                     }
 
-                    if (ImGui.MenuItem("Fade In/Out Teleporter")) AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
+                    if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
                     {
                         if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
                         {
                             end.Object._parentSpacePosition = new igVec3fMetaField(start.Position.X + 600, start.Position.Y, start.Position.Z - 500);
                             explorer.SelectionManager.UpdateSelection([end], false);
                         }
-                    });
+                    }));
                     ImGui.EndMenu();
                 }
 
                 if (ImGui.BeginMenu("New vehicle..."))
                 {
-                    if (ImGui.MenuItem("JetBoard")) AddGeneric("L203_HangEight", "L203_HangEight", "Spawner_RideBoard", "Vehicles", explorer);
+                    if (ImGui.MenuItem("JetBoard")) TryAddObject(() => AddGeneric("L203_HangEight", "L203_HangEight", "Spawner_RideBoard", "Vehicles", explorer));
                     ImGui.EndMenu();
                 }
 
@@ -225,12 +229,12 @@ namespace NST
                 {
                     if (ImGui.BeginMenu("C1"))
                     {
-                        if (ImGui.MenuItem("Bonus Teleporter")) AddBonusRoundTeleporter(explorer);
+                        if (ImGui.MenuItem("Bonus Teleporter")) TryAddObject(() => AddBonusRoundTeleporter(explorer));
                         ImGui.Separator();
                         if (ImGui.MenuItem("Tawna Small")) AddBonusRound("Tawna_Small", explorer);
                         if (ImGui.MenuItem("Tawna Large")) AddBonusRound("Tawna_Large", explorer);
-                        if (ImGui.MenuItem("Brio")) AddBonusRound("Brio", explorer);
-                        if (ImGui.MenuItem("Cortex")) AddBonusRound("Cortex", explorer);
+                        if (ImGui.MenuItem("Brio"))        AddBonusRound("Brio", explorer);
+                        if (ImGui.MenuItem("Cortex"))      AddBonusRound("Cortex", explorer);
                         ImGui.EndMenu();
                     }
                     if (ImGui.BeginMenu("C2"))
@@ -260,7 +264,7 @@ namespace NST
 
                         ImGui.SeparatorText("Platform Path");
                         if (ImGui.MenuItem("L214_RoadToRuin"))   AddC2BonusRound("L214_RoadToRuin", explorer);
-                        // if (ImGui.MenuItem("L219_Ruination (X)")) AddC2BonusRound("L219_Ruination", explorer);     // crash
+                        if (ImGui.MenuItem("L219_Ruination")) AddC2BonusRound("L219_Ruination", explorer);
 
                         ImGui.EndMenu();
                     }
@@ -303,20 +307,21 @@ namespace NST
 
                 if (ImGui.BeginMenu("New camera..."))
                 {
-                    if (ImGui.MenuItem("Relative camera")) AddRelativeCamera(explorer);
-                    if (ImGui.MenuItem("Spline camera")) AddSplineCamera(explorer);
-                    if (ImGui.MenuItem("Free camera")) AddStackCamera(explorer);
-                    if (ImGui.MenuItem("Camera Box")) AddCameraBox(explorer);
+                    if (ImGui.MenuItem("Relative camera")) TryAddObject(() => AddRelativeCamera(explorer));
+                    if (ImGui.MenuItem("Spline camera")) TryAddObject(() => AddSplineCamera(explorer));
+                    if (ImGui.MenuItem("Free camera")) TryAddObject(() => AddStackCamera(explorer));
+                    if (ImGui.MenuItem("Camera Box")) TryAddObject(() => AddCameraBox(explorer));
+                    if (ImGui.MenuItem("Camera Trigger")) TryAddObject(() => AddCameraTrigger(explorer));
                     ImGui.EndMenu();
                 }
 
                 if (ImGui.BeginMenu("Other..."))
                 {
-                    if (ImGui.MenuItem("New DynamicClipEntity")) AddCDynamicClipEntity(explorer);
-                    if (ImGui.MenuItem("New Death Trigger")) AddDeathTrigger(explorer);
+                    if (ImGui.MenuItem("New DynamicClipEntity")) TryAddObject(() => AddCDynamicClipEntity(explorer));
+                    if (ImGui.MenuItem("New Death Trigger")) TryAddObject(() => AddDeathTrigger(explorer));
                     ImGui.Separator();
-                    if (ImGui.MenuItem("New Boost Pad")) AddGenericTemplate("Chase_BoostPad", "Platforms", explorer);
-                    if (ImGui.MenuItem("New Bounce Mine")) AddGenericTemplate("Chase_BounceMine", "Hazards", explorer);
+                    if (ImGui.MenuItem("New Boost Pad")) TryAddObject(() => AddGenericTemplate("Chase_BoostPad", "Platforms", explorer));
+                    if (ImGui.MenuItem("New Bounce Mine")) TryAddObject(() => AddGenericTemplate("Chase_BounceMine", "Hazards", explorer));
                     ImGui.EndMenu();
                 }
 
@@ -334,6 +339,18 @@ namespace NST
                 templateIgz.FindObject<CEntityHandleList>("Crate_Switch_entityData_componentData_CommonCrateSwitchIron_OulinedCrates")!._data.Clear();
                 templateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Checkpoint";
                 templateIgz.FindObject<common_Collectible_TimeTrial_StartData>("Collectible_TimeTrial_Start_entityData_componentData_CommonCollectibleTimeTrialStart_gen")!._Bool = true;
+            }
+        }
+
+        private static void TryAddObject(Action callback)
+        {
+            try
+            {
+                callback();
+            }
+            catch (Exception e)
+            {
+                ModalRenderer.ShowMessageModal("Could not create the object", "An error occured while creating the object(s):\n\n" + e.Message);
             }
         }
 
@@ -413,17 +430,9 @@ namespace NST
 
             // Clone crate
 
-            IgArchiveFile? destination = null;
-            var mapFiles = explorer.Archive.GetFiles().Where(f => f.GetPath().StartsWith("maps/") && f.GetName().EndsWith(".igz"));
-
-            if (_bonusCrate) destination = mapFiles.FirstOrDefault(f => f.GetName().Contains("Bonus"));
-            
-            destination ??= mapFiles.FirstOrDefault(f => f.GetName(false).EndsWith("_Crates"));
-
-            string fileIdentifier = destination?.GetName(false) ?? "Crates";
-
-            explorer.GetOrCreateIgzFile(fileIdentifier, out destination, out IgzFile crateIgz);
-            explorer.Clone([crate], templateArchive, templateIgz, destination, crateIgz);
+            string fileIdentifier = _bonusCrate ? "BonusCrates" : "Crates";
+            explorer.GetOrCreateIgzFile(fileIdentifier, out IgArchiveFile destination, out IgzFile crateIgz);
+            explorer.Clone([crate], templateArchive, templateIgz, destination, crateIgz, initializeObjects: true);
 
             if (_floatMode == "Floating" || _floatMode == "Flood")
             {
@@ -472,7 +481,7 @@ namespace NST
             }
 
             explorer.GetOrCreateIgzFile("Collectibles", out IgArchiveFile collectibleFile, out IgzFile collectibleIgz);
-            explorer.Clone([collectible], templateArchive, templateIgz, collectibleFile, collectibleIgz);
+            explorer.Clone([collectible], templateArchive, templateIgz, collectibleFile, collectibleIgz, initializeObjects: true, offsetZ: 75.0f);
         }
 
         private static void AddRelativeCamera(LevelExplorer explorer)
@@ -547,6 +556,24 @@ namespace NST
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
             explorer.Clone([cameraBox], null, null, cameraFile, cameraIgz, 800);
+        }
+
+        private static void AddCameraTrigger(LevelExplorer explorer)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L201_TurtleWoods.pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile("L201_TurtleWoods_Hazards.igz")!.ToIgzFile();
+
+            var trigger = sourceIgz.FindObject<CScriptTriggerEntity>("MousePit_CameraTrigger00")!;
+            var triggerComponent = trigger.GetComponent<L201_TurtleWoods_MousePit_CameraTriggerData>()!;
+
+            trigger.ObjectName = "CameraTrigger";
+            trigger._min = new igVec3fMetaField(-500, -200, 0);
+            trigger._max = new igVec3fMetaField(500, 200, 1200);
+            triggerComponent._Camera_Base_0x28.Reference = null;
+            triggerComponent._Camera_Base_0x38.Reference = null;
+
+            explorer.GetOrCreateIgzFile("Hazards", out IgArchiveFile hazardFile, out IgzFile hazardIgz);
+            explorer.Clone([trigger], sourceArchive, sourceIgz, hazardFile, hazardIgz, 800, initializeObjects: true);
         }
 
         private static void AddCDynamicClipEntity(LevelExplorer explorer)
@@ -627,7 +654,7 @@ namespace NST
 
             explorer.GetOrCreateIgzFile("Bonus", out IgArchiveFile bonusFile, out IgzFile bonusIgz);
 
-            explorer.Clone([bonusTeleporter], templateArchive, templateIgz, bonusFile, bonusIgz);
+            explorer.Clone([bonusTeleporter], templateArchive, templateIgz, bonusFile, bonusIgz, initializeObjects: true);
         }
 
         private static void AddBonusRound(string type, LevelExplorer explorer)
@@ -708,7 +735,7 @@ namespace NST
 
             explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile dstFile, out IgzFile dstIgz);
 
-            explorer.Clone([obj], templateArchive, templateIgz, dstFile, dstIgz);
+            explorer.Clone([obj], templateArchive, templateIgz, dstFile, dstIgz, initializeObjects: true);
         }
 
         private static readonly List<string> _bonusFileNames = [ 
