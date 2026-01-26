@@ -344,8 +344,13 @@ namespace Alchemy
 
         public IgArchiveFile? FindMainMapFile()
         {
-            Regex regex = new Regex(@"^maps\/([^\/]+)\/([^\/\.]+)\/\2\.igz$");
-            return _files.Find(f => regex.IsMatch(f.GetPath()));
+            IgArchiveFile? packageFile = FindPackageFile();
+            if (packageFile == null) return null;
+
+            string? levelName = Path.GetFileName(Path.GetDirectoryName(packageFile.GetPath()));
+            if (levelName == null) return null;
+            
+            return FindFile(levelName, FileSearchType.Name, FileSearchParams.MapIgz);
         }
 
         /// <summary>

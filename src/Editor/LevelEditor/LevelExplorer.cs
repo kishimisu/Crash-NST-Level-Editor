@@ -620,15 +620,12 @@ namespace NST
 
         private void PasteObjects(bool keepOriginalPosition = false, bool moveSelection = false)
         {
-            const float maxDistance = 5000.0f;
             THREE.Vector3? spawnPoint = null;
 
             // Raycast to find spawn point
             if (!keepOriginalPosition || moveSelection)
             {
-                var intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
-                float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
-                spawnPoint = _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+                spawnPoint = GetIntersectionPoint();
 
                 if (moveSelection)
                 {
@@ -1232,26 +1229,25 @@ namespace NST
 
         public string GetFileNameFromIdentifier(string fileIdentifier)
         {
+            string identifier = $"_{(fileIdentifier == "Camera" ? "" : "My")}{fileIdentifier}";
+
             IgArchiveFile? existing = string.IsNullOrEmpty(fileIdentifier)
                 ? Archive.FindMainMapFile()
-                : Archive.FindFile(fileIdentifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
+                : Archive.FindFile(identifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
 
             if (existing != null) return existing.GetName(false);
 
-            IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
-
-            string path = (mainMapFile == null)
-                ? $"maps/Custom/Custom_{fileIdentifier}.igz"
-                : mainMapFile.GetPath().Replace(".igz", $"_{fileIdentifier}.igz");
-
+            string path = Archive.FindMainMapFile()!.GetPath().Replace(".igz", $"{identifier}.igz");
             return Path.GetFileNameWithoutExtension(path);
         }
 
         public void GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
         {
+            string identifier = $"_{(fileIdentifier == "Camera" ? "" : "My")}{fileIdentifier}";
+
             IgArchiveFile? existing = string.IsNullOrEmpty(fileIdentifier)
                 ? Archive.FindMainMapFile()
-                : Archive.FindFile(fileIdentifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
+                : Archive.FindFile(identifier, FileSearchType.NameContains, FileSearchParams.MapIgz);
 
             if (existing != null)
             {
@@ -1259,19 +1255,18 @@ namespace NST
                 infos.igz ??= existing.ToIgzFile();
                 file = existing;
                 igz = infos.igz;
+                // Console.WriteLine($"(existing) fileIdentifier: {fileIdentifier} ({identifier}) -> {existing.GetName()}");
             }
             else
             {
-                IgArchiveFile? mainMapFile = Archive.FindMainMapFile();
-                string path = (mainMapFile == null)
-                    ? $"maps/Custom/Custom_{fileIdentifier}.igz"
-                    : mainMapFile.GetPath().Replace(".igz", $"_{fileIdentifier}.igz");
+                string path = Archive.FindMainMapFile()!.GetPath().Replace(".igz", $"{identifier}.igz");
 
                 file = new IgArchiveFile(path);
                 igz = new IgzFile(path);
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
+                // Console.WriteLine($"(new) fileIdentifier: {fileIdentifier} ({identifier}) -> {file.GetName()}");
             }
         }
 
@@ -1282,6 +1277,7 @@ namespace NST
             float camDistance = 400, 
             bool? addToSelection = false, 
             bool initializeObjects = false, 
+            float? offsetZ = null,
             Dictionary<igObject, igObject>? clones = null)
         {
             Dictionary<NSTEntity, string?> newEntities = [];
@@ -1369,7 +1365,8 @@ namespace NST
                 SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e != selected && e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
 
-            SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
+            SelectionManager._selectionContainer.Position = GetIntersectionPoint(camDistance * 2);
+            if (offsetZ != null) SelectionManager._selectionContainer.Position.Z += offsetZ.Value;
             SelectionManager.ApplyChanges(ArchiveRenderer);
 
             return allObjects;
@@ -1379,8 +1376,15 @@ namespace NST
         {
             _treeView.RebuildTree(InstanceManager.AllObjects);
             InstanceManager.RefreshInstances(InstanceManager.AllObjects);
-            SelectionManager._selectionContainer.Position = _camera.Position.Clone().Add(_camera.Front * camDistance);
+            SelectionManager._selectionContainer.Position = GetIntersectionPoint(camDistance * 2);
             SelectionManager.ApplyChanges(ArchiveRenderer);
+        }
+        
+        private THREE.Vector3 GetIntersectionPoint(float maxDistance = 5000.0f)
+        {
+            List<THREE.Intersection> intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
+            float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
+            return _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
         }
 
         public override void Dispose()
