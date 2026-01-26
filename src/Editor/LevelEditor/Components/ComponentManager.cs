@@ -31,7 +31,7 @@ namespace NST
             _uuid = ImGuiUtils.Uuid();
         }
 
-        private List<NSTComponent> SetupComponents(LevelExplorer explorer)
+        public List<NSTComponent> SetupComponents(LevelExplorer explorer)
         {
             Explorer = explorer;
 
@@ -67,6 +67,8 @@ namespace NST
             }
 
             components.Sort((a, b) => a.DisplayName.CompareTo(b.DisplayName));
+
+            _components = components;
 
             return components;
         }

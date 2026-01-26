@@ -184,7 +184,7 @@ namespace NST
             if (hasCollision && manager.Entity.IsPrefabChild)
             {
                 ImGui.PushStyleColor(ImGuiCol.Text, 0xff00bbff);
-                ImGui.TextWrapped("This entity is part of a prefab, collisions won't be kept if you make copies of it.");
+                ImGui.TextWrapped("This entity is part of a prefab, copy the parent prefab to keep collisions.");
                 ImGui.PopStyleColor();
                 ImGui.Spacing();
             }
@@ -213,17 +213,17 @@ namespace NST
                 return;
             }
 
-            if (manager.Entity.Children.Any(c => c is NSTEntity e && e.CollisionShapeIndex != -1))
-            {
-                ImGui.PushStyleColor(ImGuiCol.Text, 0xff00bbff);
-                ImGui.TextWrapped("(!) This prefab contains children with collisions, which isn't fully supported yet.");
-                ImGui.TextWrapped("- You can move this prefab around and keep collisions.");
-                ImGui.TextWrapped("- You can copy this prefab to a different level *once* and keep collisions.");
-                ImGui.TextWrapped("- You *cannot* keep collisions if you copy this prefab to the same level.");
-                ImGui.PopStyleColor();
-                ImGui.Separator();
-                ImGui.Spacing();
-            }
+            // if (manager.Entity.Children.Any(c => c is NSTEntity e && e.CollisionShapeIndex != -1))
+            // {
+            //     ImGui.PushStyleColor(ImGuiCol.Text, 0xff00bbff);
+            //     ImGui.TextWrapped("(!) This prefab contains children with collisions, which isn't fully supported yet.");
+            //     ImGui.TextWrapped("- You can move this prefab around and keep collisions.");
+            //     ImGui.TextWrapped("- You can copy this prefab to a different level *once* and keep collisions.");
+            //     ImGui.TextWrapped("- You *cannot* keep collisions if you copy this prefab to the same level.");
+            //     ImGui.PopStyleColor();
+            //     ImGui.Separator();
+            //     ImGui.Spacing();
+            // }
 
             ImGui.Text("Prefab children:");
 

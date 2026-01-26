@@ -571,7 +571,7 @@ namespace NST
         /// Try to save the current archive to disk.
         /// Will show a confirmation modal if it's a game archive.
         /// </summary>
-        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false, bool compress = false)
+        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false, bool compress = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
         {
             if (!IsUpdated && !compress)
             {
@@ -586,13 +586,13 @@ namespace NST
                     fromLevelEditor
                         ? "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to create a copy of the original level\n(Save as...)."
                         : "Warning: you're about to overwrite a game file!\n\nThe recommended approach is to copy the files you want to edit to a new archive (mod), then use the mod manager to apply them.",
-                    () =>  SaveArchive(true, launchGame, compress), // Save as...
-                    () =>  SaveArchive(false, launchGame, compress) // Overwrite
+                    () =>  SaveArchive(true, launchGame, compress, preSaveCallback, postSaveCallback), // Save as...
+                    () =>  SaveArchive(false, launchGame, compress, preSaveCallback, postSaveCallback) // Overwrite
                 );
             }
             else
             {
-                SaveArchive(false, launchGame, compress);
+                SaveArchive(false, launchGame, compress, preSaveCallback, postSaveCallback);
             }
         }
 
@@ -600,7 +600,7 @@ namespace NST
         /// Save the current archive to disk
         /// </summary>
         /// <param name="saveAs">If true will open the file saving explorer, otherwise will overwrite the current file</param>
-        public void SaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false)
+        public void SaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
         {
             string? path = Archive.GetPath();
 
@@ -640,6 +640,8 @@ namespace NST
             Task.Run(() =>
             {
                 List<CollisionUpdateInfos> updatedCollisions = [];
+
+                preSaveCallback?.Invoke();
 
                 // Loop through all updated files
                 foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
@@ -703,6 +705,8 @@ namespace NST
                 Archive.Save(path, true);
                 IsUpdated = false;
 
+                postSaveCallback?.Invoke();
+
                 ModalRenderer.CloseLoadingModal();
 
                 if (launchGame)
@@ -721,6 +725,7 @@ namespace NST
                     string logPath = CrashHandler.WriteLogsToFile();
                     ModalRenderer.ShowMessageModal("Error", $"An error occured while saving the archive. Log saved to:\n\n{logPath}");
                 }
+                postSaveCallback?.Invoke();
             }, TaskContinuationOptions.OnlyOnFaulted);
         }
 

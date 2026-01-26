@@ -180,12 +180,12 @@ namespace THREE
                 {
                     if (obj is Mesh || obj is Line)
                     {
-                        if (obj.UserData.ContainsKey("excludeFromOutline")) return;
+                        if (obj.UserData.ContainsKey("excludeFromOutline") || !obj.UserData.TryGetValue("oldVisible", out object? value)) return;
 
                         if (bVisible)
                         {
 
-                            obj.Visible = (bool)obj.UserData["oldVisible"];
+                            obj.Visible = (bool)value;
                             obj.UserData.Remove("oldVisible");
                         }
                         else

@@ -1,5 +1,6 @@
 using Alchemy;
 using ImGuiNET;
+using System.Text.RegularExpressions;
 
 namespace NST
 {
@@ -128,6 +129,7 @@ namespace NST
         public List<NSTObject> AllObjects { get; } = [];
         public Dictionary<NamedReference, NSTObject> AllReferences { get; } = [];
         public Dictionary<igEntity, NSTEntity> PrefabTemplates { get; } = [];
+        public HashSet<NSTEntity> FakePrefabChilds { get; } = [];
 
         private LevelExplorer _explorer;
         private Dictionary<NSTModel, InstanceManager> _instances = [];
@@ -147,6 +149,8 @@ namespace NST
                 Register(obj);
             }
 
+            List<NSTEntity> fakeTemplates = RegisterFakePrefabs();
+
             foreach (NSTEntity entity in AllEntities.ToList())
             {
                 entity.InitPrefabChildren(this);
@@ -156,6 +160,11 @@ namespace NST
             {
                 if (obj is NSTEntity entity)
                 {
+                    if (entity.IsPrefabChild && fakeTemplates.Contains(entity.PrefabTemplate!))
+                    {
+                        FakePrefabChilds.Add(entity);
+                    }
+
                     entity.InitChildren(_explorer, AllObjects);
                     entity.InitScriptTriggerEntity(_explorer, AllEntities);
                 }
@@ -200,6 +209,35 @@ namespace NST
                     cameraBox.Setup(AllObjects);
                 }
             }
+        }
+
+        private List<NSTEntity> RegisterFakePrefabs()
+        {
+            var regex = new Regex(@"^_FakePrefab_(.+?)___(.+)$");
+            List<NSTEntity> fakeTemplates = [];
+
+            foreach (NSTEntity template in AllEntities.ToList())
+            {
+                var match = regex.Match(template.Object.ObjectName!);
+                if (!match.Success) continue;
+
+                string parentName = match.Groups[1].Value;
+                string childName = match.Groups[2].Value;
+
+                NSTEntity? parent = AllEntities.Find(e => e.Object.ObjectName == parentName);
+                if (parent == null) continue;
+
+                template.Object.ObjectName = childName;
+                parent.Object.GetComponent<igPrefabComponentData>()?._prefabEntities?._data.Add(template.Object);
+
+                THREE.Matrix4 parentTransform = parent.Object.GetTransformMatrix().Inverted();
+                THREE.Vector3 localPos = parentTransform * template.Position;
+                template.Object._parentSpacePosition = localPos.ToVec3MetaField();
+                fakeTemplates.Add(template);
+                // Console.WriteLine($"Added fake child to prefab: {template.Object.ObjectName}, {parentName}, {childName}");
+            }
+
+            return fakeTemplates;
         }
 
         public void Register(NSTObject obj)
@@ -315,11 +353,11 @@ namespace NST
                     return [];
                 }
 
-                if (entity.IsPrefabChild && (entity.PrefabTemplate!.PrefabTemplateInstances.Count > 1 || entity.ParentPrefabInstance!.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) < 8))
+                if (entity.IsPrefabChild && entity.ParentPrefabInstance?.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) < 45)
                 {
                     bool triggerPassThrough = !selectionEmpty && selection.All(e => e.Object is CScriptTriggerEntity && e.IsPrefabChild);
 
-                    if (fromTree || (shiftPressed && selectionEmpty) || (!shiftPressed && (entity.ParentPrefabInstance!.IsSelected || triggerPassThrough)))
+                    if (fromTree || (shiftPressed && selectionEmpty) || (!shiftPressed && (entity.ParentPrefabInstance.IsSelected || triggerPassThrough)))
                     {
                         Console.WriteLine("Select prefab child instances");
                         return SelectChildInstances(entity).Cast<NSTObject>().ToList();
@@ -327,7 +365,7 @@ namespace NST
                     else
                     {
                         Console.WriteLine("Select prefab group");
-                        return SelectPrefabGroup(entity.ParentPrefabInstance!).Cast<NSTObject>().ToList();
+                        return SelectPrefabGroup(entity.ParentPrefabInstance).Cast<NSTObject>().ToList();
                     }
                 }
                 else if (entity.IsPrefabInstance)

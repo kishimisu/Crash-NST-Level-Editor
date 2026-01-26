@@ -104,6 +104,7 @@ namespace NST
 
                     compoundShape._elements.Remove(shape);
 
+                    existing.Remove(reference);
                     shapes.Remove(shape);
                     rebuildHashMap = true;
 

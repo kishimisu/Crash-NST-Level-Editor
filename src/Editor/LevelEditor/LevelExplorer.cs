@@ -715,6 +715,11 @@ namespace NST
                                         prefabChild.PrefabTemplate!.PrefabTemplateInstances.Remove(prefabChild);
                                         prefabChild.PrefabTemplate.PrefabTemplateInstances.ForEach(e => e.Parents.Remove(removedEntity));
                                         InstanceManager.Unregister(prefabChild);
+
+                                        if (prefabChild.CollisionShapeIndex != -1)
+                                        {
+                                            ArchiveRenderer.SetEntityUpdated(prefabChild, removed: true);
+                                        }
                                     }
                                 }
                             }
@@ -767,6 +772,64 @@ namespace NST
             }
 
             _treeView.RebuildTree(InstanceManager.AllObjects);
+        }
+
+        private void SaveArchive(bool launchGame, bool saveAs)
+        {
+            List<Action> postSaveCallbacks = [];
+
+            // Deconstruct fake prefabs with collision
+            Action onPreSave = () =>
+            {
+                foreach (NSTEntity prefabChild in InstanceManager.FakePrefabChilds)
+                {
+                    if (!FileManager.IsFileUpdated(prefabChild.ArchiveFile)) continue;
+
+                    THREE.Vector3 worldPos = new THREE.Vector3();
+                    prefabChild.ObjectToWorld().Decompose(worldPos, new THREE.Quaternion(), new THREE.Vector3());
+
+                    NSTEntity parentPrefab = prefabChild.ParentPrefabInstance!;
+                    var prefabComponentData = parentPrefab.Object.GetComponent<igPrefabComponentData>()!._prefabEntities!._data;
+
+                    var previousPosition = prefabChild.Object._parentSpacePosition;
+                    var previousName = prefabChild.Object.ObjectName;
+                    var previousIndex = prefabComponentData.IndexOf(prefabChild.Object);
+
+                    prefabComponentData.Remove(prefabChild.Object);
+
+                    prefabChild.Object.ObjectName = $"_FakePrefab_{parentPrefab.Object.ObjectName}___{prefabChild.Object.ObjectName}";
+                    prefabChild.Object._parentSpacePosition = worldPos.ToVec3MetaField();
+                    prefabChild.ParentPrefabInstance = null;
+
+                    postSaveCallbacks.Add(() =>
+                    {
+                        prefabComponentData.Insert(previousIndex, prefabChild.Object);
+
+                        prefabChild.Object.ObjectName = previousName;
+                        prefabChild.Object._parentSpacePosition = previousPosition;
+                        prefabChild.ParentPrefabInstance = parentPrefab;
+                    });
+                }
+            };
+
+            Action onPostSave = () =>
+            {
+                LoadCollisions(InstanceManager.AllEntities);
+
+                foreach (Action callback in postSaveCallbacks)
+                {
+                    callback.Invoke();
+                }
+            };
+
+            if (saveAs)
+            {
+                ArchiveRenderer.SaveArchive(true, launchGame, false, onPreSave, onPostSave);
+            }
+            else
+            {
+                ArchiveRenderer.TrySaveArchive(launchGame, true, false, onPreSave, onPostSave);
+            }
         }
 
         public override void Render(double? deltaTime)
@@ -894,24 +957,21 @@ namespace NST
             ImGui.End();
         }
 
-        void HandleInputs()
+        private void HandleInputs()
         {
             if (!IsWindowFocused) return;
 
             if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
             {
-                ArchiveRenderer.TrySaveArchive(false, true);
-                LoadCollisions(InstanceManager.AllEntities);
+                SaveArchive(launchGame: false, saveAs: false);
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L))
             {
-                ArchiveRenderer.TrySaveArchive(true, true);
-                LoadCollisions(InstanceManager.AllEntities);
+                SaveArchive(launchGame: true, saveAs: false);
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S))
             {
-                ArchiveRenderer.SaveArchive(true);
-                LoadCollisions(InstanceManager.AllEntities);
+                SaveArchive(launchGame: false, saveAs: true);
             }
             else if (!IsSceneFocused) return;
 

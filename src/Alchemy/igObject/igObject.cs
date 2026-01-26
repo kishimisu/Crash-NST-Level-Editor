@@ -127,10 +127,10 @@ namespace Alchemy
             if (clones.ContainsKey(this)) return clones[this];
 
             // Skip components with multiple references (todo: cleanup & optimize)
-            if (igz != null && clones.Count > 0 && mode.HasFlag(CloneMode.SkipComponents) && (this is igComponentData || this is igEntityData) &&
-                igz.Objects.Count(
+            if (igz != null && clones.Count > 0 && mode.HasFlag(CloneMode.SkipComponents) && (this is igComponentData || this is igEntityData)
+                /*&& igz.Objects.Count(
                     e => e.GetType() != typeof(igObjectList) && e.GetChildren(igz, ChildrenSearchParams.IncludeHandles).Contains(this)
-                ) > 1)
+                ) > 1*/)
             {
                 return this;
             }

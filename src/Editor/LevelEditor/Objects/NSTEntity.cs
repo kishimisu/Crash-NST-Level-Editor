@@ -339,8 +339,7 @@ namespace NST
             return new NSTEntity(newObject, newArchiveFile ?? ArchiveFile)
             {
                 Model = Model,
-                CollisionShapeIndex = IsPrefabChild ? -1 : CollisionShapeIndex,
-                CollisionPrefabHash = CollisionPrefabHash,
+                CollisionShapeIndex = CollisionShapeIndex,
                 IsTemplate = IsTemplate,
                 IsHidden = IsHidden
             };
