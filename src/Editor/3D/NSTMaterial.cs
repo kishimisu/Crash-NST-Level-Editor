@@ -237,6 +237,7 @@ namespace NST
             if (blending)
             {
                 material.Transparent = true;
+                material.Opacity = Math.Clamp(color.W * 1.5f, 0, 1);
                 material.BlendEquation = _BLENDING_EQUATION_MAP[blendEquation];
                 material.BlendSrc = _BLENDING_FACTOR_MAP[srcBlend];
                 material.BlendDst = _BLENDING_FACTOR_MAP[dstBlend];
