@@ -120,8 +120,12 @@ namespace NST
                             c.SetUpdated(true);
                         },
                         skipIfNotFound: true);
+                        if (objectRef != null) continue;
 
-                        if (objectRef == null && c.Explorer.FileManager.FindObjectInOpenFiles(handle.Reference, out _) is igHandleList handleList)
+                        igObject? obj = c.Explorer.FileManager.FindObjectInOpenFiles(handle.Reference, out _);
+                        if (obj == null) continue;
+
+                        if (obj is igHandleList handleList)
                         {
                             if (handleList is CWaypointHandleList waypointList)
                             {
@@ -131,6 +135,10 @@ namespace NST
                             {
                                 RenderNullableCEntityHandleList(field.GetName(), handle, c.Object, c);
                             }
+                        }
+                        else if (obj is CWaypoint waypoint)
+                        {
+                            RenderWaypoint(waypoint, c);
                         }
                     }
                 }
@@ -734,7 +742,13 @@ namespace NST
 
             if (manager.Entity.TriggerVolumeBox == null) return;
 
-            if (manager.Entity.Object3D?.Children.Contains(manager.Entity.TriggerVolumeBox) == false)
+            var triggerExists = manager.Entity.Object3D?.Children.Contains(manager.Entity.TriggerVolumeBox);
+
+            if (triggerExists != true && manager.Explorer.SelectionManager._selection.Count > 0 && manager.Explorer.SelectionManager._selection[0] != manager.Entity)
+            {
+                manager.Explorer.SelectionManager.UpdateSelection([manager.Entity]);
+            }
+            if (triggerExists == false && manager.Entity.Object3D != null)
             {
                 manager.Entity.Object3D.Add(manager.Entity.TriggerVolumeBox);
                 manager.Explorer.RenderNextFrame = true;
@@ -1063,6 +1077,46 @@ namespace NST
             return false;
         }
 
+        private static void RenderWaypoint(CWaypoint waypoint, NSTComponent manager, Action? renderRemove = null)
+        {
+            NSTWaypoint wp = manager.Entity.AddWaypoint(waypoint, manager.Explorer);
+
+            ImGui.PushID(waypoint.ObjectName);
+
+            ImGui.SetNextItemAllowOverlap();
+            if (ImGui.Selectable(waypoint.ObjectName + ":", wp.IsSelected))
+            {
+                manager.Explorer.SelectObject(wp.IsSelected ? manager.Entity : wp);
+            }
+        
+            renderRemove?.Invoke();
+
+            ImGui.Indent();
+            bool updated = RenderFloat3("Position:", ref waypoint._position, waypoint, manager, true);
+            updated |= RenderFloat3("Rotation:", ref waypoint._rotation, waypoint, manager, true);
+            RenderCheckbox("Occupied:", ref waypoint._occupied);
+            ImGui.Unindent();
+
+            ImGui.Separator();
+
+            ImGui.PopID();
+
+            if (updated && wp.Object3D != null)
+            {
+                if (wp.IsSelected)
+                {
+                    manager.Explorer.SelectObject(wp);
+                }
+                else
+                {
+                    var parent = wp.Object3D.Parent;
+                    parent.Remove(wp.Object3D);
+                    parent.Add(wp.CreateObject3D());
+                    manager.Explorer.RenderNextFrame = true;
+                }
+            }
+        }
+
         public static bool RenderCWaypointHandleList(string label, CWaypointHandleList handleList, igComponentData component, NSTComponent manager)
         {
             ImGui.Text(label + ":");
@@ -1104,42 +1158,7 @@ namespace NST
                         continue;
                     }
 
-                    NSTWaypoint wp = manager.Entity.AddWaypoint(waypoint, manager.Explorer);
-
-                    ImGui.PushID(waypoint.ObjectName);
-
-                    ImGui.SetNextItemAllowOverlap();
-                    if (ImGui.Selectable(waypoint.ObjectName + ":", wp.IsSelected))
-                    {
-                        manager.Explorer.SelectObject(wp.IsSelected ? manager.Entity : wp);
-                    }
-
-                    RenderRemove();
-
-                    ImGui.Indent();
-                    bool updated = RenderFloat3("Position:", ref waypoint._position, waypoint, manager, true);
-                    updated |= RenderFloat3("Rotation:", ref waypoint._rotation, waypoint, manager, true);
-                    RenderCheckbox("Occupied:", ref waypoint._occupied);
-                    ImGui.Unindent();
-
-                    ImGui.Separator();
-
-                    ImGui.PopID();
-
-                    if (updated && wp.Object3D != null)
-                    {
-                        if (wp.IsSelected)
-                        {
-                            manager.Explorer.SelectObject(wp);
-                        }
-                        else
-                        {
-                            var parent = wp.Object3D.Parent;
-                            parent.Remove(wp.Object3D);
-                            parent.Add(wp.CreateObject3D());
-                            manager.Explorer.RenderNextFrame = true;
-                        }
-                    }
+                    RenderWaypoint(waypoint, manager, RenderRemove);
                 }
                 
                 ImGui.Spacing();
