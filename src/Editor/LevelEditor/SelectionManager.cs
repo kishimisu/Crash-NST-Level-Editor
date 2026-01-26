@@ -236,7 +236,7 @@ namespace NST
                         if (childTemplate.Object._transform == null)
                         {
                             childTemplate.Object._transform = new igEntityTransform();
-                            childTemplate.Object._transform.MemoryPool = childTemplate.Object.MemoryPool;
+                            childTemplate.Object._transform.MemoryPool = childTemplate.Object.MemoryPool.WithAlignment(16);
                         }
                         childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
                     }
@@ -249,7 +249,7 @@ namespace NST
                 if (entity._transform == null && (hasRotation || (hasScale && childTemplate == null)))
                 {
                     entity._transform = new igEntityTransform();
-                    entity._transform.MemoryPool = entity.MemoryPool;
+                    entity._transform.MemoryPool = entity.MemoryPool.WithAlignment(16);
                 }
 
                 if (entity._transform != null)

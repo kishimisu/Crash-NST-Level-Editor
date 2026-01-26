@@ -24,6 +24,16 @@ namespace Alchemy
             alignment = 8
         };
 
+        public MemoryPool WithAlignment(int newAlignment)
+        {
+            return new MemoryPool()
+            {
+                name = name,
+                identifier = identifier,
+                alignment = newAlignment
+            };
+        }
+
         public ChunkInfo ToChunkInfo(int offset, int size)
         {
             return new ChunkInfo()

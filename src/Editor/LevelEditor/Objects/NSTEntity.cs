@@ -453,7 +453,7 @@ namespace NST
 
             ImGui.Spacing();
 
-            igEntityTransform transform = Object._transform ?? new igEntityTransform() { MemoryPool = Object.MemoryPool };
+            igEntityTransform transform = Object._transform ?? new igEntityTransform() { MemoryPool = Object.MemoryPool.WithAlignment(16) };
             THREE.Vector3 previousPosition = Object._parentSpacePosition.ToVector3();
 
             // Render position input
@@ -496,7 +496,7 @@ namespace NST
 
                     if (childTemplate.Object._transform == null)
                     {
-                        childTemplate.Object._transform = new igEntityTransform() { MemoryPool = childTemplate.Object.MemoryPool };
+                        childTemplate.Object._transform = new igEntityTransform() { MemoryPool = childTemplate.Object.MemoryPool.WithAlignment(16) };
                         explorer.ArchiveRenderer.SetObjectUpdated(childTemplate.ArchiveFile, childTemplate.Object, true);
                     }
                     explorer.ArchiveRenderer.SetEntityUpdated(childTemplate);
