@@ -242,6 +242,8 @@ namespace NST
                     }
                 }
 
+                THREE.Matrix4 previousMatrix = entity3D.ObjectToWorld();
+
                 // Update position
                 entity._parentSpacePosition = worldPos.ToVec3MetaField();
 
@@ -279,6 +281,33 @@ namespace NST
                     }
 
                     _explorer.InstanceManager.RefreshInstances(prefabChildren);
+                }
+
+                THREE.Matrix4 deltaMatrix = new THREE.Matrix4().Copy(entity3D.ObjectToWorld()).Multiply(previousMatrix.Inverted());
+
+                // Update child templates position
+                var childTemplates = entity3D.GetUniqueChildTemplates();
+                if (childTemplates.Any())
+                {
+                    foreach (var child in childTemplates)
+                    {
+                        THREE.Matrix4 newChildMatrix = deltaMatrix * child.ObjectToWorld();
+                        THREE.Vector3 p = new THREE.Vector3();
+                        newChildMatrix.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
+                        child.Object._parentSpacePosition = p.ToVec3MetaField();
+                    }
+                    _explorer.InstanceManager.RefreshInstances(childTemplates.Cast<NSTObject>().ToList());
+                }
+                // Update child waypoints position
+                if (_explorer.FileManager.GetIgz(entity3D.ArchiveFile) is IgzFile igz)
+                {
+                    foreach (var wp in entity3D.GetComponentsWaypoints(igz).SelectMany(e => e.Value))
+                    {
+                        THREE.Matrix4 newMat = deltaMatrix * THREE.Matrix4.CreateTranslation(wp._position._x, wp._position._y, wp._position._z);
+                        THREE.Vector3 p = new THREE.Vector3();
+                        newMat.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
+                        wp._position = p.ToVec3MetaField();
+                    }
                 }
             }
 
@@ -385,7 +414,26 @@ namespace NST
 
                         if (copyToSameFile)
                         {
-                            igEntity entityClone = srcIgz.AddClone(entity.Object, null, clones, CloneMode.Deep | CloneMode.SkipComponents);
+                            HashSet<igObject> forceClone = [];
+
+                            // Clone child templates
+                            if (entity.Object.TryGetComponent(out common_Spawner_TemplateData? spawnerTemplate))
+                            {
+                                forceClone.Add(spawnerTemplate);
+                            }
+                            else if (entity.Object.TryGetComponent(out Multiple_Spawner_Template_c? multipleSpawner))
+                            {
+                                forceClone.Add(multipleSpawner);
+                            }
+                            else if (entity.Object.TryGetComponent(out Animated_Multiple_Spawner_Template_Behavior? animatedSpawner))
+                            {
+                                forceClone.Add(animatedSpawner);
+                            }
+                            // Clone child waypoints
+                            var waypoints = entity.GetComponentsWaypoints(srcIgz);
+                            foreach (var wp in waypoints) forceClone.Add(wp.Key);
+
+                            igEntity entityClone = srcIgz.AddClone(entity.Object, null, clones, CloneMode.Deep | CloneMode.SkipComponents, forceClone.Count == 0 ? null : forceClone);
 
                             // Special case: paste prefab child
                             if (entity.IsPrefabChild)

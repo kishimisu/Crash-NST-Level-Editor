@@ -21,6 +21,16 @@ namespace NST
         private static List<NSTComponent> _copyComponents = [];
         private static LevelExplorer? _copyEntityExplorer = null;
 
+        private static readonly HashSet<Type> _autoFocusComponents = 
+        [
+            typeof(common_Spawner_TemplateData), 
+            typeof(Multiple_Spawner_Template_c), 
+            typeof(Animated_Multiple_Spawner_Template_Behavior),
+            typeof(igPrefabComponentData), 
+            typeof(common_Level_ManagerData),
+            typeof(common_BonusRoundTeleporterData)
+        ];
+
         public int Count => _components.Count;
         public string GetID() => _uuid.ToString();
         public NSTComponent? GetComponent<T>() where T : igComponentData => _components.Find(c => c.Object is T);
@@ -55,12 +65,7 @@ namespace NST
 
                 if (_isCrate || _selection.Count > 0) continue;
 
-                if (dict.Count == 1 || 
-                    component is common_Spawner_TemplateData || 
-                    component is Multiple_Spawner_Template_c || 
-                    component is igPrefabComponentData || 
-                    component is common_Level_ManagerData ||
-                    component is common_BonusRoundTeleporterData)
+                if (dict.Count == 1 || _autoFocusComponents.Contains(component.GetType()))
                 {
                     _selection.Add(c);
                 }

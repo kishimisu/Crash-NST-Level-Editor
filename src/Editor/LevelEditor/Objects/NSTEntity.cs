@@ -319,6 +319,49 @@ namespace NST
                 .Where(p => p.Object.GetComponent<common_Spawner_TemplateData>()?._EntityToSpawn.Reference?.objectName == Object.ObjectName);
         }
 
+        public IEnumerable<NSTEntity> GetUniqueChildTemplates()
+        {
+            return Children
+                .OfType<NSTEntity>()
+                .Where(e => e.IsTemplate && e.Parents.Count == 1 &&
+                           (e.Object._parentSpacePosition._x != 0 || e.Object._parentSpacePosition._y != 0 || e.Object._parentSpacePosition._z != 0));
+        }
+
+        public Dictionary<igComponentData, List<CWaypoint>> GetComponentsWaypoints(IgzFile parentIgz)
+        {
+            return Object.GetComponents().ToDictionary(c => c, c =>
+            {
+                List<CWaypoint> waypoints = [];
+
+                foreach (var handle in c.GetHandles())
+                {
+                    igObject? obj = parentIgz.FindObject(handle);
+                    if (obj == null) continue;
+
+                    if (obj is CWaypoint wp)
+                    {
+                        waypoints.Add(wp);
+                    }
+                    else if (obj is CWaypointHandleList wpList)
+                    {
+                        foreach (var wpRef in wpList._data)
+                        {
+                            if (wpRef.Reference == null) continue;
+
+                            obj = parentIgz.FindObject(wpRef.Reference);
+
+                            if (obj == null) continue;
+                            if (obj is CWaypoint childWp) waypoints.Add(childWp);
+                        }
+                    }
+                }
+
+                return waypoints;
+            })
+            .Where(e => e.Value.Count > 0)
+            .ToDictionary();
+        }
+
         public THREE.Matrix4 ObjectToWorld()
         {
             THREE.Vector3? overrideScale = GetChildTemplate()?.Object._transform?._nonUniformPersistentParentSpaceScale.ToVector3();
