@@ -165,6 +165,8 @@ namespace NST
 
             pointMesh.Traverse(e => e.UserData["spline"] = this);
 
+            Object3D?.Parent.Remove(Object3D);
+
             Object3D = lineMesh;
 
             // OpenControlPointList = _controlPoints.Any(e => e.IsSelected);

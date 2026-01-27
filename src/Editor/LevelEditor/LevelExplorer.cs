@@ -80,6 +80,7 @@ namespace NST
         private bool _isDragging = false;
         private bool _clickedInsideScene = false;
         private bool _shouldOpenContextMenu = false;
+        private bool _refreshSelectionOnMouseUp = false;
         private static bool _clearMemoryOnExit = false;
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
@@ -190,6 +191,11 @@ namespace NST
                         (_controls as FirstPersonControls)?.ResetMousePos();
                     }
                 }
+                else if (_refreshSelectionOnMouseUp)
+                {
+                    SelectionManager.UpdateSelection(SelectionManager._selection.ToList());
+                    _refreshSelectionOnMouseUp = false;
+                }
 
                 _outlinePass.showCenterDot =  false;
                 _clickedInsideScene = false;
@@ -220,11 +226,6 @@ namespace NST
             _controls = new FirstPersonControls(this, _camera);
 
             _gizmos = new THREE.Silk.TransformControls(this, _camera, GetClipSpaceMousePos);
-
-            _gizmos._mouseUpEvent += (string obj) =>
-            {
-                SelectionManager.ApplyChanges(ArchiveRenderer);
-            };
 
             foreach ((string layerName, bool active) in _layers)
             {
@@ -1445,6 +1446,16 @@ namespace NST
             List<THREE.Intersection> intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
             float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
             return _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+        }
+
+        public void OnStartScaling(NSTEntity entity)
+        {
+            if (!_refreshSelectionOnMouseUp && entity.Spline?.Object3D != null && entity.Object3D?.Children.Contains(entity.Spline.Object3D) == true)
+            {
+                entity.Object3D.Remove(entity.Spline.Object3D);
+                entity.Spline.Object3D = null;
+                _refreshSelectionOnMouseUp = true;
+            }
         }
 
         public override void Dispose()

@@ -69,7 +69,7 @@ namespace NST
             THREE.Color highlightColor = new THREE.Color(0xff5141);
             THREE.Color defaultColor = new THREE.Color(0xb6b6b6);
 
-            List<THREE.Matrix4> matrices = instances.Select(e => e.ObjectToWorld()).ToList();
+            List<THREE.Matrix4> matrices = instances.Select(e => e.ObjectToWorld(true)).ToList();
 
             List<THREE.Color> colors = (debugMode switch
             {   

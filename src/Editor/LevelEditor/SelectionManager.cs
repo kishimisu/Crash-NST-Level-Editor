@@ -15,19 +15,45 @@ namespace NST
         private readonly THREE.Silk.TransformControls _gizmos;
         private readonly THREE.OutlinePass _outlinePass;
         private bool _revertGizmos = false;
+        private int _scaleMode = 0;
 
         public SelectionManager(THREE.Object3D rootObject, THREE.Silk.TransformControls gizmos, THREE.OutlinePass outlinePass, LevelExplorer explorer)
         {
             _gizmos = gizmos;
             _outlinePass = outlinePass;
+
             _explorer = explorer;
+            _explorer.KeyDown += OnKeyDown;
 
             rootObject.Add(_selectionContainer);
-
             _gizmos.Attach(_selectionContainer);
+            
             _gizmos.Visible = false;
 
-            explorer.KeyDown += OnKeyDown;
+            _gizmos._mouseUpEvent += (_) =>
+            {
+                ApplyChanges(_explorer.ArchiveRenderer);
+            };
+
+            _gizmos._changeEvent += (_) =>
+            {
+                if (_scaleMode != 0) return;
+
+                _scaleMode = -1;
+
+                if (_gizmos.mode == "scale")
+                {
+                    foreach (NSTEntity entity in _selection.OfType<NSTEntity>())
+                    {
+                        if (entity.Spline?.Object3D != null && entity.Object3D?.Children.Contains(entity.Spline.Object3D) == true)
+                        {
+                            entity.Object3D.Remove(entity.Spline.Object3D);
+                            entity.Spline.Object3D = null;
+                            _scaleMode = 1;
+                        }
+                    }
+                }
+            };
         }
 
         public void UpdateSelection(List<NSTObject> objects, bool newSelection = true)
@@ -317,6 +343,12 @@ namespace NST
                 spline.ComputeDistances();
                 spline.RefreshSpline();
             }
+
+            if (_scaleMode == 1)
+            {
+                UpdateSelection(_selection.ToList());
+            }
+            _scaleMode = 0;
         }
 
         public bool Copy(LevelExplorer explorer)

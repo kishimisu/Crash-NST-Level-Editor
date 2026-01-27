@@ -69,7 +69,7 @@ namespace NST
                 group.Add(new THREE.Mesh(geo, mat));
             }
 
-            group.ApplyMatrix4(ObjectToWorld());
+            group.ApplyMatrix4(ObjectToWorld(true));
 
             group.Traverse(e => e.UserData["entity"] = this);
 
@@ -362,9 +362,9 @@ namespace NST
             .ToDictionary();
         }
 
-        public THREE.Matrix4 ObjectToWorld()
+        public THREE.Matrix4 ObjectToWorld(bool useOverrideScale = false)
         {
-            THREE.Vector3? overrideScale = GetChildTemplate()?.Object._transform?._nonUniformPersistentParentSpaceScale.ToVector3();
+            THREE.Vector3? overrideScale = useOverrideScale ? GetChildTemplate()?.Object._transform?._nonUniformPersistentParentSpaceScale.ToVector3() : null;
             THREE.Matrix4 modelMatrix = Object.GetTransformMatrix(overrideScale);
 
             if (ParentPrefabInstance == null)
@@ -549,6 +549,7 @@ namespace NST
                     Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
                     childTemplate.Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
                     explorer.RenderNextFrame = true;
+                    explorer.OnStartScaling(this);
                 }
             }
             else if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, 0.01f))
