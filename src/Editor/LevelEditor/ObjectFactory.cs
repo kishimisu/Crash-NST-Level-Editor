@@ -373,7 +373,7 @@ namespace NST
                 return;
             }
 
-            crate = (CEntity)crate.Clone();
+            crate = (CEntity)crate.Clone(new());
 
             // Apply settings
 
@@ -384,7 +384,7 @@ namespace NST
 
             if (_outlinedCrate)
             {
-                CEntity outlinedCrate = (CEntity)templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!.Clone();
+                CEntity outlinedCrate = (CEntity)templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!.Clone(new());
 
                 var outlineData = outlinedCrate.GetComponent<common_Crate_OutlineData>()!;
                 var triggerBox = outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!;

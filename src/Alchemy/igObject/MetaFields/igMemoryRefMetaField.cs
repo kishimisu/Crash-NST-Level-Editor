@@ -65,7 +65,7 @@ namespace Alchemy
             _bitfield = (int)(_bitfield & 0xFF0FFFFF) | ((packedAlignment - 2 & 0xF) << 0x14);
         }
 
-        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
+        public override igObjectBase Clone(CloneProperties props)
         {
             igMemoryRef<T> clone = new();
             clone._size = _size;
@@ -73,7 +73,7 @@ namespace Alchemy
             clone._ref = new();
             clone.MemoryPool = MemoryPool;
 
-            if (!mode.HasFlag(CloneMode.Deep) || !typeof(T).IsSubclassOf(typeof(igObjectBase)))
+            if (!props.mode.HasFlag(CloneMode.Deep) || !typeof(T).IsSubclassOf(typeof(igObjectBase)))
             {
                 clone._elements = new List<T>(_elements);
                 return clone;
@@ -83,7 +83,7 @@ namespace Alchemy
             for (int i = 0; i < _elements.Count; i++)
             {
                 igObjectBase? element = _elements[i] as igObjectBase;
-                object cloneElement = element?.Clone(igz, dst, mode, clones)!;
+                object cloneElement = element?.Clone(props)!;
                 clone._elements.Add((T)cloneElement);
             }
             return clone;

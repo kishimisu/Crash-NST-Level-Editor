@@ -68,9 +68,9 @@ namespace Alchemy
             RebuildDict = true;
         }
 
-        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null)
+        public override igObjectBase Clone(CloneProperties props)
         {
-            igHashTable<K, V> clone = (igHashTable<K, V>)base.Clone(igz, dst, mode, clones);
+            igHashTable<K, V> clone = (igHashTable<K, V>)base.Clone(props);
             clone.Dict = new Dictionary<K, V>();
             clone.BuildDict();
             return clone;

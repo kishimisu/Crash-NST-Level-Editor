@@ -34,7 +34,7 @@ namespace NST
 
             if (!isUnique)
             {
-                _componentCopy = (igComponentData)component.Clone();
+                _componentCopy = (igComponentData)component.Clone(new());
             }
 
             DisplayName = GetDisplayName();

@@ -424,7 +424,7 @@ namespace NST
             }
             if (ImGui.Selectable("Copy object"))
             {
-                IgzRenderer.CopyObject = (igObject)Object.Clone(mode: CloneMode.Deep);
+                IgzRenderer.CopyObject = (igObject)Object.Clone(new(mode: CloneMode.Deep));
                 IgzRenderer.CopyRenderer = tree.Renderer;
             }
 

@@ -874,7 +874,7 @@ namespace NST
             {
                 if (isMetaField && value is igMetaField metaField)
                 {
-                    _copyObject = metaField.Clone();
+                    _copyObject = metaField.Clone(new());
                 }
                 else if (isIgObject && renderer is IgzRenderer igzRenderer)
                 {

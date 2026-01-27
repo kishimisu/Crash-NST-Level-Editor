@@ -110,40 +110,37 @@ namespace Alchemy
             writer.Write(value, offset);
         }
 
-        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null)
+        public override igObjectBase Clone(CloneProperties props)
         {
-            clones ??= new Dictionary<igObject, igObject>();
-
             // (Shallow copy) Skip if not root object
-            if (!mode.HasFlag(CloneMode.Deep) && !mode.HasFlag(CloneMode.ShallowAndChildren) && clones.Count > 0 && this is not igComponentList) return this;
+            if (!props.mode.HasFlag(CloneMode.Deep) && !props.mode.HasFlag(CloneMode.ShallowAndChildren) && props.clones.Count > 0 && this is not igComponentList) return this;
 
             // Skip entities
-            if (mode.HasFlag(CloneMode.SkipEntities) && this is igEntity && clones.Count > 0) return this;
+            if (props.mode.HasFlag(CloneMode.SkipEntities) && this is igEntity && props.clones.Count > 0) return this;
 
             // Skip empty objects
             if (GetType() == typeof(igMetaObject) || GetType() == typeof(igObject)) return this;
 
             // Skip already cloned objects
-            if (clones.ContainsKey(this)) return clones[this];
+            if (props.clones.ContainsKey(this)) return props.clones[this];
 
-            // Skip components with multiple references (todo: cleanup & optimize)
-            if (igz != null && clones.Count > 0 && mode.HasFlag(CloneMode.SkipComponents) && (this is igComponentData || this is igEntityData)
-                /*&& igz.Objects.Count(
-                    e => e.GetType() != typeof(igObjectList) && e.GetChildren(igz, ChildrenSearchParams.IncludeHandles).Contains(this)
-                ) > 1*/)
-            {
+            // Skip components with multiple references
+            if (props.clones.Count > 0 && props.mode.HasFlag(CloneMode.SkipComponents) && (
+                (this is igComponentData && props.forceClone?.Contains(this) == false) || 
+                (this is igEntityData && props.forceClone == null)
+            )) {
                 return this;
             }
 
             // (Shallow + children) switch to Shallow mode for the children
-            if (mode.HasFlag(CloneMode.ShallowAndChildren) && clones.Count > 0) mode = CloneMode.Shallow;
+            if (props.mode.HasFlag(CloneMode.ShallowAndChildren) && props.clones.Count > 0) props.mode = CloneMode.Shallow;
 
-            clones[this] = this; // Temporary assignment to prevent infinite recursion
+            props.clones[this] = this; // Temporary assignment to prevent infinite recursion
 
             // Clone this object
-            igObject clone = (igObject)base.Clone(igz, dst, mode, clones);
+            igObject clone = (igObject)base.Clone(props);
             clone.MemoryPool = MemoryPool;
-            clones[this] = clone;
+            props.clones[this] = clone;
 
             return clone;
         }

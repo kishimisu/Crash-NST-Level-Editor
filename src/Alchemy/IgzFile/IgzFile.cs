@@ -134,45 +134,31 @@ namespace Alchemy
         }
 
         /// <summary>
-        /// Clone an object and add it to this file
+        /// Clone an object and its children recursively and add all new objects to this file
         /// </summary>
         /// <param name="obj">The object to clone</param>
         /// <param name="source">The source igz file</param>
         /// <param name="clones">The list of cloned objects</param>
         /// <returns>The cloned object</returns>
-        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep) where T : igObject
+        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep, HashSet<igObject>? forceClone = null) where T : igObject
         {
-            if (obj.ObjectName == null) throw new Exception("Not implemented");
-            
             source ??= this;
             clones ??= new Dictionary<igObject, igObject>();
-
-            // obj = source.FindObject<T>(obj.ObjectName) ?? obj;
-
-            T clone = source.CreateClone(obj, this, clones, mode);
-
-            return clone;
-        }
-
-        /// <summary>
-        /// Clone an object and its children recursively and add all new objects to another file
-        /// </summary>
-        private T CreateClone<T>(T obj, IgzFile dest, Dictionary<igObject, igObject> clones, CloneMode mode = CloneMode.Deep) where T : igObject
-        {
+            
             List<igObject> prevKeys = clones.Keys.ToList();
 
             // Clone child objects
-            T clone = (T)obj.Clone(this, dest, mode, clones);
+            T clone = (T)obj.Clone(new CloneProperties(source, this, mode, clones, forceClone));
 
             Dictionary<igObject, igObject> newClones = clones.Where(kvp => !prevKeys.Contains(kvp.Key)).ToDictionary();
 
-            string srcNamespace = GetName(false).ToLower();
-            string dstNamespace = dest.GetName(false);
+            string srcNamespace = source.GetName(false).ToLower();
+            string dstNamespace = GetName(false);
 
             // Add new objects and update handle namespaces
             foreach ((igObject src, igObject dst) in newClones.ToList())
             {
-                if (dest.Objects.Contains(dst))
+                if (Objects.Contains(dst))
                 {
                     newClones.Remove(src);
                     continue;
@@ -180,12 +166,12 @@ namespace Alchemy
 
                 if (dst.ObjectName != null)
                 {
-                    string newName = dest.FindSuitableName(dst.ObjectName);
+                    string newName = FindSuitableName(dst.ObjectName);
                     // Console.WriteLine("Updating name: " + dst.ObjectName + " => " + newName);
                     dst.ObjectName = newName;
                 }
 
-                if (dest != this && !mode.HasFlag(CloneMode.SkipEntities))
+                if (this != source && !mode.HasFlag(CloneMode.SkipEntities))
                 {
                     // Update handles
                     foreach (var handle in dst.GetHandles())
@@ -197,7 +183,7 @@ namespace Alchemy
                     }
                 }
 
-                dest.Objects.Add(dst);
+                Objects.Add(dst);
             }
 
             // Clone child handles
@@ -210,7 +196,7 @@ namespace Alchemy
                 {
                     if (srcHandle.namespaceName.ToLower() != srcNamespace) continue;
 
-                    igObject? srcObject = FindObject(srcHandle);
+                    igObject? srcObject = source.FindObject(srcHandle);
 
                     if (srcObject == null)
                     {
@@ -218,7 +204,7 @@ namespace Alchemy
                         continue;
                     }
 
-                    if (!Objects.Contains(srcObject))
+                    if (!source.Objects.Contains(srcObject))
                     {
                         Console.WriteLine("Warning: Source object not found in igz file: " + srcObject);
                         continue;
@@ -226,7 +212,7 @@ namespace Alchemy
 
                     if (!clones.ContainsKey(srcObject))
                     {
-                        igObject handleClone = CreateClone(srcObject, dest, clones, mode);
+                        igObject handleClone = AddClone(srcObject, source, clones, mode, forceClone);
 
                         dstHandle.objectName = handleClone.ObjectName!;
                     }

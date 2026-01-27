@@ -23,6 +23,24 @@ namespace Alchemy
         SkipEntities = 1 << 3, // Skip cloning entities
         ShallowAndChildren = 1 << 4, // Clone the top-level object and all of its children
     }
+
+    public class CloneProperties
+    {
+        public IgzFile? src = null;
+        public IgzFile? dst = null;
+        public CloneMode mode = CloneMode.Deep;
+        public Dictionary<igObject, igObject> clones = [];
+        public HashSet<igObject>? forceClone = null;
+
+        public CloneProperties(IgzFile? src = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null, HashSet<igObject>? forceClone = null)
+        {
+            this.src = src;
+            this.dst = dst;
+            this.mode = mode;
+            this.clones = clones ?? [];
+            this.forceClone = forceClone;
+        }
+    }
     
     /// <summary>
     /// Base class for all Alchemy objects (corresponds to __internalObjectBase)
@@ -260,7 +278,7 @@ namespace Alchemy
         /// <summary>
         /// Create a clone of this object
         /// </summary>
-        public virtual igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
+        public virtual igObjectBase Clone(CloneProperties props)
         {            
             igObjectBase clone = (igObjectBase)MemberwiseClone();
 
@@ -269,7 +287,7 @@ namespace Alchemy
                 object? value = field.GetValue(this);
 
                 if (value == null) continue;
-                if (value is igObjectBase obj) value = obj.Clone(igz, dst, mode, clones);
+                if (value is igObjectBase obj) value = obj.Clone(props);
 
                 field.SetValue(clone, value);
             }

@@ -46,9 +46,9 @@ namespace Alchemy
             writer.Write(_handle, offset);
         }
 
-        public override igObjectBase Clone(IgzFile? igz = null, IgzFile? dst = null, CloneMode mode = CloneMode.Shallow, Dictionary<igObject, igObject>? clones = null)
+        public override igObjectBase Clone(CloneProperties props)
         {
-            igHandleMetaField clone = (igHandleMetaField)base.Clone(igz, dst, mode, clones);
+            igHandleMetaField clone = (igHandleMetaField)base.Clone(props);
 
             clone.Reference = Reference?.Clone();
 
