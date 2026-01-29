@@ -1,8 +1,8 @@
-# Crash NST Level Editor
+# Crash NST Maker
 
 A mod manager and level editor for Crash Bandicoot: N.Sane Trilogy on PC
 
-<img src="assets/readme/level_editor/editor.jpg" alt="NST Editor" width="800"/>
+<img src="assets/readme/editor.jpg" alt="Crash NST Maker" width="800"/>
 
 ## Table of Contents
 
@@ -19,21 +19,27 @@ This project is a continuation of my earlier modding tool/proof of concept [The 
 
 This new iteration is built on an entirely new C# codebase (replacing the original javascript implementation), with a focus on performance and stability.
 
+Moreover, custom levels created with this tool won't interfere with the original game files (unless explicitely choosing to overwrite them).
+
+### Features
+
 - Create, edit and play custom levels
-- Create, edit and manage active mods
+- Import game objects from any level
+- Manage and create mods
 - Full access to the game assets
 - Advanced tools for exporing and editing game files
 
-## Discussion
+## Discussion / Documentation
+
 - General discussion (The Warp Room): [https://thewarproom.com/showthread.php?tid=270](https://thewarproom.com/showthread.php?tid=270)
 - Development/Help (Discord): [Skylanders Reverse Engineering](https://discord.gg/vsnVrPvVjc) (#nst-level-editor)
-- Steam discussion : [https://steamcommunity.com/app/731490/discussions/0/689746131737976098/](https://steamcommunity.com/app/731490/discussions/0/689746131737976098/)
+- Level Editor documentation: [README_Level_Editor.md](README_Level_Editor.md)
 
 ## Installation
 
 #### Prerequisites:
 - You must own an original copy of Crash Bandicoot NST PC (installed via Steam or Game Pass)
-- If your game is already modded it is preferable to reinstall it before using this tool
+- If your game is already modded it is recommended to reinstall it before using this tool
 
 #### Download:
 You can download the prebuilt windows-x64 executable from the [Releases page](https://github.com/kishimisu/Crash-NST-Level-Editor/releases).
