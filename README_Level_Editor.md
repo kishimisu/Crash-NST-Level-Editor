@@ -205,7 +205,7 @@ Static models always have 3 components:
 
 This is what is responsible for spawning most objects in the game other than static models (crates, enemies, platforms...)
 
-Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that actually is actually spawned and that contains all the interesting properties. 
+Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that is actually spawned and that contains all the interesting properties. 
 
 The spawner usually only contains very few components and is mainly used to set the position and rotation for spawning the underlying template.
 

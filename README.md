@@ -27,7 +27,7 @@ Moreover, custom levels created with this tool won't interfere with the original
 - Import game objects from any level
 - Manage and create mods
 - Full access to the game assets
-- Advanced tools for exporing and editing game files
+- Advanced tools for exploring and editing game files
 
 ## Discussion / Documentation
 
