@@ -30,6 +30,7 @@ namespace NST
         private EntityTreeView _treeView;
         private Dictionary<HashedReference, int> _collisionData = [];
         private THREE.Silk.TransformControls _gizmos;
+        private SelectionBox _selectionBox;
         private System.Numerics.Vector4 _renderBounds = new System.Numerics.Vector4();
 
         private IgArchiveFile? _zoneInfoFile;
@@ -82,6 +83,8 @@ namespace NST
         private bool _shouldOpenContextMenu = false;
         private bool _refreshSelectionOnMouseUp = false;
         private static bool _clearMemoryOnExit = false;
+
+        public bool CanUseBoxSelection => !_gizmos.dragging && _clickedInsideScene && IsWindowFocused;
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
         public void RebuildTree() => _treeView.RebuildTree(InstanceManager.AllObjects);
@@ -240,6 +243,30 @@ namespace NST
             InstanceManager = new InstancedMeshManager(this, _scene);
 
             SelectionManager = new SelectionManager(InstanceManager.RootObject, _gizmos, _outlinePass, this);
+
+            _selectionBox = new SelectionBox(this, _camera, InstanceManager.RootObject);
+
+            _selectionBox.OnSelect += () =>
+            {
+                if (_gizmos.dragging) return;
+
+                var min = GetClipSpaceMousePos(_selectionBox.PointTopLeft.X, _selectionBox.PointTopLeft.Y);
+				var max = GetClipSpaceMousePos(_selectionBox.PointBottomRight.X, _selectionBox.PointBottomRight.Y);
+
+				if (min != null && max != null)
+				{
+					var objects = _selectionBox.Select(new THREE.Vector3(-min.X, min.Y, 0.5f), new THREE.Vector3(-max.X, max.Y, 0.5f));
+
+                    if (objects.Count > 400)
+                    {
+                        ModalRenderer.ShowWarningModal($"Are you sure you want to select {objects.Count} objects?", () => SelectionManager.UpdateSelection(objects.ToList()));
+                    }
+                    else
+                    {
+                        SelectionManager.UpdateSelection(objects.ToList());
+                    }
+				}
+            };
 
             SilkWindow.instance.RestoreViewport();
         }
@@ -918,6 +945,7 @@ namespace NST
                     {
                         _renderBounds = DrawImage();
                         IsSceneFocused = ImGui.IsItemHovered();
+                        _selectionBox.Draw();
                     }
                     else if (RebuildState == RebuildStatus.NeedsRebuild)
                     {
@@ -1025,6 +1053,7 @@ namespace NST
                 _gizmos.mode = "scale";
                 RenderNextFrame = true;
             }
+            else if (ImGui.GetIO().WantCaptureKeyboard) return;
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
                 DeleteSelection();
@@ -1144,10 +1173,11 @@ namespace NST
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
                 ImGuiUtils.ColoredSeparator("Selection", controlsColor);
-                ImGui.BulletText("Left click: select object");
+                ImGui.BulletText("Left click: select object(s)");
                 ImGui.BulletText("(Click multiple times focus child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
                 ImGui.BulletText("Left Alt: align/snap selected crates");
+                ImGui.BulletText("Escape: unselect all (greatly improves FPS)");
                 ImGuiUtils.ColoredSeparator("Objects", controlsColor);
                 ImGui.BulletText("Right click: add objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
@@ -1163,6 +1193,7 @@ namespace NST
                 ImGui.BulletText("Ctrl + S: save level");
                 ImGui.BulletText("Ctrl + L: backup + save + launch");
                 ImGui.BulletText("Ctrl+Shift + S: save level as...");
+                ImGui.BulletText("Ctrl+Shift + R: reload level");
                 ImGui.Spacing();
             }
         }
@@ -1182,12 +1213,13 @@ namespace NST
             }
         }
 
-        public THREE.Vector2? GetClipSpaceMousePos(THREE.Silk.MouseEventArgs e)
+        public THREE.Vector2? GetClipSpaceMousePos(THREE.Silk.MouseEventArgs e) => GetClipSpaceMousePos(e.X, e.Y);
+        private THREE.Vector2? GetClipSpaceMousePos(float x, float y)
         {
             if (!IsWindowFocused) return null;
             
-            float x = (e.X - _renderBounds.X) / _renderBounds.Z;
-            float y = (e.Y - _renderBounds.Y) / _renderBounds.W;
+            x = (x - _renderBounds.X) / _renderBounds.Z;
+            y = (y - _renderBounds.Y) / _renderBounds.W;
 
             return new THREE.Vector2(x * 2.0f - 1.0f, y * 2.0f - 1.0f);
         }
