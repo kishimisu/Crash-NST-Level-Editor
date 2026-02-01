@@ -17,7 +17,7 @@ A mod manager and level editor for Crash Bandicoot: N.Sane Trilogy on PC
 
 This project is a continuation of my earlier modding tool/proof of concept [The Apprentice](https://github.com/kishimisu/Crash-NST-Modding-Tool) which was a first attempt at understanding how the game works and how it could be modded.
 
-This new iteration is built on an entirely new C# codebase (replacing the original javascript implementation), with a focus on performance and stability.
+This new iteration is built on an entirely new C# codebase designed to support advanced level editing, with a focus on performance and stability.
 
 Moreover, custom levels created with this tool won't interfere with the original game files (unless explicitely choosing to overwrite them).
 
@@ -29,11 +29,16 @@ Moreover, custom levels created with this tool won't interfere with the original
 - Full access to the game assets
 - Advanced tools for exploring and editing game files
 
-## Discussion / Documentation
+### Discussion / Documentation
 
 - General discussion (The Warp Room): [https://thewarproom.com/showthread.php?tid=270](https://thewarproom.com/showthread.php?tid=270)
 - Development/Help (Discord): [Skylanders Reverse Engineering](https://discord.gg/vsnVrPvVjc) (#nst-level-editor)
 - Level Editor documentation: [README_Level_Editor.md](README_Level_Editor.md)
+
+### Showcased levels
+
+- SpeedLan's Carnage levels ([Nexus Mods](https://www.nexusmods.com/crashbandicootnsanetrilogy/mods/50?tab=images#list-modimages-1))
+- Camo's Road To Death ([Youtube](https://www.youtube.com/watch?v=7l9D7dloNAo))
 
 ## Installation
 

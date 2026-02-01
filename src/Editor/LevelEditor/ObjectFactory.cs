@@ -208,6 +208,21 @@ namespace NST
                         ImGui.EndMenu();
                     }
 
+                    if (ImGui.BeginMenu("Level platform..."))
+                    {
+                        if (ImGui.MenuItem("L103_TheGreatGate   |  Wooden spinning platform ")) TryAddObject(() => AddGeneric("L103_TheGreatGate", "L103_TheGreatGate_Platforms", "Village_Platform_SpinningPlat", "Platforms", explorer));
+                        if (ImGui.MenuItem("L106_RollingStones  |  Falling stone pillar     ")) TryAddObject(() => AddGeneric("L106_RollingStones", "L106_RollingStones_Hazards", "Jungle_Platform_Stone_FallAway002", "Platforms", explorer));
+                        if (ImGui.MenuItem("L106_RollingStones  |  Moving stone pillar      ")) TryAddObject(() => AddGeneric("L106_RollingStones", "L106_RollingStones_Hazards", "Jungle_Platform_Stone_Spline001", "Platforms", explorer));
+                        if (ImGui.MenuItem("L108_NativeFortress |  Cloud platform           ")) TryAddObject(() => AddGeneric("L108_NativeFortress", "L108_NativeFortress_Platforms", "Village_Platform_Clouds007", "Platforms", explorer));
+                        // if (ImGui.MenuItem("L111_TempleRuins    |  Spline temple platform   ")) TryAddObject(() => AddGeneric("L111_TempleRuins", "L111_TempleRuins_Platforms", "Temple_Platform_Spline", "Platforms", explorer));
+                        if (ImGui.MenuItem("L111_TempleRuins    |  Falling temple platform  ")) TryAddObject(() => AddGeneric("L111_TempleRuins", "L111_TempleRuins_Platforms", "Temple_Platform_FallAway", "Platforms", explorer));
+                        if (ImGui.MenuItem("L111_TempleRuins    |  Up/down temple platform  ")) TryAddObject(() => AddGeneric("L111_TempleRuins", "L111_TempleRuins_Platforms", "Temple_Platform_UpDown", "Platforms", explorer));
+                        if (ImGui.MenuItem("L111_TempleRuins    |  Orbit temple platform    ")) TryAddObject(() => AddGeneric("L111_TempleRuins", "L111_TempleRuins_Platforms", "Temple_Platform_Orbit_Spline001", "Platforms", explorer));
+                        if (ImGui.MenuItem("L112_RoadToNowhere  |  Upside down bounce turtle")) TryAddObject(() => AddGeneric("L112_RoadToNowhere", "L112_RoadToNowhere_BounceTurtle", "Jungle_Enemy_Bounce_Turtle", "Platforms", explorer));
+                        if (ImGui.MenuItem("L201_TurtleWoods    |  Body slam entrance       ")) TryAddObject(() => AddGeneric("L201_TurtleWoods", [("L201_TurtleWoods", "Jungle_SecretEntrance_BodySlam"), ("L201_TurtleWoods_Art", "HolePitrim01")], "Platforms", explorer));
+                        ImGui.EndMenu();
+                    }
+                    
                     if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
                     {
                         if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
@@ -351,6 +366,7 @@ namespace NST
             catch (Exception e)
             {
                 ModalRenderer.ShowMessageModal("Could not create the object", "An error occured while creating the object(s):\n\n" + e.Message);
+                Console.WriteLine($"{e.Message}\n\n{e.StackTrace}");
             }
         }
 
@@ -711,6 +727,28 @@ namespace NST
                     ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the bonus round\n\nLog file: {logPath}");
                 }
             }, TaskContinuationOptions.OnlyOnFaulted);
+        }
+
+        private static void AddGeneric(string archiveName, List<(string fileName, string objectName)> objectPaths, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
+            
+            explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile dstFile, out IgzFile dstIgz);
+
+            List<NSTObject> clones = [];
+
+            foreach ((string fileName, string objectName) in objectPaths)
+            {
+                IgzFile sourceIgz = sourceArchive.FindFile(fileName, FileSearchType.Name, FileSearchParams.MapIgz)!.ToIgzFile();
+                igObject obj = sourceIgz.FindObject<igObject>(objectName)!;
+
+                clones.AddRange(explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: null, initializeObjects: true));
+            }
+
+            explorer.SelectionManager.UpdateSelection(clones);
+            explorer.MoveSelectionToCamera(400);
+
+            callback?.Invoke(clones);
         }
 
         private static void AddGeneric(string archiveName, string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
