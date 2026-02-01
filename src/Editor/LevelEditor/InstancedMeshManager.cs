@@ -279,6 +279,11 @@ namespace NST
             {
                 parent.Children.Remove(obj);
             }
+
+            foreach (NSTObject child in obj.Children)
+            {
+                child.Parents.Remove(obj);
+            }
             
             if (obj is NSTEntity entity)
             {

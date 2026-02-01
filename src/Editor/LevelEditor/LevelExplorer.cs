@@ -652,7 +652,8 @@ namespace NST
         {
             if (SelectionManager._selection.Count == 0) return;
             
-            HashSet<NSTObject> deleted = [];
+            HashSet<NSTObject> removedObjects = [];
+            HashSet<InstanceManager> managersToRefresh = [];
             Dictionary<NSTSpline, List<NSTObject>> splines = [];
 
             foreach (NSTObject selected in SelectionManager._selection)
@@ -700,12 +701,19 @@ namespace NST
 
                     if (InstanceManager.AllReferences.TryGetValue(obj.ToNamedReference(infos.file.GetName(false)), out NSTObject? removedObject))
                     {
-                        InstanceManager.Unregister(removedObject);
-
-                        deleted.Add(removedObject);
-
-                        if (removedObject is NSTEntity removedEntity)
+                        if (removedObject is not NSTEntity removedEntity)
                         {
+                            InstanceManager.Unregister(removedObject);
+                            removedObjects.Add(removedObject);
+                        }
+                        else
+                        {
+                            if (removedEntity.InstanceManager != null)
+                            {
+                                managersToRefresh.Add(removedEntity.InstanceManager);
+                            }
+                            InstanceManager.Unregister(removedObject);
+                            
                             // Special cases for prefab children
                             if (removedEntity.IsPrefabInstance)
                             {
@@ -741,7 +749,12 @@ namespace NST
                 }
             }
 
-            InstanceManager.RefreshInstances(deleted.ToList());
+            foreach (var manager in managersToRefresh)
+            {
+                manager.ConvertToInstanced(InstanceManager.RootObject, DebugRenderMode);
+            }
+
+            InstanceManager.RefreshInstances(removedObjects.ToList());
 
             // Delete splines children
             foreach ((NSTSpline spline, List<NSTObject> objects) in splines)

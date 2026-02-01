@@ -285,6 +285,9 @@ namespace Alchemy
             var objects = objectList == null ? Objects : Objects.Skip(1);
 
             HashSet<igObject> allChildren = toRemove.GetChildrenRecursive(this, ChildrenSearchParams.IncludeHandles).ToHashSet();
+            
+            bool hasLoop = allChildren.Contains(toRemove);
+            
             allChildren.Add(toRemove);
 
             foreach (igObject parent in objects)
@@ -304,7 +307,7 @@ namespace Alchemy
                         references[child] = (new List<igObject>(), new List<igObject>());
                     }
 
-                    if (inHierarchy) continue;
+                    if (inHierarchy && !hasLoop) continue;
 
                     references[child].parents.Add(parent);
                 }
@@ -312,15 +315,17 @@ namespace Alchemy
 
             removed ??= new HashSet<igObject>();
 
-            return RemoveRecursive(toRemove, force, references, removed);
+            return RemoveRecursive(toRemove, force, hasLoop, references, removed);
         }
 
-        private HashSet<igObject> RemoveRecursive(igObject obj, bool force, Dictionary<igObject, (List<igObject> parents, List<igObject> children)> references, HashSet<igObject> removed)
+        private HashSet<igObject> RemoveRecursive(igObject obj, bool force, bool hasLoop, Dictionary<igObject, (List<igObject> parents, List<igObject> children)> references, HashSet<igObject> removed)
         {
             (List<igObject>? parents, List<igObject>? children) = references.ContainsKey(obj) ? references[obj] : (null, null);
 
             if (parents == null || parents.Count == 0 || force)
             {
+                if (!force && hasLoop && obj is CEntity) return removed;
+
                 removed.Add(obj);
 
                 Objects.Remove(obj);
@@ -340,7 +345,7 @@ namespace Alchemy
 
                     references[child].parents.Remove(obj);
 
-                    RemoveRecursive(child, false, references, removed);
+                    RemoveRecursive(child, false, hasLoop, references, removed);
                 }
             }
 
