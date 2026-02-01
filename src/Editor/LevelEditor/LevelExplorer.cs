@@ -645,6 +645,8 @@ namespace NST
                 {
                     _treeView.SelectObject(newObject);
                 }
+
+                RenderNextFrame = true;
             });
         }
 
@@ -786,9 +788,11 @@ namespace NST
             }
 
             _treeView.RebuildTree(InstanceManager.AllObjects);
+
+            RenderNextFrame = true;
         }
 
-        private void SaveArchive(bool launchGame, bool saveAs)
+        public void SaveArchive(bool saveAs, bool launchGame, bool compress = false)
         {
             List<Action> postSaveCallbacks = [];
 
@@ -836,14 +840,7 @@ namespace NST
                 }
             };
 
-            if (saveAs)
-            {
-                ArchiveRenderer.SaveArchive(true, launchGame, false, onPreSave, onPostSave);
-            }
-            else
-            {
-                ArchiveRenderer.TrySaveArchive(launchGame, true, false, onPreSave, onPostSave);
-            }
+            ArchiveRenderer.TrySaveArchive(saveAs, launchGame, compress, true, onPreSave, onPostSave);
         }
 
         public override void Render(double? deltaTime)
@@ -885,7 +882,7 @@ namespace NST
                     _updateCachedModels = false;
                 }
 
-                ArchiveRenderer?.RenderMenuBar(true);
+                ArchiveRenderer?.RenderMenuBar(SaveArchive);
 
                 IsWindowFocused = _isDragging | ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
 
@@ -987,15 +984,18 @@ namespace NST
             {
                 SaveArchive(launchGame: false, saveAs: true);
             }
-            else if (!IsSceneFocused) return;
-
-            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R))
+            {
+                ArchiveRenderer.TryReload(true);
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
             {
                 if (SelectionManager.Copy(this))
                 {
                     THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
                     _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
-                    Task.Delay(250).ContinueWith(_ => _outlinePass.visibleEdgeColor.Copy(prev));
+                    Task.Delay(250).ContinueWith(_ => { _outlinePass.visibleEdgeColor.Copy(prev); RenderNextFrame = true; });
+                    RenderNextFrame = true;
                 }
             }   
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
@@ -1013,14 +1013,17 @@ namespace NST
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
                 _gizmos.mode = "translate";
+                RenderNextFrame = true;
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.R))
             {
                 _gizmos.mode = "rotate";
+                RenderNextFrame = true;
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.T))
             {
                 _gizmos.mode = "scale";
+                RenderNextFrame = true;
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
@@ -1029,6 +1032,7 @@ namespace NST
             else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
             {
                 SelectionManager.ClearSelection(true);
+                RenderNextFrame = true;
                 _gizmos.Visible = false;
             }
         }

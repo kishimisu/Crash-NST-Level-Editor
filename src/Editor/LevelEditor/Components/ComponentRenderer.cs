@@ -591,8 +591,7 @@ namespace NST
             ImGui.SetItemTooltip("False in:\n- L112_RoadToNowhere\n- L120_TheHighRoad");
             RenderCheckbox("Bool_0x50:", ref component._Bool_0x50, component, manager);
             ImGui.SetItemTooltip("True in:\n- L127_TheGreatHall\n- L200_Intro");
-            RenderCheckbox("Bool_0x60:", ref component._Bool_0x60, component, manager);
-            ImGui.SetItemTooltip("True in:\n- L104_Boulders\n- L107_HogWild\n- L113_BoulderDash\n- L114_WholeHog\n- L205_CrashDash\n- L208_BearIt\n- L209_CrashCrush\n- L213_BearDown\n- L226_TotallyBear\n- L308_HogRide\n- L314_RoadCrash\n- L317_ByeByeBlimps\n- L322_OrangeAsphalt\n- L324_MadBombers\n- L328_Area51\n- L330_RingsOfPower\n- L331_HotCoco");
+            RenderCheckbox("Disable Aku Aku:", ref component._Bool_0x60, component, manager);
             RenderCheckbox("Bool_0xa8:", ref component._Bool_0xa8, component, manager);
             ImGui.SetItemTooltip("False in:\n- L222_RockIt\n- L224_PackAttack");
         }

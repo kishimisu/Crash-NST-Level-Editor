@@ -128,6 +128,20 @@ namespace NST
 
         public void Setup(List<NSTEntity> entities)
         {
+            if (Object is CCutsceneCamera cutsceneCamera)
+            {
+                if (cutsceneCamera._attachToEntity.Reference != null)
+                {
+                    NSTEntity? child = entities.Find(e => e.FileNamespace == cutsceneCamera._attachToEntity.Reference.namespaceName && e.Object.ObjectName == cutsceneCamera._attachToEntity.Reference.objectName);
+                    if (child != null)
+                    {
+                        Children.Add(child);
+                        child.Parents.Add(this);
+                    }
+                }
+                return;
+            }
+
             if (Object is not CSplineCamera spline || spline._splineEntity.Reference == null) return;
 
             NSTEntity? entity = entities.Find(e => e.FileNamespace == spline._splineEntity.Reference.namespaceName && e.Object.ObjectName == spline._splineEntity.Reference.objectName);

@@ -65,7 +65,7 @@ It won't include unsaved changes.
 - When sharing levels, consider using `File -> Compress & Save` to reduce the level size
 
 #### Backup menu
-- You can manually backup and restore the level. It will be saved under `<level_name>_Backup.pak`
+- You can manually backup and restore the level. It will be saved under `<level_name>.pak.backup`
 - An automatic backup is created each time you use `Ctrl+L`, overwriting the previous automatic backup for this level
 
 ## Level Infos
@@ -179,9 +179,7 @@ You can find the list of components at the top, and the currently selected compo
 - Click on the checkbox on the right to enable/disable a component
 - `Click` on a component to select it
 - `Click+Drag` or `Shift+Click` for range selection
-- `Right click` to open the context menu
-- `Ctrl+C/V` to copy/paste selected components
-- `Suppr/Del` to delete selected components
+- `Right click` on a component to open the context menu (copy/paste/delete components)
 
 You can also copy/paste values from a component to another instead of pasting it as a new component:
 
@@ -205,7 +203,7 @@ Static models always have 3 components:
 
 This is what is responsible for spawning most objects in the game other than static models (crates, enemies, platforms...)
 
-Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that is actually spawned and that contains all the interesting properties. 
+Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that is actually spawned and that contains all the advanced properties. 
 
 The spawner usually only contains very few components and is mainly used to set the position and rotation for spawning the underlying template.
 

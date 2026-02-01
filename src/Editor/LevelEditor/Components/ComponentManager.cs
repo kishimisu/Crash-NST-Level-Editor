@@ -165,12 +165,12 @@ namespace NST
 
             ImGuiUtils.VerticalSpacing(8.0f);
 
-            if (ImGui.IsWindowHovered())
-            {
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C)) CopyComponents(_selection.ToList(), explorer);
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V)) PasteComponents(explorer);
-                if (ImGui.IsKeyPressed(ImGuiKey.Delete) || ImGui.IsKeyPressed(ImGuiKey.Backspace)) DeleteComponents(_selection, explorer);
-            }
+            // if (ImGui.IsWindowHovered())
+            // {
+            //     if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C)) CopyComponents(_selection.ToList(), explorer);
+            //     if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V)) PasteComponents(explorer);
+            //     if (ImGui.IsKeyPressed(ImGuiKey.Delete) || ImGui.IsKeyPressed(ImGuiKey.Backspace)) DeleteComponents(_selection, explorer);
+            // }
 
             ImGui.EndChild();
             ImGui.PopID();

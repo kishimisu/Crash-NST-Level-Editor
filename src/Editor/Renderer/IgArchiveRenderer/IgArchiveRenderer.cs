@@ -146,6 +146,7 @@ namespace NST
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(true); // Save and run
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) TryReload(false); // Reload archive
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E)) App.OpenLevelExplorer(this); // Level Explorer
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(false); // Restore backup
             }
@@ -156,10 +157,12 @@ namespace NST
             ImGui.End();
         }
 
-        public void RenderMenuBar(bool fromLevelEditor = false)
+        public void RenderMenuBar(Action<bool, bool, bool>? customSaveMethod = null)
         {
             if (ImGui.BeginMenuBar())
             {
+                bool fromLevelEditor = customSaveMethod != null;
+
                 if (ImGui.MenuItem("\uE900"))
                 {
                     App.OpenMainMenu();
@@ -168,11 +171,23 @@ namespace NST
                 {
                     if (ImGui.MenuItem("Open", "Ctrl+O")) App.OnClickOpen(fromLevelEditor);
                     App.RenderOpenRecent(fromLevelEditor: fromLevelEditor);
+                    if (ImGui.MenuItem("Reload", "Ctrl+Shift+R")) TryReload(fromLevelEditor);
                     ImGui.Separator();
-                    if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
-                    if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) SaveArchive(true);
-                    if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(true);
-                    if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
+
+                    if (customSaveMethod == null)
+                    {
+                        if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
+                        if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) TrySaveArchive(saveAs: true);
+                        if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(launchGame: true);
+                        if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
+                    }
+                    else
+                    {
+                        if (ImGui.MenuItem("Save", "Ctrl+S")) customSaveMethod(false, false, false);
+                        if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) customSaveMethod(true, false, false);
+                        if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) customSaveMethod(false, true, false);
+                        if (ImGui.MenuItem("Compress and save")) customSaveMethod(false, false, true);
+                    }
 
                     ImGui.Separator();
 
@@ -202,7 +217,6 @@ namespace NST
                     string autoBackupPath = Path.Join(LocalStorage.GetStoragePath("backups"), $"{hash}.pak");
                     bool hasAutoBackup = File.Exists(autoBackupPath);
 
-
                     if (!_hasBackup && !hasAutoBackup)
                     {
                         ImGui.MenuItem("No backup found", null, false, false);
@@ -217,8 +231,9 @@ namespace NST
                             string formatted = fileInfo.LastWriteTime.ToString("dd/MM HH:mm");
                             if (ImGui.MenuItem($"Restore auto backup ({formatted})")) RestoreBackup(fromLevelEditor, autoBackupPath);
                         }
-                        if (_hasBackup && ImGui.MenuItem("Restore backup", "Ctrl+Shift+R")) RestoreBackup(fromLevelEditor);
-                        if (_hasBackup && ImGui.MenuItem("Delete backup")) DeleteBackup();
+                        if (!_hasBackup && ImGui.MenuItem("Create backup")) CreateBackup();
+                        if (_hasBackup && ImGui.MenuItem("Restore manual backup", "Ctrl+Shift+R")) RestoreBackup(fromLevelEditor);
+                        if (_hasBackup && ImGui.MenuItem("Delete manual backup")) DeleteBackup();
                     }
                     ImGui.EndMenu();
                 }
@@ -283,8 +298,32 @@ namespace NST
             backupPath ??= Archive.GetPath() + ".backup";
             File.Copy(backupPath, Archive.GetPath(), true);
 
+            // Reload editor window
+            Reload(fromLevelEditor);
+
+            if (!fromLevelEditor)
+            {
+                ModalRenderer.ShowMessageModal("Operation successful", "Backup has been restored.");
+            }
+        }
+
+        public void TryReload(bool fromLevelEditor)
+        {
+            if (!IsUpdated)
+            {
+                Reload(fromLevelEditor);
+            }
+            else
+            {
+                ModalRenderer.ShowWarningModal($"Are you sure you want to reload {Archive.GetName()} without saving?", () => Reload(fromLevelEditor));
+            }
+        }
+
+        private void Reload(bool fromLevelEditor)
+        {
             // Reset archive renderer
             Archive = IgArchive.Open(Archive.GetPath());
+            IsUpdated = false;
             Setup();
 
             // Reopen level explorer
@@ -293,11 +332,6 @@ namespace NST
             {
                 explorer.IsOpen = false;
                 explorer.ReOpen = fromLevelEditor;
-            }
-
-            if (!fromLevelEditor)
-            {
-                ModalRenderer.ShowMessageModal("Operation successful", "Backup has been restored.");
             }
         }
 
@@ -571,8 +605,20 @@ namespace NST
         /// Try to save the current archive to disk.
         /// Will show a confirmation modal if it's a game archive.
         /// </summary>
-        public void TrySaveArchive(bool launchGame = false, bool fromLevelEditor = false, bool compress = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
+        public void TrySaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false, bool fromLevelEditor = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
         {
+            if (!fromLevelEditor && App.GetLevelExplorer(this) is LevelExplorer explorer)
+            {
+                explorer.SaveArchive(saveAs, launchGame, compress);
+                return;
+            }
+
+            if (saveAs)
+            {
+                SaveArchive(true, launchGame, compress, preSaveCallback, postSaveCallback);
+                return;
+            }
+            
             if (!IsUpdated && !compress)
             {
                 if (launchGame) Archive.TryRunLevel();

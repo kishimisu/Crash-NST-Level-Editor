@@ -124,9 +124,9 @@ namespace Alchemy
             // Skip already cloned objects
             if (props.clones.ContainsKey(this)) return props.clones[this];
 
-            // Skip components with multiple references
+            // Skip entity data & components
             if (props.clones.Count > 0 && props.mode.HasFlag(CloneMode.SkipComponents) && (
-                (this is igComponentData && props.forceClone?.Contains(this) == false) || 
+                (this is igComponentData && this is not CSplineComponentData && props.forceClone?.Contains(this) == false) || 
                 (this is igEntityData && props.forceClone == null)
             )) {
                 return this;

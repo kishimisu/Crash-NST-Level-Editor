@@ -632,7 +632,7 @@ namespace NST
                                 renderer.SetEntityUpdated(newPrefabChild);
                             }
                         }
-                        else if (_copyExplorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
+                        else if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
                         {
                             Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
                             renderer.SetEntityUpdated(clone, infos.shapeInstance);
