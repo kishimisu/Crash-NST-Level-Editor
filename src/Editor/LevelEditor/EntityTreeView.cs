@@ -297,7 +297,11 @@ namespace NST
 
             if (Object != null)
             {
-                ImGui.PushStyleColor(ImGuiCol.Text, Object.GetObject().GetType().GetUniqueColor());
+                uint col = Object is NSTEntity entity && entity.IsTemplate
+                    ? 0xff00ffff
+                    : Object.GetObject().GetType().GetUniqueColor();
+
+                ImGui.PushStyleColor(ImGuiCol.Text, col);
                 ImGui.Text("\uEA1E");
                 ImGui.PopStyleColor();
                 ImGui.SameLine(0, 5);

@@ -144,11 +144,10 @@ namespace NST
 
                 // Shortcuts
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) SaveArchive(true); // Save as
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(true); // Save and run
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) TrySaveArchive(saveAs: true); // Save as
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(launchGame: true); // Save and run
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) TryReload(false); // Reload archive
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E)) App.OpenLevelExplorer(this); // Level Explorer
-                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.R)) RestoreBackup(false); // Restore backup
             }
 
             // Render undocked IGZs
@@ -232,7 +231,7 @@ namespace NST
                             if (ImGui.MenuItem($"Restore auto backup ({formatted})")) RestoreBackup(fromLevelEditor, autoBackupPath);
                         }
                         if (!_hasBackup && ImGui.MenuItem("Create backup")) CreateBackup();
-                        if (_hasBackup && ImGui.MenuItem("Restore manual backup", "Ctrl+Shift+R")) RestoreBackup(fromLevelEditor);
+                        if (_hasBackup && ImGui.MenuItem("Restore manual backup")) RestoreBackup(fromLevelEditor);
                         if (_hasBackup && ImGui.MenuItem("Delete manual backup")) DeleteBackup();
                     }
                     ImGui.EndMenu();
@@ -933,8 +932,10 @@ namespace NST
 
             foreach (IgArchiveFile file in newFiles)
             {
-                bool addToPkg = !file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/");
-                if (excludeMapFiles && file.GetPath().StartsWith("maps/")) continue;
+                bool addToPkg = !file.GetPath().StartsWith("maps/");
+                if (excludeMapFiles && (file.GetPath().StartsWith("maps/") || file.GetName().StartsWith("StaticCollision_"))) continue;
+                if (file.GetPath().StartsWith("vfx/Crash3/Hub")) continue;
+
                 AddFile(file, addToPkg);
             }
 
@@ -946,7 +947,7 @@ namespace NST
         /// </summary>
         public void AddFileWithDependencies(IgArchive sourceArchive, IgArchiveFile file, bool focus = false)
         {
-            bool addToPkg = !file.GetPath().StartsWith("maps/") || file.GetPath().StartsWith("maps/Custom/");
+            bool addToPkg = !file.GetPath().StartsWith("maps/");
             
             AddFile(file, addToPkg, focus);
 
@@ -962,7 +963,7 @@ namespace NST
             for (int i = 0; i < added.Count; i++)
             {
                 IgArchiveFile newFile = added[i];
-                addToPkg = !newFile.GetPath().StartsWith("maps/") || newFile.GetPath().StartsWith("maps/Custom/");
+                addToPkg = !newFile.GetPath().StartsWith("maps/");
                 AddFile(newFile, addToPkg);
             }
         }

@@ -109,14 +109,6 @@ namespace NST
                 renderer.ReloadFile();
             }
         }
-
-        public void RenderWindow()
-        {
-            if (renderer != null && renderer.IsOpenAsWindow)
-            {
-                renderer.Render();
-            }
-        }
     }
 
     /// <summary>
@@ -384,9 +376,19 @@ namespace NST
         /// </summary>
         public void RenderWindows()
         {
-            foreach (FileUpdateInfos file in _files.Values.ToList())
+            try
             {
-                file.RenderWindow();
+                foreach (FileUpdateInfos file in _files.Values)
+                {
+                    if (file.renderer?.IsOpenAsWindow == true)
+                    {
+                        file.renderer.Render();
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
             }
         }
 
