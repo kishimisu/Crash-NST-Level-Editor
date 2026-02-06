@@ -56,7 +56,8 @@ namespace NST
             Templates = 7, 
             Clouds = 8, 
             Shadows = 9, 
-            Hidden = 10
+            Hidden = 10,
+            TriggersOn = 20,
         };
 
         private readonly Dictionary<string, bool> _layers = new()
@@ -1217,6 +1218,7 @@ namespace NST
                     layers.Disable(i+1);
                 }
             }
+            layers.Enable((int)CameraLayer.TriggersOn);
         }
 
         public THREE.Vector2? GetClipSpaceMousePos(THREE.Silk.MouseEventArgs e) => GetClipSpaceMousePos(e.X, e.Y);
@@ -1318,6 +1320,7 @@ namespace NST
                 raycaster.layers.Disable((int)CameraLayer.Splines);
                 raycaster.layers.Disable((int)CameraLayer.CameraBox);
                 raycaster.layers.Disable((int)CameraLayer.Triggers);
+                raycaster.layers.Disable((int)CameraLayer.TriggersOn);
                 raycaster.layers.Disable((int)CameraLayer.ClipEntities);
             }
 

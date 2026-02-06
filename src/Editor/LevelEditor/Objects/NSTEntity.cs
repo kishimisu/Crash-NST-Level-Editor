@@ -96,17 +96,21 @@ namespace NST
             {
                 foreach (NSTEntity parent in Parents.OfType<NSTEntity>().Where(p => p.Object is CScriptTriggerEntity))
                 {
-                    parent.Object3D?.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.Default));
+                    parent.Object3D?.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn));
                 }
             }
 
-            if (!selected)
+            if (Object is CScriptTriggerEntity)
+            {
+                LevelExplorer.CameraLayer layer = selected || Children.Any(c => c.IsSelected) ? LevelExplorer.CameraLayer.TriggersOn : LevelExplorer.CameraLayer.Triggers;
+                group.Traverse(e => e.Layers.Set((int)layer));
+            }
+            else if (!selected)
             {
                 LevelExplorer.CameraLayer layer = LevelExplorer.CameraLayer.Default;
 
                 if (IsTemplate) layer = LevelExplorer.CameraLayer.Templates;
                 else if (IsHidden) layer = LevelExplorer.CameraLayer.Hidden;
-                else if (Object is CScriptTriggerEntity && !Parents.Any(c => c.IsSelected)) layer = LevelExplorer.CameraLayer.Triggers;
                 else if (Object is CDynamicClipEntity) layer = LevelExplorer.CameraLayer.ClipEntities;
                 else if (Model == null) layer = LevelExplorer.CameraLayer.AllEntities;
 
