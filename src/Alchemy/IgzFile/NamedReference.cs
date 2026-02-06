@@ -95,6 +95,13 @@ namespace Alchemy
             return new HashedReference() { fileHash = fileHash, objectHash = objectHash };
         }
 
+        public static bool Compare(NamedReference a, NamedReference b, bool compareEXID = false)
+        {
+            if (a.namespaceName != b.namespaceName || a.objectName != b.objectName) return false;
+            if (compareEXID && a.isEXID != b.isEXID) return false;
+            return true;
+        }
+
         public override bool Equals(object? obj) => obj is NamedReference other && namespaceName == other.namespaceName && objectName == other.objectName && isEXID == other.isEXID;
         public override int GetHashCode() => HashCode.Combine(namespaceName, objectName, isEXID);
         public override string ToString() => $"{(isEXID ? "[EXID] " : "")}{namespaceName}::{objectName}";

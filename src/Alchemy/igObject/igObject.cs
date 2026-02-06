@@ -110,6 +110,18 @@ namespace Alchemy
             writer.Write(value, offset);
         }
 
+        private static readonly HashSet<Type> _forceCloneComponents =
+        [
+            typeof(common_Spawner_TemplateData),
+            typeof(Multiple_Spawner_Template_c),
+            typeof(Animated_Multiple_Spawner_Template_Behavior),
+            typeof(CSplineComponentData),
+            typeof(CSplineLaneMoverComponentData),
+            typeof(CMovementControllerComponentData),
+            typeof(Platform_Simple_PingpongData),
+            typeof(Jungle_Hazard_Ostrich_BehaviorData),
+        ];
+
         public override igObjectBase Clone(CloneProperties props)
         {
             // (Shallow copy) Skip if not root object
@@ -126,8 +138,8 @@ namespace Alchemy
 
             // Skip entity data & components
             if (props.clones.Count > 0 && props.mode.HasFlag(CloneMode.SkipComponents) && (
-                (this is igComponentData && this is not CSplineComponentData && props.forceClone?.Contains(this) == false) || 
-                (this is igEntityData && props.forceClone == null)
+                (this is igEntityData && props.forceClone == null) ||
+                (this is igComponentData && !_forceCloneComponents.Contains(GetType()) && props.forceClone?.Contains(this) == false)
             )) {
                 return this;
             }

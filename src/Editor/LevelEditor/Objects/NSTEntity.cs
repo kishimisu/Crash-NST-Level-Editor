@@ -30,6 +30,10 @@ namespace NST
         public bool IsHidden { get; set; } = false;
         public bool IsSpawned => !IsPrefabTemplate && !IsTemplate && !IsHidden;
 
+        // Parent CScriptTriggerEntity focus
+        public bool ClickedAgain { get; set; } = false;
+        public bool OutlineTrigger { get; set; } = false;
+
         public NSTSpline? Spline { get; private set; }
         public THREE.Object3D? TriggerVolumeBox { get; private set; }
         private Dictionary<CWaypoint, NSTWaypoint> _waypoints = [];
@@ -62,7 +66,7 @@ namespace NST
         {
             THREE.Object3D group = Model?.CreateObject() ?? new THREE.Object3D();
 
-            if (Model == null)
+            if (Model == null && Object is not CScriptTriggerEntity && Object is not CDynamicClipEntity)
             {
                 var geo = new THREE.BoxGeometry(20, 20, 20);
                 var mat = new THREE.MeshPhongMaterial() { Color = MathUtils.FromImGuiColor(Object.GetType().GetUniqueColor()) };
@@ -88,12 +92,22 @@ namespace NST
                 group.Attach(child);
             }
 
+            if (Object is not CScriptTriggerEntity)
+            {
+                foreach (NSTEntity parent in Parents.OfType<NSTEntity>().Where(p => p.Object is CScriptTriggerEntity))
+                {
+                    parent.Object3D?.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.Default));
+                }
+            }
+
             if (!selected)
             {
                 LevelExplorer.CameraLayer layer = LevelExplorer.CameraLayer.Default;
 
                 if (IsTemplate) layer = LevelExplorer.CameraLayer.Templates;
                 else if (IsHidden) layer = LevelExplorer.CameraLayer.Hidden;
+                else if (Object is CScriptTriggerEntity && !Parents.Any(c => c.IsSelected)) layer = LevelExplorer.CameraLayer.Triggers;
+                else if (Object is CDynamicClipEntity) layer = LevelExplorer.CameraLayer.ClipEntities;
                 else if (Model == null) layer = LevelExplorer.CameraLayer.AllEntities;
 
                 group.Traverse(e => e.Layers.Set((int)layer));
@@ -103,12 +117,9 @@ namespace NST
                 group.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.Clouds));
             }
 
-            if (Object3D != null)
-            {
-                Object3D.Parent?.Remove(Object3D);
-            }
-
             _waypoints.Clear();
+
+            Object3D?.Parent?.Remove(Object3D);
 
             Object3D = group;
 
@@ -124,9 +135,7 @@ namespace NST
 
             foreach (NSTObject child in Children)
             {
-                if (child.IsSelected) continue;
-                if (child is NSTEntity) continue;
-                if (child.GetObject() is CScriptTriggerEntity) continue;
+                if (child.IsSelected || child is NSTEntity) continue;
 
                 group.Add(child.CreateObject3D(selected));
             }
@@ -141,6 +150,11 @@ namespace NST
                 THREE.Color color = new THREE.Color(Object is CScriptTriggerEntity ? 0xFFA500 : 0xFF0000);
                 var layer = Object is CDynamicClipEntity ? LevelExplorer.CameraLayer.ClipEntities : LevelExplorer.CameraLayer.Triggers;
                 THREE.Mesh mesh = CreateBoxHelper(entity._min.ToVector3(), entity._max.ToVector3(), color, focused, layer);
+
+                if (Object is CScriptTriggerEntity && !OutlineTrigger)
+                {
+                    mesh.UserData["excludeFromOutline"] = true;
+                }
 
                 mesh.ApplyMatrix4(ObjectToWorld());
 
@@ -266,38 +280,6 @@ namespace NST
             }
 
             return newEntities;
-        }
-
-        public void InitScriptTriggerEntity(LevelExplorer explorer, List<NSTEntity> entities)
-        {
-            if (Object is not CScriptTriggerEntity trigger) return;
-
-            Spawner_Trigger_LogicData? spawner = trigger.GetComponent<Spawner_Trigger_LogicData>();
-            NamedReference? reference = spawner?._SpawnerActivationList.Reference;
-
-            if (reference == null) return;
-
-            CEntityHandleList? handleList = (CEntityHandleList?)explorer.FileManager.FindObjectInOpenFiles(reference, out _);
-
-            if (handleList == null) return;
-
-            foreach (var handleMetaField in handleList._data)
-            {
-                NamedReference? handle = handleMetaField?.Reference;
-
-                NSTEntity? entity = entities.FirstOrDefault(e =>
-                    e.Object.ObjectName == handle?.objectName &&
-                    e.FileNamespace == handle?.namespaceName
-                );
-
-                if (entity == null)
-                {
-                    Console.WriteLine($"WARNING: Could not find spawned entity {handle?.objectName} for trigger {Object.ObjectName}");
-                    continue;
-                }
-
-                entity.Children.Add(this);
-            }
         }
 
         public NSTEntity? GetChildTemplate()

@@ -200,7 +200,7 @@ namespace NST
                     _refreshSelectionOnMouseUp = false;
                 }
 
-                _outlinePass.showCenterDot =  false;
+                _outlinePass.showCenterDot = false;
                 _clickedInsideScene = false;
                 _isDragging = false;
             };
@@ -924,6 +924,12 @@ namespace NST
 
                     RenderSettingsPanel();
 
+                    if (ImGui.Button("Collapse all"))
+                    {
+                        _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
+                        if (SelectionManager._selection.Count > 0) _treeView.SelectObject(SelectionManager._selection[0]);
+                    }
+
                     if (ImGui.BeginChild("ObjectTree" + GetHashCode()))
                     {
                         _treeView.Render();
@@ -1174,7 +1180,7 @@ namespace NST
                 ImGui.BulletText("Shift: move faster");
                 ImGuiUtils.ColoredSeparator("Selection", controlsColor);
                 ImGui.BulletText("Left click: select object(s)");
-                ImGui.BulletText("(Click multiple times focus child objects)");
+                ImGui.BulletText("(Click again to select parent/child objects)");
                 ImGui.BulletText("Shift + Left click: add/remove from selection");
                 ImGui.BulletText("Left Alt: align/snap selected crates");
                 ImGui.BulletText("Escape: unselect all (greatly improves FPS)");
@@ -1294,7 +1300,7 @@ namespace NST
             return InstanceManager.AllObjects.Find(e => e.FileNamespace == reference.namespaceName && e.GetObject().ObjectName == reference.objectName);
         }
 
-        private List<THREE.Intersection> Raycast(THREE.Vector2 mouseClipSpace, float distance)
+        private List<THREE.Intersection> Raycast(THREE.Vector2 mouseClipSpace, float distance, bool excludeTransparent = false)
         {
             if (mouseClipSpace.X < -1 || mouseClipSpace.X > 1 || mouseClipSpace.Y < -1 || mouseClipSpace.Y > 1) return [];
 
@@ -1307,6 +1313,14 @@ namespace NST
 
             UpdateActiveLayers(raycaster.layers);
 
+            if (excludeTransparent)
+            {
+                raycaster.layers.Disable((int)CameraLayer.Splines);
+                raycaster.layers.Disable((int)CameraLayer.CameraBox);
+                raycaster.layers.Disable((int)CameraLayer.Triggers);
+                raycaster.layers.Disable((int)CameraLayer.ClipEntities);
+            }
+
             return raycaster.IntersectObject(InstanceManager.RootObject, true);
         }
 
@@ -1316,10 +1330,28 @@ namespace NST
 
             intersects.Sort((x, y) => y.object3D.UserData.ContainsKey("spline").CompareTo(x.object3D.UserData.ContainsKey("spline")));
 
-            foreach (THREE.Intersection intersect in intersects)
+            for (int i = 0; i < intersects.Count; i++)
             {
-                hitEntities = InstanceManager.SelectFromRaycast(intersect);
-                if (hitEntities.Count > 0) break;
+                hitEntities = InstanceManager.SelectFromRaycast(intersects[i]);
+                
+                if (hitEntities.Count == 0) continue;
+                
+                if (hitEntities[0] is NSTEntity e && e.Object is CScriptTriggerEntity)
+                {
+                    for (int j = i+1; j < intersects.Count; j++)
+                    {
+                        List<NSTObject> nextHitEntities = InstanceManager.SelectFromRaycast(intersects[j]);
+                        if (nextHitEntities.Count == 0) continue;
+
+                        if (nextHitEntities.Count > 0 && nextHitEntities[0] is NSTEntity child && e.Children.Contains(child))
+                        {
+                            hitEntities = nextHitEntities;
+                            break;
+                        }
+                    }
+                }
+                
+                break;
             }
 
             if (hitEntities.Count == 0) 
@@ -1492,7 +1524,7 @@ namespace NST
         
         private THREE.Vector3 GetIntersectionPoint(float maxDistance = 5000.0f)
         {
-            List<THREE.Intersection> intersections = Raycast(THREE.Vector2.Zero(), maxDistance);
+            List<THREE.Intersection> intersections = Raycast(THREE.Vector2.Zero(), maxDistance, true);
             float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
             return _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
         }

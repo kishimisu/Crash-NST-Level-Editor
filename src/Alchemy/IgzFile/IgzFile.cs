@@ -100,10 +100,17 @@ namespace Alchemy
         /// <returns>The object if found, null otherwise</returns>
         public igObject? FindObject(NamedReference reference)
         {
-            if (reference.namespaceName.ToLower() != GetName(false).ToLower())
+            if (!reference.namespaceName.Equals(GetName(false), StringComparison.CurrentCultureIgnoreCase))
             {
                 // The handle doesn't point to the current file
                 return null;
+            }
+
+            if (reference.objectName.All(char.IsDigit))
+            {
+                uint hash = uint.Parse(reference.objectName);
+
+                return Objects.Find(o => o.ObjectName != null && NamespaceUtils.ComputeHash(o.ObjectName) == hash);
             }
 
             string objectName = reference.objectName.ToLowerInvariant();
@@ -354,7 +361,7 @@ namespace Alchemy
 
         public string FindSuitableName(string name)
         {
-            while (Objects.Any(e => e.ObjectName == name))
+            while (Objects.Any(e => string.Compare(e.ObjectName, name, true) == 0))
             {
                 name = IncrementTrailingNumber(name);
             } 

@@ -134,7 +134,6 @@ namespace NST
         private LevelExplorer _explorer;
         private Dictionary<NSTModel, InstanceManager> _instances = [];
         private InstanceManager _entitiesWithoutModel = new InstanceManager();
-        private InstanceManager _scriptTriggers = new InstanceManager();
 
         public InstancedMeshManager(LevelExplorer explorer, THREE.Scene scene)
         {
@@ -166,7 +165,6 @@ namespace NST
                     }
 
                     entity.InitChildren(_explorer, AllObjects);
-                    entity.InitScriptTriggerEntity(_explorer, AllEntities);
                 }
                 else if (obj is NSTCamera camera)
                 {
@@ -198,7 +196,6 @@ namespace NST
                 if (obj is NSTEntity entity)
                 {
                     entity.InitChildren(_explorer, AllObjects);
-                    entity.InitScriptTriggerEntity(_explorer, AllEntities);
                 }
                 else if (obj is NSTCamera camera)
                 {
@@ -251,22 +248,19 @@ namespace NST
 
             if (!entity.IsSpawned) return;
 
-            if (entity.Object is CScriptTriggerEntity)
+            if (entity.Model != null)
             {
-                _scriptTriggers.Add(entity);
+                if (!_instances.TryGetValue(entity.Model, out InstanceManager? value))
+                {
+                    value = new InstanceManager(entity.Model);
+                    _instances[entity.Model] = value;
+                }
+
+                value.Add(entity);
             }
-            else if (entity.Model == null)
+            else if (entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object.GetComponent<CTriggerVolumeBoxComponentData>() == null)
             {
                 _entitiesWithoutModel.Add(entity);
-            }
-            else if (!_instances.ContainsKey(entity.Model))
-            {
-                _instances[entity.Model] = new InstanceManager(entity.Model);
-                _instances[entity.Model].Add(entity);
-            }
-            else
-            {
-                _instances[entity.Model].Add(entity);
             }
         }
 
@@ -300,43 +294,33 @@ namespace NST
 
         public List<NSTObject> SelectFromRaycast(THREE.Intersection hit)
         {
-            if (hit.object3D.UserData.ContainsKey("entity"))
+            if (hit.object3D.UserData.TryGetValue("entity", out object? entityObj))
             {
-                NSTObject entity = (NSTObject)hit.object3D.UserData["entity"];
-                // Console.WriteLine("Hit object: " + entity.GetObject().ObjectName);
-                return Select(entity);
+                return Select((NSTObject)entityObj);
             }
-            else if (hit.object3D.UserData.ContainsKey("instance"))
+            else if (hit.object3D.UserData.TryGetValue("instance", out object? instanceObj))
             {
-                InstanceManager instance = (InstanceManager)hit.object3D.UserData["instance"];
+                InstanceManager instance = (InstanceManager)instanceObj;
                 NSTEntity entity = instance.Entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
-                // Console.WriteLine("Hit instance: " + entity.Object.ObjectName);
                 return Select(entity);
             }
-            else if (hit.object3D.UserData.ContainsKey("spline"))
+            else if (hit.object3D.UserData.TryGetValue("spline", out object? splineObj))
             {
-                NSTSpline spline = (NSTSpline)hit.object3D.UserData["spline"];
+                NSTSpline spline = (NSTSpline)splineObj;
                 NSTSplineControlPoint controlPoint = spline._controlPoints[hit.instanceId];
-                // Console.WriteLine("Hit spline: " + spline.Object.ObjectName +  " #" + hit.instanceId);
                 return Select(controlPoint);
             }
-            else if (hit.object3D.UserData.ContainsKey("splineRotation"))
+            else if (hit.object3D.UserData.TryGetValue("splineRotation", out object? splineRotationObj))
             {
-                NSTSplineRotationKeyFrame keyframe = (NSTSplineRotationKeyFrame)hit.object3D.UserData["splineRotation"];
-                // Console.WriteLine("Hit spline rotation keyframe: " + keyframe.Object.ObjectName);
-                return Select(keyframe);
+                return Select((NSTSplineRotationKeyFrame)splineRotationObj);
             }
-            else if (hit.object3D.UserData.ContainsKey("splineMarker"))
+            else if (hit.object3D.UserData.TryGetValue("splineMarker", out object? splineMarkerObj))
             {
-                NSTSplineMarker marker = (NSTSplineMarker)hit.object3D.UserData["splineMarker"];
-                // Console.WriteLine("Hit spline marker: " + marker.Object.ObjectName);
-                return Select(marker);
+                return Select((NSTSplineMarker)splineMarkerObj);
             }
-            else if (hit.object3D.UserData.ContainsKey("waypoint"))
+            else if (hit.object3D.UserData.TryGetValue("waypoint", out object? waypointObj))
             {
-                NSTWaypoint waypoint = (NSTWaypoint)hit.object3D.UserData["waypoint"];
-                // Console.WriteLine("Hit waypoint: " + waypoint.Object.ObjectName);
-                return Select(waypoint);
+                return Select((NSTWaypoint)waypointObj);
             }
 
             return [];
@@ -353,7 +337,36 @@ namespace NST
             {
                 bool alreadySelected = !selectionEmpty && selection.All(e => e.Object == entity.Object);
 
-                if ((entity.Object is CScriptTriggerEntity || entity.Object is CDynamicClipEntity) && alreadySelected)
+                if (entity.Object is CScriptTriggerEntity && (!entity.IsPrefabChild || (entity.IsSelected && entity.OutlineTrigger)))
+                {
+                    if (shiftPressed)
+                    {
+                        entity.OutlineTrigger = true;
+                        return [ entity ];
+                    }
+
+                    List<NSTObject> children = entity.Children.Where(c => c is NSTEntity e && e.IsSpawned).ToList();
+
+                    entity.OutlineTrigger = false;
+
+                    if (children.Count > 1)
+                    {
+                        children.Insert(0, entity);
+
+                        if (!entity.IsSelected && children.Any(e => !e.IsSelected))
+                        {
+                            return children;
+                        }
+                    }
+
+                    if (alreadySelected) return [];
+
+                    entity.OutlineTrigger = true;
+
+                    return [ entity ];
+                }
+
+                if (alreadySelected && entity.Object is CDynamicClipEntity)
                 {
                     return [];
                 }
@@ -378,14 +391,20 @@ namespace NST
                     return SelectPrefabGroup(entity).Cast<NSTObject>().ToList();
                 }
 
-                if (entity.IsSelected && selection.Count != 1) return [ entity ];
+                entity.ClickedAgain = entity.IsSelected && !entity.ClickedAgain && !entity.Parents.Any(p => p.IsSelected);
 
-                List<NSTObject> selected = [ entity ];
-                // selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.IsSpawned));
-                if (!fromTree || alreadySelected) selected.AddRange(entity.Children.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity));
+                List<NSTObject> outSelection = [ entity ];
 
-                Console.WriteLine("Select " + selected.Count + " entities");
-                return selected;
+                if (entity.ClickedAgain && !shiftPressed)
+                {
+                    foreach (NSTEntity parent in entity.Parents.OfType<NSTEntity>().Where(p => p.Object is CScriptTriggerEntity))
+                    {
+                        parent.OutlineTrigger = false;
+                        outSelection.Add(parent);
+                    }
+                }
+
+                return outSelection;
             }
             else if (obj is NSTSplineControlPoint controlPoint)
             {
@@ -436,6 +455,8 @@ namespace NST
 
             prefabs.AddRange(prefabInstance.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == prefabInstance && e.IsSpawned));
 
+            prefabs.ForEach(e => e.OutlineTrigger = false);
+
             return prefabs;
         }
 
@@ -450,6 +471,8 @@ namespace NST
                 instances.Add(child);
             }
             
+            instances.ForEach(e => e.OutlineTrigger = true);
+
             return instances;
         }
 

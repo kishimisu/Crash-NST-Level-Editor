@@ -82,11 +82,14 @@ namespace NST
                     else if (entity.IsHidden) hidden.Add(obj);
                     else if (entity.IsPrefabChild) continue;
                     else if (!entity.IsSpawned && entity.Parents.Count > 0) continue;
-                    // else if (!entity.IsSpawned && objects.Any(e => e.Children.Contains(obj))) continue;
-                    else if (entity.GetObject().GetType() == typeof(CEntity) && entity.GetObject().ObjectName!.StartsWith("Crate_")) crates.Add(obj);
+                    else if (entity.Object.GetType() == typeof(CEntity) && entity.Object.GetComponent<common_Crate_StackCheckerData>() != null) crates.Add(obj);
                     else if (entity.Spline != null && entity.Children.Count == 1) splines.Add(obj);
-                    else if (entity.Object is CScriptTriggerEntity && (entity.Parents.Count > 0 || entity.Children.Any(e => e.Children.Contains(entity)))) continue;
-                    else if (entity.Model == null && entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object is not CPlayerStartEntity) other.Add(obj);
+                    else if (entity.Object is CScriptTriggerEntity && entity.Parents.Any(p => p.GetObject() is not CScriptTriggerEntity)) continue;
+                    else if (entity.Model == null && entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object is not CPlayerStartEntity)
+                    {
+                        if (entity.Parents.Count > 0) continue;
+                        other.Add(obj);
+                    }
                     else added = false;
                 }
                 else if (obj.GetObject() is CCamera)
@@ -242,24 +245,19 @@ namespace NST
             added ??= new HashSet<NSTObject>();
             added.Add(obj);
 
-            HashSet<NSTObject> children = obj.Children;
-            bool sortChildren = (obj is NSTEntity);
-            bool isSpawned = (obj is NSTEntity entity && (entity.IsSpawned && entity.Model != null));
-
             HashSet<NSTObject> prev = added.ToHashSet();
 
-            foreach (NSTObject child in children)
+            bool isSpawned = obj is NSTEntity entity && entity.IsSpawned;
+
+            foreach (NSTObject child in obj.Children)
             {
                 if (child is NSTSpline) continue;
-                // if (isSpawned && (child is NSTEntity childEntity && !childEntity.IsSpawned)) continue;
-                if (isSpawned && child.GetObject() is not CScriptTriggerEntity) continue;
+                if (isSpawned && child is NSTEntity e && e.IsTemplate) continue;
                 if (added.Contains(child)) continue;
-                Children.Add(new EntityTreeNode(child.GetObject().ObjectName ?? "<No name>", child, added));
+                Children.Add(new EntityTreeNode(child.GetObject().ObjectName ?? "<No name>", child, prev));
             }
 
-            added = prev;
-
-            if (sortChildren)
+            if (obj is NSTEntity)
             {
                 Children.Sort((a, b) => a.Name.CompareTo(b.Name));
             }
@@ -297,11 +295,7 @@ namespace NST
 
             if (Object != null)
             {
-                uint col = Object is NSTEntity entity && entity.IsTemplate
-                    ? 0xff00ffff
-                    : Object.GetObject().GetType().GetUniqueColor();
-
-                ImGui.PushStyleColor(ImGuiCol.Text, col);
+                ImGui.PushStyleColor(ImGuiCol.Text, Object.GetObject().GetType().GetUniqueColor());
                 ImGui.Text("\uEA1E");
                 ImGui.PopStyleColor();
                 ImGui.SameLine(0, 5);
@@ -322,7 +316,8 @@ namespace NST
                 return;
             }
 
-            if (Object.IsSelected && (Object is NSTEntity e && e.IsPrefabChild || Object.Parents.Count == 0)) flags |= ImGuiTreeNodeFlags.Selected;
+            if (Object.IsSelected) flags |= ImGuiTreeNodeFlags.Selected;
+            else flags &= ~ImGuiTreeNodeFlags.Selected;
 
             string displayName = Object is NSTEntity entity && entity.IsPrefabInstance ? $"[Prefab] {Name}" : Name;
 

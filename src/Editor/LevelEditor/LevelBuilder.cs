@@ -523,7 +523,7 @@ namespace NST
 
             for (int i = 0; i < 8; i++)
             {
-                CEntity ironCrateCloneClone = crateIgz.AddClone(ironCrateClone);
+                CEntity ironCrateCloneClone = crateIgz.AddClone(ironCrateClone, mode: CloneMode.Shallow);
                 ironCrateClone._parentSpacePosition = new igVec3fMetaField(600 + (i+1) * 75.5f, 0, 0);
             }
 

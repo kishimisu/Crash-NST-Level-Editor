@@ -37,6 +37,7 @@ namespace NST
             {
                 mesh.Add(new THREE.Mesh(geo, new THREE.MeshBasicMaterial() {
                     Color = color,
+                    Side = THREE.Constants.DoubleSide,
                     Opacity = 0.35f,
                     Transparent = true,
                 }));
@@ -73,24 +74,38 @@ namespace NST
             }
 
             // Render object references
+            var children = Children.Where(c => c is not NSTSpline && (c is not NSTEntity e || !e.IsTemplate)).ToList();
+
+            if (Parents.Count > 0 || children.Count > 0) ImGui.Spacing();
             
-            if (Parents.Count > 0)
+            if (Parents.Count > 0 && ImGui.TreeNodeEx($"Show parents ({Parents.Count})"))
             {
-                ImGui.Spacing();
-                if (ImGui.TreeNodeEx($"Show ({Parents.Count}) references"))
+                foreach (NSTObject obj in Parents)
                 {
-                    foreach (NSTObject obj in Parents)
+                    if (ImGui.Selectable("##" + obj.GetObject().ObjectName))
                     {
-                        if (ImGui.Selectable("##" + obj.GetObject().ObjectName))
-                        {
-                            explorer.Focus(obj);
-                        }
-                        ImGui.SameLine();
-                        ImGui.Bullet();
-                        obj.RenderName();
+                        explorer.Focus(obj);
                     }
-                    ImGui.TreePop();
+                    ImGui.SameLine();
+                    ImGui.Bullet();
+                    obj.RenderName();
                 }
+                ImGui.TreePop();
+            }
+
+            if (children.Count > 0 && ImGui.TreeNodeEx($"Show children ({children.Count})"))
+            {
+                foreach (NSTObject obj in children)
+                {
+                    if (ImGui.Selectable("##" + obj.GetObject().ObjectName))
+                    {
+                        explorer.Focus(obj);
+                    }
+                    ImGui.SameLine();
+                    ImGui.Bullet();
+                    obj.RenderName();
+                }
+                ImGui.TreePop();
             }
 
             ImGui.PopID();

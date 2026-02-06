@@ -113,7 +113,7 @@ Contains the list of all objects in the level, grouped by type. Click on an elem
 - **Splines**: Contains all spline entities (See [#splines](#splines))
 - **Player Start**: Contains the player start entity (where the character is spawned when starting the level)
 - **CEntity / CGameEntity / CPhysicalEntity**: Contains most of the level's game objects (enemies, hazards, obstacles... see [#spawner templates](#spawner-templates))
-- **CActor**: Contains character entities (Fake crash, bosses...)
+- **CActor**: Contains character entities (bosses and advanced enemies...)
 
 Objects without a model:
 (these appear as colored cubes in the level editor)
