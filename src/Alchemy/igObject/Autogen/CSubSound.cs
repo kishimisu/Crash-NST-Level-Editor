@@ -6,7 +6,7 @@ namespace Alchemy
         [FieldAttr(16)] public string? _fileName = null;
         [FieldAttr(24)] public float _volume = 1.0f;
         [FieldAttr(28)] public u16 _sampleRate = 48000;
-        [FieldAttr(30)] public i8 _quality = 40;
+        [FieldAttr(30)] public i8 _quality = 100;
         [FieldAttr(31)] public bool _externalSource;
         [FieldAttr(32)] public uint _externalBufferSize;
         [FieldAttr(36)] public uint _externalDecodeBufferSamples;
