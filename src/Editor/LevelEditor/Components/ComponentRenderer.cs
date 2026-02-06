@@ -273,7 +273,7 @@ namespace NST
 
         private static void RenderComponent(common_Crate_SpawnIronWhenUsedData component, NSTComponent manager)
         {
-            RenderObjectReference("Entity:", component._Entity.Reference, typeof(igEntity), manager.Explorer, (value) => 
+            RenderObjectReference("Entity:", component._Entity.Reference, typeof(CEntity), manager.Explorer, (value) => 
             {
                 component._Entity.Reference = value;
                 manager.SetUpdated(true);
@@ -349,7 +349,7 @@ namespace NST
                     manager.SetUpdated();
                 }
                 ImGui.SameLine();
-                RenderObjectReference(name, handle.Reference, typeof(igEntity), manager.Explorer, (value) => 
+                RenderObjectReference(name, handle.Reference, typeof(CEntity), manager.Explorer, (value) => 
                 {
                     handle.Reference = value;
                     manager.SetUpdated(true);
@@ -365,7 +365,7 @@ namespace NST
             RenderSlot("Slot 5", component._Entity_0x60, ref component._Bool_0x34);
             ImGui.Spacing();
 
-            RenderObjectReference("Final slot:", component._Entity_0x68.Reference, typeof(igEntity), manager.Explorer, (value) => 
+            RenderObjectReference("Final slot:", component._Entity_0x68.Reference, typeof(CEntity), manager.Explorer, (value) => 
             {
                 component._Entity_0x68.Reference = value;
                 manager.SetUpdated(true);
@@ -374,13 +374,13 @@ namespace NST
 
         private static void RenderComponent(common_Crate_OutlineData component, NSTComponent manager)
         {
-            RenderObjectReference("Replace with:", component._ReplacementEntity.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("Replace with:", component._ReplacementEntity.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 component._ReplacementEntity.Reference = value;
                 manager.SetUpdated(true);
             });
 
-            RenderObjectReference("2nd replacement:", component._UsedEntityToSpawn.Reference, typeof(igEntity), manager.Explorer, (value) => 
+            RenderObjectReference("2nd replacement:", component._UsedEntityToSpawn.Reference, typeof(CEntity), manager.Explorer, (value) => 
             {
                 component._UsedEntityToSpawn.Reference = value;
                 manager.SetUpdated(true);
@@ -473,7 +473,7 @@ namespace NST
                 for (int i = 0; i < method.Collectibles._data.Count; i++)
                 {
                     igEntity entity = method.Collectibles._data[i];
-                    RenderObject($"{i}.", entity, manager.Entity.FileNamespace, typeof(igEntity), manager.Explorer, (value) =>
+                    RenderObject($"{i}.", entity, manager.Entity.FileNamespace, typeof(CEntity), manager.Explorer, (value) =>
                     {
                         if (value == null)
                         {
@@ -543,10 +543,24 @@ namespace NST
 
 #endregion
 #region Other
+
+        private static HashSet<igHandleMetaField> _nullOverrides = [];
         
         private static void RenderComponent(common_Spawner_TemplateData component, NSTComponent manager)
         {
-            RenderObjectReference("Template:", component._EntityToSpawn, typeof(igEntity), manager, defaultOpen: true);
+            if (component._TriggerVolume.Reference != null || _nullOverrides.Contains(component._TriggerVolume))
+            {
+                _nullOverrides.Add(component._TriggerVolume);
+                RenderObjectReference("Trigger Volume:", component._TriggerVolume, typeof(CEntity), manager);
+            }
+
+            if (component._SpawnAtEntity.Reference != null || _nullOverrides.Contains(component._SpawnAtEntity))
+            {
+                _nullOverrides.Add(component._SpawnAtEntity);
+                RenderObjectReference("Spawn At Entity:", component._SpawnAtEntity, typeof(CEntity), manager);
+            }
+
+            RenderObjectReference("Template:", component._EntityToSpawn, typeof(CGameEntity), manager, defaultOpen: true);
         }
 
         private static void RenderComponent(Multiple_Spawner_Template_c component, NSTComponent manager)
@@ -565,7 +579,7 @@ namespace NST
 
         private static void RenderComponent(common_Level_ManagerData component, NSTComponent manager)
         {
-            RenderObjectReference("Spawn Entity:", component._spawnEntity?.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("Spawn Entity:", component._spawnEntity?.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._spawnEntity == null) component._spawnEntity = new();
                 component._spawnEntity.Reference = value;
@@ -574,7 +588,7 @@ namespace NST
 
             ImGui.SeparatorText("Dark level");
             RenderCheckbox("Is Aku Aku Illuminated:", ref component._IsAkuAkuIlluminated, component, manager);
-            RenderObjectReference("Visual Entity:", component._Entity_0x48?.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("Visual Entity:", component._Entity_0x48?.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._Entity_0x48 == null) component._Entity_0x48 = new();
                 component._Entity_0x48.Reference = value;
@@ -600,21 +614,21 @@ namespace NST
         {
             RenderEnum("Type:", ref component._NewEnum12_id_kxje8bmu, component, manager);
 
-            RenderObjectReference("DDA Entity:", component._Entity_0x50?.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("DDA Entity:", component._Entity_0x50?.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._Entity_0x50 == null) component._Entity_0x50 = new();
                 component._Entity_0x50.Reference = value;
                 manager.SetUpdated(true);
             });
 
-            RenderObjectReference("Checkpoint template:", component._Entity_0x40?.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("Checkpoint template:", component._Entity_0x40?.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._Entity_0x40 == null) component._Entity_0x40 = new();
                 component._Entity_0x40.Reference = value;
                 manager.SetUpdated(true);
             });
 
-            RenderObjectReference("AkuAku template:", component._Entity_0x48?.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("AkuAku template:", component._Entity_0x48?.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._Entity_0x48 == null) component._Entity_0x48 = new();
                 component._Entity_0x48.Reference = value;
@@ -684,7 +698,7 @@ namespace NST
 
         private static void RenderComponent(CSplineLaneMoverComponentData component, NSTComponent manager)
         {
-            NSTObject? splineObject = RenderObjectReference("Spline entity:", component._splineEntity.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            NSTObject? splineObject = RenderObjectReference("Spline entity:", component._splineEntity.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 if (component._splineEntity == null) component._splineEntity = new();
                 component._splineEntity.Reference = value;
@@ -743,10 +757,6 @@ namespace NST
 
             var triggerExists = manager.Entity.Object3D?.Children.Contains(manager.Entity.TriggerVolumeBox);
 
-            if (triggerExists != true && manager.Explorer.SelectionManager._selection.Count > 0 && manager.Explorer.SelectionManager._selection[0] != manager.Entity)
-            {
-                manager.Explorer.SelectionManager.UpdateSelection([manager.Entity]);
-            }
             if (triggerExists == false && manager.Entity.Object3D != null)
             {
                 manager.Entity.Object3D.Add(manager.Entity.TriggerVolumeBox);
@@ -816,7 +826,7 @@ namespace NST
                 }
             }
 
-            RenderObjectReference("Checkpoint:", component._Entity.Reference, typeof(igEntity), manager.Explorer, (value) =>
+            RenderObjectReference("Checkpoint:", component._Entity.Reference, typeof(CEntity), manager.Explorer, (value) =>
             {
                 component._Entity.Reference = value;
                 manager.SetUpdated(true);
@@ -881,7 +891,7 @@ namespace NST
             RenderCheckbox("Bool_0xd1", ref component._Bool_0xd1, component, manager);
             RenderCheckbox("Bool_0xd2", ref component._Bool_0xd2, component, manager);
 
-            RenderObjectReference("Entity:", component._Entity, typeof(igEntity), manager);
+            RenderObjectReference("Entity:", component._Entity, typeof(CEntity), manager);
             // RenderObjectReference("Component Data:", component._Component_Data, typeof(igEntity), manager);
 
             RenderCheckbox("Bool_0xf0", ref component._Bool_0xf0, component, manager);
@@ -1042,7 +1052,7 @@ namespace NST
                 {
                     igHandleMetaField handle = handleList._data[i];
 
-                    RenderObjectReference($"{i}.", handle.Reference, typeof(igEntity), manager.Explorer, (value) => 
+                    RenderObjectReference($"{i}.", handle.Reference, typeof(CEntity), manager.Explorer, (value) => 
                     {
                         handle.Reference = value;
                         manager.SetUpdated(handleList, true, file);
@@ -1243,10 +1253,9 @@ namespace NST
                 }
                 
                 // Dropdown
-                var objects = explorer.InstanceManager.AllObjects.Where(e => (fileNamespace == null || e.FileNamespace == fileNamespace) && e.GetObject().GetType().IsAssignableTo(type)).ToList();
-                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.Select(e => e.GetObject().ObjectName!).ToList(), false, (index, _) =>
+                var objects = explorer.InstanceManager.AllObjects.Where(e => (fileNamespace == null || e.FileNamespace == fileNamespace) && e.GetObject().GetType().IsAssignableTo(type));
+                ImGuiUtils.RenderComboWithSearch("##" + label, "null", objects.ToList(), (obj) =>
                 {
-                    NSTObject obj = objects[index];
                     callback(obj.ToReference());
                 });
 

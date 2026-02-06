@@ -178,5 +178,71 @@ namespace NST
                 ImGui.EndCombo();
             }
         }
+
+        public static void RenderComboWithSearch(string label, string preview, List<NSTObject> options, Action<NSTObject> callback)
+        {
+            options = options
+                .OrderBy(e => e.FileNamespace)
+                .ThenBy(e => e.GetObject().GetType().Name)
+                .ThenBy(e => e.GetObject().ObjectName)
+                .ToList();
+
+            if (!_comboSearches.TryGetValue(label, out string? comboSearch))
+            {
+                comboSearch = "";
+            }
+
+            if (ImGui.BeginCombo(label, preview, ImGuiComboFlags.HeightLarge))
+            {
+                ImGui.SetNextItemWidth(-1);
+
+                if (ImGui.InputTextWithHint(label, "Search...", ref comboSearch, 256))
+                {
+                    _comboSearches[label] = comboSearch;
+                }
+
+                string searchLower = comboSearch.ToLower();
+
+                if (ImGui.BeginTable(label, 3, ImGuiTableFlags.BordersInner | ImGuiTableFlags.Reorderable))
+                {
+                    ImGui.TableSetupColumn("File");
+                    ImGui.TableSetupColumn("Type");
+                    ImGui.TableSetupColumn("Name");
+                    ImGui.TableHeadersRow();
+
+                    uint normalBg   = ImGui.GetColorU32(ImGuiCol.TableRowBg);
+                    uint specialBg  = ImGui.GetColorU32(ImGuiCol.TableRowBgAlt);
+                    bool useNormalBg = true;
+
+                    for (int i = 0; i < options.Count; i++)
+                    {
+                        NSTObject nstObj = options[i];
+                        Alchemy.igObject obj = nstObj.GetObject();
+
+                        if (!obj.ObjectName!.Contains(searchLower, StringComparison.CurrentCultureIgnoreCase)) continue;
+
+                        if (i > 0 && options[i-1].FileNamespace != nstObj.FileNamespace) useNormalBg = !useNormalBg;
+
+                        ImGui.TableNextColumn();
+                        ImGui.TableSetBgColor(ImGuiTableBgTarget.RowBg0, useNormalBg ? normalBg : specialBg);
+                        if (ImGui.Selectable($"{nstObj.FileNamespace}##{obj.ObjectName}", false, ImGuiSelectableFlags.SpanAllColumns))
+                        {
+                            _comboSearches.Remove(label);
+                            callback(nstObj);
+                        }
+
+                        ImGui.TableNextColumn();
+                        ImGui.TextColored(MathUtils.UIntToVector4Numerics(obj.GetType().GetUniqueColor()), obj.GetType().Name);
+
+                        ImGui.TableNextColumn();
+                        ImGui.Text(obj.ObjectName);
+                    }
+
+                    ImGui.EndTable();
+                }
+
+                ImGui.EndCombo();
+            }
+        }
     }
 }
