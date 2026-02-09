@@ -258,7 +258,9 @@ namespace NST
 
                 value.Add(entity);
             }
-            else if (entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object.GetComponent<CTriggerVolumeBoxComponentData>() == null)
+            else if (entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && 
+                     entity.Object.GetComponent<CTriggerVolumeBoxComponentData>() == null && 
+                     entity.Object.GetComponent<igPrefabComponentData>() == null)
             {
                 _entitiesWithoutModel.Add(entity);
             }

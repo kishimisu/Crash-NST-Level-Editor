@@ -45,11 +45,13 @@ namespace NST
             { typeof(CMovementControllerComponentData), (c, m) =>              RenderComponent((CMovementControllerComponentData)c, m) },
             { typeof(CSplineLaneMoverComponentData), (c, m) =>                 RenderComponent((CSplineLaneMoverComponentData)c, m) },
             { typeof(CTriggerVolumeBoxComponentData), (c, m) =>                RenderComponent((CTriggerVolumeBoxComponentData)c, m) },
+            { typeof(common_ChangeCrashGameMode_TriggerData), (c, m) =>        RenderComponent((common_ChangeCrashGameMode_TriggerData)c, m) },
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
             { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
             { typeof(common_Generic_Path_Platform_SwapGameModeData), (c, m) => RenderComponent((common_Generic_Path_Platform_SwapGameModeData)c, m) },
             { typeof(common_Path_Platform_Mover), (c, m) =>                    RenderComponent((common_Path_Platform_Mover)c, m) },
+            { typeof(common_Generic_Path_Teleporter_StartData), (c, m) =>      RenderComponent((common_Generic_Path_Teleporter_StartData)c, m) },
             { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
             { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
         };
@@ -138,7 +140,7 @@ namespace NST
                         }
                         else if (obj is CWaypoint waypoint)
                         {
-                            RenderWaypoint(waypoint, c);
+                            RenderWaypoint(waypoint.ObjectName, waypoint, c);
                         }
                     }
                 }
@@ -408,6 +410,13 @@ namespace NST
         private static void RenderComponent(Egypt_Hazard_FloodWater_BehaviorData component, NSTComponent manager)
         {
             RenderFloat("Flood height:", ref component._Float, component, manager, 10.0f, 100.0f);
+            RenderString("Crash death:", ref component._CrashDeath, component, manager);
+            RenderHandle("Lower sound:", "hazard_floodwater_bank", component._Sound_0x40, component, manager);
+            RenderHandle("Rise sound: ", "hazard_floodwater_bank", component._Sound_0x38, component, manager);
+            RenderObjectReference("Water sound object 1:", component._Entity_0x48, typeof(CGameEntity), manager);
+            RenderObjectReference("Water sound object 2:", component._Entity_0x50, typeof(CGameEntity), manager);
+            RenderObjectReference("Water sound object 3:", component._Entity_0x58, typeof(CGameEntity), manager);
+            RenderCheckbox("Bool:", ref component._Bool, component, manager);
         }
 
         private static void RenderComponent(Egypt_Platform_FloodWater_BehaviorData component, NSTComponent manager)
@@ -759,6 +768,7 @@ namespace NST
 
             if (triggerExists == false && manager.Entity.Object3D != null)
             {
+                manager.Entity.TriggerVolumeBox.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn));
                 manager.Entity.Object3D.Add(manager.Entity.TriggerVolumeBox);
                 manager.Explorer.RenderNextFrame = true;
             }
@@ -769,11 +779,21 @@ namespace NST
                 THREE.Euler rotation = component._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
                 THREE.Vector3 scale = component._dimensions.ToVector3();
 
-                manager.Entity.TriggerVolumeBox.Position.Copy(position);
+                THREE.Vector3 parentScale = new THREE.Vector3();
+                manager.Entity.ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+
+                manager.Entity.TriggerVolumeBox.Position.Copy(position / parentScale);
                 manager.Entity.TriggerVolumeBox.Rotation.Copy(rotation);
-                manager.Entity.TriggerVolumeBox.Scale.Copy(scale);
+                manager.Entity.TriggerVolumeBox.Scale.Copy(scale / parentScale);
                 manager.Explorer.RenderNextFrame = true;
             }
+        }
+
+        private static void RenderComponent(common_ChangeCrashGameMode_TriggerData component, NSTComponent manager)
+        {
+            RenderEnum("Switch From:", ref component._E_World_Gameplay_Mode_0x2c, component, manager);
+            RenderEnum("Switch To:  ", ref component._E_World_Gameplay_Mode_0x30, component, manager);
+            RenderCheckbox("Bool:", ref component._Bool, component, manager);
         }
 
         private static void RenderComponent(common_C3_IntroSequenceData component, NSTComponent manager)
@@ -841,8 +861,8 @@ namespace NST
 
         private static void RenderComponent(common_Path_Platform_Mover component, NSTComponent manager)
         {
-            RenderObjectReference("Spline Camera 1:", component._common_Gem_Platform_SplineDatas002, typeof(CCamera), manager);
-            RenderObjectReference("Spline Camera 2:", component._common_Gem_Platform_SplineDatas001, typeof(CCamera), manager);
+            RenderObjectReference("Spline Camera 1:", component._common_Gem_Platform_SplineDatas002, typeof(CSplineCamera), manager);
+            RenderObjectReference("Spline Camera 2:", component._common_Gem_Platform_SplineDatas001, typeof(CSplineCamera), manager);
             RenderFloat("Initial Delay: ", ref component._common_Gem_Platform_SplineDatas007, component, manager);
 
             if (component._common_Gem_Platform_SplineDatas006.Reference != null)
@@ -896,6 +916,21 @@ namespace NST
 
             RenderCheckbox("Bool_0xf0", ref component._Bool_0xf0, component, manager);
             RenderFloat("Float_0xf4", ref component._Float_0xf4, component, manager);
+        }
+
+        private static void RenderComponent(common_Generic_Path_Teleporter_StartData component, NSTComponent manager)
+        {
+            if (component._Waypoint.Reference != null && manager.Explorer.FileManager.FindObjectInOpenFiles(component._Waypoint.Reference, out _) is CWaypoint wp)
+            {
+                RenderWaypoint("Teleport to waypoint", wp, manager);
+            }
+            RenderObjectReference("Teleport to:", component._Entity, typeof(CEntity), manager);
+            RenderObjectReference("Target camera:", component._common_Gem_Platform_SplineDatas001, typeof(CCamera), manager);
+            RenderObjectReference("Target spline:", component._Spline, typeof(CEntity), manager);
+            RenderObjectReference("Camera proxy:", component._CameraProxy, typeof(CEntity), manager);
+            RenderEnum("Gameplay switch:", ref component._NewEnum16_id_noksmwgb, component, manager);
+            RenderEnum("Gameplay mode:", ref component._E_World_Gameplay_Mode, component, manager);
+            RenderCheckbox("Warp animation:", ref component._Bool, component, manager);
         }
 
         private static int _audioPlayerStatus = 0;
@@ -1086,16 +1121,28 @@ namespace NST
             return false;
         }
 
-        private static void RenderWaypoint(CWaypoint waypoint, NSTComponent manager, Action? renderRemove = null)
+        private static void RenderWaypoint(string? label, CWaypoint waypoint, NSTComponent manager, Action? renderRemove = null)
         {
             NSTWaypoint wp = manager.Entity.AddWaypoint(waypoint, manager.Explorer);
 
-            ImGui.PushID(waypoint.ObjectName);
+            label ??= "Waypoint";
+
+            ImGui.PushID(label);
+
+            var flags = ImGuiSelectableFlags.AllowDoubleClick;
+            if (wp.IsSelected) flags |= ImGuiSelectableFlags.Highlight;
 
             ImGui.SetNextItemAllowOverlap();
-            if (ImGui.Selectable(waypoint.ObjectName + ":", wp.IsSelected))
+            if (ImGui.Selectable(label + ":", wp.IsSelected, flags))
             {
-                manager.Explorer.SelectObject(wp.IsSelected ? manager.Entity : wp);
+                if (ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
+                {
+                    manager.Explorer.Focus(wp, true);
+                }
+                else
+                {
+                    manager.Explorer.SelectObject(wp.IsSelected ? manager.Entity : wp);
+                }
             }
         
             renderRemove?.Invoke();
@@ -1167,7 +1214,7 @@ namespace NST
                         continue;
                     }
 
-                    RenderWaypoint(waypoint, manager, RenderRemove);
+                    RenderWaypoint(waypoint.ObjectName, waypoint, manager, RenderRemove);
                 }
                 
                 ImGui.Spacing();

@@ -28,7 +28,8 @@ namespace NST
             typeof(Animated_Multiple_Spawner_Template_Behavior),
             typeof(igPrefabComponentData), 
             typeof(common_Level_ManagerData),
-            typeof(common_BonusRoundTeleporterData)
+            typeof(common_BonusRoundTeleporterData),
+            typeof(Egypt_Hazard_FloodWater_BehaviorData)
         ];
 
         public int Count => _components.Count;
@@ -98,7 +99,7 @@ namespace NST
 
         public void SelectComponent<T>() where T : igComponentData
         {
-            NSTComponent? component = _components.Find(c => c.Object is T);
+            NSTComponent? component = _components?.Find(c => c.Object is T);
             
             if (component != null)
             {
