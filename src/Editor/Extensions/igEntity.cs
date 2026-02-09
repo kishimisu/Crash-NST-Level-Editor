@@ -145,19 +145,31 @@ namespace NST
 
                             if (string.IsNullOrEmpty(modelName))
                             {
-                                common_Collectible_AkuAku_SpawnedData? ccsd = entityToSpawnEntity.GetComponent<common_Collectible_AkuAku_SpawnedData>();
-
-                                if (ccsd != null)
+                                if (entityToSpawnEntity.GetComponent<common_Collectible_AkuAku_SpawnedData>() != null)
                                 {
                                     modelName = @"actors:\NPC\AkuAku.igb";
                                 }
-
-                                if (string.IsNullOrEmpty(modelName))
+                                else
                                 {
                                     modelName = GetCollectibleModelName(entityToSpawnEntity, explorer);
                                 }
                             }
+
+                            if (string.IsNullOrEmpty(modelName))
+                            {
+                                if (entityToSpawnEntity.GetComponent<common_LevelEnd_CrateCounter_SpawnedData>() != null)
+                                {
+                                    modelName = "FXM_C1_randomcratebase_hologram";
+                                }
+                            }
                         }
+                    }
+                }
+                else if (entity.TryGetComponent(out common_BabyT_SpawnManagerData? babyT) && babyT._Entity_0x38.Reference != null)
+                {
+                    if (AlchemyUtils.FindObjectInArchives(babyT._Entity_0x38.Reference, explorer.Archive, explorer, igz) is CActor actor)
+                    {
+                        modelName = GetModelName(actor, igz, explorer);
                     }
                 }
             }            
