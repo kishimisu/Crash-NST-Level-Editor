@@ -934,7 +934,7 @@ namespace NST
             {
                 bool addToPkg = !file.GetPath().StartsWith("maps/");
                 if (excludeMapFiles && (file.GetPath().StartsWith("maps/") || file.GetName().StartsWith("StaticCollision_"))) continue;
-                if (file.GetPath().StartsWith("vfx/Crash3/Hub")) continue;
+                if (file.GetPath().StartsWith("vfx/Crash1/Hub") || file.GetPath().StartsWith("vfx/Crash3/Hub")) continue;
 
                 AddFile(file, addToPkg);
             }
