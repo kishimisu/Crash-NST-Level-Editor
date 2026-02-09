@@ -4,18 +4,59 @@ using System.Text.RegularExpressions;
 
 namespace NST
 {
-    public class EntityTreeView : TreeView<EntityTreeNode>
+    public partial class EntityTreeView : TreeView<EntityTreeNode>
     {
         public LevelExplorer Explorer { get; }
 
-        private static readonly Dictionary<string, List<string>> _objectGroupNames = new Dictionary<string, List<string>>()
+        // Entity type hierarchy:
+        // ----------------------
+        // igEntity
+        // └─ CEntity
+        //    ├─ CPlayerStartEntity
+        //    ├─ CWorldEntity
+        //    └─ CGameEntity
+        //       ├─ CDynamicClipEntity
+        //       ├─ CScriptTriggerEntity
+        //       └─ CPhysicalEntity
+        //          └─ CActor
+
+        private static readonly Dictionary<string, List<string>> _objectGroupNames = new()
         {
-            { "Object groups", new List<string>() { "igEntity", "Prefabs", "Crates", "Splines", "CPlayerStartEntity" } },
-            { "Entities", new List<string>() { "CEntity", "CGameEntity", "CPhysicalEntity", "CActor", "Other" } },
-            { "Triggers / colliders", new List<string>() { "CScriptTriggerEntity", "CDynamicClipEntity" } },
-            { "Cameras", new List<string>() { "Cameras", "CCameraBox" } },
-            { "Hidden", new List<string>() { "Templates", "Hidden" } }
+            { "3D Game Objects",  new List<string>() { "igEntity", "Prefabs", "CEntity", "CGameEntity", "CPhysicalEntity", "CActor", "Crates", "Collectibles" } },
+            { "Game Objects", new List<string>() { "CPlayerStartEntity", "CScriptTriggerEntity", "CDynamicClipEntity", "Cameras", "CCameraBox" } },
+            { "Other",         new List<string>() { "Lighting", "VFX", "SFX", "Other" } },
+            { "Hidden",        new List<string>() { "Templates", "Hidden" } }
         };
+        private static readonly List<string> _typeOrder = 
+        [
+            "igEntity", "Prefabs", "CEntity", "CGameEntity", "CPhysicalEntity", "CActor", "Crates", "Collectibles",
+            "CPlayerStartEntity", "CScriptTriggerEntity", "CDynamicClipEntity", "Cameras", "CCameraBox", 
+            "Lighting", "VFX", "SFX", "Other", "Templates", "Hidden"
+        ];
+        private static readonly Dictionary<string, string> _objectGroupMap = new() 
+        {
+            {"igEntity", "Static objects"},
+            {"CPlayerStartEntity", "Player start"},
+            {"CScriptTriggerEntity", "Triggers"},
+            {"CDynamicClipEntity", "Clips"},
+        };
+        private static readonly HashSet<Type> _alwaysDisplayComponents = 
+        [
+            typeof(common_Path_Platform_Mover),
+            typeof(Hazard_Crushing_Block_ManagerData),
+            typeof(Egypt_Crushing_Block_Manager_BehaviorData),
+            typeof(common_BabyT_SpawnManagerData),
+        ];
+        private static readonly HashSet<Type> _componentsWithoutModel = 
+        [
+            typeof(common_Spawner_TemplateData),
+            typeof(Spawner_Trigger_LogicData),
+            typeof(CTriggerVolumeComponentData),
+            typeof(Hazard_AlwaysOnData),
+            typeof(L319_FutureFrenzy_Elevator_logicData),
+            typeof(L333_FutureTense_Elevator_LogicData),
+            typeof(L333_FutureTense_Tech_Platform_FlipOff_Synchronized_ControllerData),
+        ];
 
         private Dictionary<string, List<EntityTreeNode>> _objectGroups = [];
 
@@ -47,26 +88,20 @@ namespace NST
 
         public void RebuildTree(List<NSTObject> objects)
         {
-            Dictionary<string, List<NSTObject>> types = new Dictionary<string, List<NSTObject>>() { { "Crates", [] }, { "Prefabs", [] } };
+            Dictionary<string, List<NSTObject>> types = [];
             Dictionary<string, uint> colors = [];
 
             List<NSTObject> entities = [];
             List<NSTObject> crates = [];
+            List<NSTObject> collectibles = [];
             List<NSTObject> prefabs = [];
             List<NSTObject> cameras = [];
-            List<NSTObject> splines = [];
-            List<NSTObject> templates = [];
+            List<NSTObject> light = [];
+            List<NSTObject> vfx = [];
+            List<NSTObject> sfx = [];
             List<NSTObject> other = [];
+            List<NSTObject> templates = [];
             List<NSTObject> hidden = [];
-
-            _objectGroups = new Dictionary<string, List<EntityTreeNode>>()
-            {
-                { "Object groups", new List<EntityTreeNode>() },
-                { "Entities", new List<EntityTreeNode>() },
-                { "Triggers / colliders", new List<EntityTreeNode>() },
-                { "Cameras", new List<EntityTreeNode>() },
-                { "Hidden", new List<EntityTreeNode>() }
-            };
 
             foreach (NSTObject obj in objects)
             {
@@ -78,17 +113,33 @@ namespace NST
 
                     if (entity.IsPrefabTemplate) continue;
                     else if (entity.IsPrefabInstance) prefabs.Add(obj);
-                    else if (entity.IsTemplate) templates.Add(obj);
+                    else if (entity.IsTemplate)
+                    {
+                        if (entity.IsPrefabChild && templates.Any(t => t.GetObject() == entity.Object)) continue;
+                        if (entity.Parents.Any(p => p is NSTEntity e && e.IsTemplate)) continue;
+                        templates.Add(obj);
+                    }
                     else if (entity.IsHidden) hidden.Add(obj);
                     else if (entity.IsPrefabChild) continue;
-                    else if (!entity.IsSpawned && entity.Parents.Count > 0) continue;
                     else if (entity.Object.GetType() == typeof(CEntity) && entity.Object.GetComponent<common_Crate_StackCheckerData>() != null) crates.Add(obj);
-                    else if (entity.Spline != null && entity.Children.Count == 1) splines.Add(obj);
+                    else if (entity.Object.GetType() == typeof(CEntity) && entity.Children.Any(c => c is NSTEntity e && e.Object.GetComponent<common_Collectible_Template_SpawnedData>() != null)) collectibles.Add(obj);
                     else if (entity.Object is CScriptTriggerEntity && entity.Parents.Any(p => p.GetObject() is not CScriptTriggerEntity)) continue;
+                    else if (entity.Object is CPlayerStartEntity || entity.Object.GetComponents().Any(c => _alwaysDisplayComponents.Any(t => c.GetType().IsAssignableTo(t)))) added = false;
+                    else if (entity.Parents.Count(p => p is NSTEntity e && e.IsSpawned && e.Object is not CScriptTriggerEntity && e.Object.GetComponent<common_Spawner_TemplateData>() == null) == 1) continue;
                     else if (entity.Model == null && entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object is not CPlayerStartEntity)
                     {
-                        if (entity.Parents.Count > 0) continue;
-                        other.Add(obj);
+                        if (entity.Parents.Any(p => p is not NSTEntity e || !e.IsTemplate) && entity.Object.GetComponent<common_Spawner_TemplateData>() == null) continue;
+                        else if (entity.Object.GetType() == typeof(igEntity) && entity.Object.ObjectName == "Main_OutdoorLightEntity") light.Add(obj);
+                        else if (entity.Object.GetComponents().Any(c => _componentsWithoutModel.Any(t => c.GetType().IsAssignableTo(t)))) added = false;
+                        else if (entity.Object.GetComponent<CTintSphereComponentData>() != null)    light.Add(obj);
+                        else if (entity.Object.GetComponent<CPointLightComponentData>() != null)    light.Add(obj);
+                        else if (entity.Object.GetComponent<CBoxLightComponentData>() != null)      light.Add(obj);
+                        else if (entity.Object.GetComponent<CVisualDataBoxComponentData>() != null) light.Add(obj);
+                        else if (entity.Object.GetComponent<CStaticVfxComponentData>() != null)     vfx.Add(obj);
+                        else if (entity.Object.GetComponent<CLoopingVfxComponentData>() != null)    vfx.Add(obj);
+                        else if (entity.Object.GetComponent<CAmbientAudioComponentData>() != null)  sfx.Add(obj);
+                        else if (entity.Object.GetComponent<common_OnStartMusicData>() != null)     sfx.Add(obj);
+                        else other.Add(obj);
                     }
                     else added = false;
                 }
@@ -102,31 +153,31 @@ namespace NST
                 {
                     Type type = obj.GetObject().GetType();
 
-                    if (!types.ContainsKey(type.Name))
+                    if (!types.TryGetValue(type.Name, out List<NSTObject>? value))
                     {
-                        types.Add(type.Name, []);
+                        value = [];
+                        types.Add(type.Name, value);
                         colors.Add(type.Name, type.GetUniqueColor());
                     }
-                    types[type.Name].Add(obj);
+
+                    value.Add(obj);
                 }
             }
 
-            types["Crates"] = crates;
             types["Prefabs"] = prefabs;
+            types["Crates"] = crates;
+            types["Collectibles"] = collectibles;
             types["Cameras"] = cameras;
-            types["Splines"] = splines;
+            types["Lighting"] = light;
+            types["VFX"] = vfx;
+            types["SFX"] = sfx;
             types["Other"] = other;
             types["Templates"] = templates;
             types["Hidden"] = hidden;
 
-            types = types.Where(kvp => kvp.Value.Count > 0).ToDictionary();
+            types = _typeOrder.Where(t => types.ContainsKey(t) && types[t].Count > 0).ToDictionary(t => t, t => types[t]);
 
-            var start = new List<string>() { "igEntity", "Prefabs", "Crates", "Splines", "CPlayerStartEntity", "CEntity", "CGameEntity", "CPhysicalEntity" };
-            var end = new List<string>() { "Other", "CScriptTriggerEntity", "CDynamicClipEntity", "Cameras", "CCameraBox", "Templates", "Hidden" };
-            var middle = types.Keys.Where(k => !start.Contains(k) && !end.Contains(k)).ToList();
-            var order = start.Concat(middle).Concat(end).ToList();
-
-            types = order.Where(o => types.ContainsKey(o)).ToDictionary(o => o, o => types[o]);
+            _objectGroups = _objectGroupNames.ToDictionary(e => e.Key, e => new List<EntityTreeNode>());
 
             AllNodes.Clear();
 
@@ -137,7 +188,7 @@ namespace NST
                 foreach (NSTObject entity in t.Value)
                 {
                     string name = entity.GetObject().ObjectName ?? "<No name>";
-                    Match match = Regex.Match(name, @"^(.*?)(?:_)?(\d+)?$");
+                    Match match = ObjectNameRegex().Match(name);
 
                     if (!match.Success) {
                         Console.WriteLine($"Warning: Could not parse {name} into name and number");
@@ -169,7 +220,12 @@ namespace NST
                 .ToList();
 
                 int totalCount = subFolders.Sum(n => n.IsFolder ? Math.Max(1, n.Children.Count) : 1);
-                string rootName = $"{(t.Key == "igEntity" ? "Static objects" : t.Key == "CPlayerStartEntity" ? "Player Start" : t.Key)} ({totalCount})";
+
+                if (!_objectGroupMap.TryGetValue(t.Key, out string? rootName))
+                {
+                    rootName = t.Key;
+                }
+                rootName += $" ({totalCount})";
 
                 if (subFolders.Count == 1 && subFolders.First().IsFolder)
                 {
@@ -179,7 +235,7 @@ namespace NST
                 EntityTreeNode rootNode = new EntityTreeNode(rootName, subFolders, GetUniqueColor(t.Key));
                 AllNodes.Add(rootNode);
 
-                string? groupName = _objectGroupNames.FirstOrDefault(e => e.Value.Contains(t.Key)).Key ?? "Entities";
+                string? groupName = _objectGroupNames.FirstOrDefault(e => e.Value.Contains(t.Key)).Key ?? "3D Game Objects";
                 _objectGroups[groupName].Add(rootNode);
 
                 return rootNode;
@@ -187,27 +243,25 @@ namespace NST
             .ToList();
         }
 
-        public void SelectObject(NSTObject obj) => SelectObjectRecursive(obj, AllNodes.Cast<TreeNode>().ToList());
-        private bool SelectObjectRecursive(NSTObject obj, List<TreeNode> nodes)
+        public void SelectObject(NSTObject obj)
         {
-            foreach (EntityTreeNode node in nodes)
+            var queue = new Queue<EntityTreeNode>(AllNodes);
+
+            while (queue.Count > 0)
             {
+                var node = queue.Dequeue();
+
                 if (node.Object == obj)
                 {
-                    SetSelectedNode(node, keyboardFocus: false, expandNode: true);
-                    return true;
+                    SetSelectedNode(node, keyboardFocus: false, expandParents: true);
+                    return;
                 }
 
                 foreach (EntityTreeNode child in node.Children)
                 {
-                    if (SelectObjectRecursive(obj, child.Children))
-                    {
-                        return true;
-                    }
+                    queue.Enqueue(child);
                 }
             }
-
-            return false;
         }
 
         private static uint GetUniqueColor(string name)
@@ -218,6 +272,9 @@ namespace NST
             int b = rng.Next(130, 255);
             return 0xff000000 | (uint)((b << 16) | (g << 8) | r);
         }
+
+        [GeneratedRegex(@"^(.*?)(?:_)?(\d+)?$")]
+        private static partial Regex ObjectNameRegex();
     }
 
     public class EntityTreeNode : TreeNode
@@ -321,7 +378,7 @@ namespace NST
 
             string displayName = Object is NSTEntity entity && entity.IsPrefabInstance ? $"[Prefab] {Name}" : Name;
 
-            IsOpen = ImGui.TreeNodeEx("###" + Name, flags);
+            IsOpen = ImGui.TreeNodeEx("###" + Name + Object.FileNamespace, flags);
 
             if (ImGui.IsItemClicked())
             {
