@@ -66,7 +66,7 @@ namespace NST
         {
             THREE.Object3D group = Model?.CreateObject() ?? new THREE.Object3D();
 
-            if (Model == null && Object is not CScriptTriggerEntity && Object is not CDynamicClipEntity)
+            if (Model == null && !IsPrefabInstance && Object is not CScriptTriggerEntity && Object is not CDynamicClipEntity)
             {
                 var geo = new THREE.BoxGeometry(20, 20, 20);
                 var mat = new THREE.MeshPhongMaterial() { Color = MathUtils.FromImGuiColor(Object.GetType().GetUniqueColor()) };
@@ -170,7 +170,11 @@ namespace NST
                 THREE.Vector3 position = box._offset.ToVector3();
                 THREE.Euler rotation = box._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
                 THREE.Vector3 scale = box._dimensions.ToVector3();
-                THREE.Matrix4 localMatrix = new THREE.Matrix4().Compose(position, new THREE.Quaternion().SetFromEuler(rotation), scale);
+
+                THREE.Vector3 parentScale = new THREE.Vector3();
+                ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+
+                THREE.Matrix4 localMatrix = new THREE.Matrix4().Compose(position / parentScale, new THREE.Quaternion().SetFromEuler(rotation), scale / parentScale);
 
                 THREE.Color color =  MathUtils.FromImGuiColor(box.GetType().GetUniqueColor());
                 THREE.Vector3 min = THREE.Vector3.One() * -0.5f;

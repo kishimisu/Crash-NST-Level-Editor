@@ -1419,7 +1419,7 @@ namespace NST
             List<igObject> objects, 
             IgArchive? sourceArchive, IgzFile? sourceIgz, 
             IgArchiveFile destFile, IgzFile destIgz, 
-            float camDistance = 400, 
+            float camDistance = 600, 
             bool? addToSelection = false, 
             bool initializeObjects = false, 
             float? offsetZ = null,

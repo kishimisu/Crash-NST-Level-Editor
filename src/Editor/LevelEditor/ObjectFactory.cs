@@ -223,20 +223,18 @@ namespace NST
                         ImGui.EndMenu();
                     }
                     
-                    if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
-                    {
-                        if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
-                        {
-                            end.Object._parentSpacePosition = new igVec3fMetaField(start.Position.X + 600, start.Position.Y, start.Position.Z - 500);
-                            explorer.SelectionManager.UpdateSelection([end], false);
-                        }
-                    }));
+                    if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddFadeTeleporter(explorer));
+                    if (ImGui.MenuItem("Warp Teleporter")) TryAddObject(() => AddWarpTeleporter(explorer));
                     ImGui.EndMenu();
                 }
 
                 if (ImGui.BeginMenu("New vehicle..."))
                 {
                     if (ImGui.MenuItem("JetBoard")) TryAddObject(() => AddGeneric("L203_HangEight", "L203_HangEight", "Spawner_RideBoard", "Vehicles", explorer));
+                    if (ImGui.MenuItem("JetBoard Dismount")) TryAddObject(() => AddGeneric("L203_HangEight", "L203_HangEight", "Ride_Board_Dismount01", "Vehicles", explorer));
+                    ImGui.Separator();
+                    if (ImGui.MenuItem("Baby TRex")) TryAddObject(() => AddTRex(explorer, false));
+                    if (ImGui.MenuItem("Baby TRex Dismount")) TryAddObject(() => AddTRex(explorer, true));
                     ImGui.EndMenu();
                 }
 
@@ -651,6 +649,77 @@ namespace NST
             explorer.Clone([deathTrigger], templateArchive, templateIgz, hazardFile, hazardIgz, 800);
         }
 
+        private static void AddFadeTeleporter(LevelExplorer explorer)
+        {
+            AddGeneric("L202_SnowGo", "L202_SnowGo", "Generic_Path_Platform_Start_FadeOut", "Platforms", explorer, objects =>
+            {
+                if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
+                {
+                    end.Object._parentSpacePosition = new igVec3fMetaField(start.Position.X + 600, start.Position.Y, start.Position.Z - 500);
+                    explorer.SelectionManager.UpdateSelection([end], false);
+                }
+            });
+        }
+
+        private static void AddWarpTeleporter(LevelExplorer explorer)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L220_BeeHaving.pak"));
+            IgArchiveFile sourceFile = sourceArchive.FindFile("L220_BeeHaving_BonusArea.igz")!;
+            IgzFile sourceIgz = sourceFile.ToIgzFile();
+
+            var teleporter = sourceIgz.FindObject<CScriptTriggerEntity>("Generic_Path_Teleporter_Start")!;
+            var start = sourceIgz.FindObject<CEntity>("Generic_Path_Teleport_Start")!;
+            var component = teleporter.GetComponent<common_Generic_Path_Teleporter_StartData>()!;
+
+            start._parentSpacePosition = new igVec3fMetaField(teleporter._parentSpacePosition._x + 200, teleporter._parentSpacePosition._y, teleporter._parentSpacePosition._z);
+            component._Spline.Reference = null;
+            component._common_Gem_Platform_SplineDatas001.Reference = null;
+
+            explorer.GetOrCreateIgzFile("Platforms", out IgArchiveFile dstFile, out IgzFile dstIgz);
+
+            explorer.Clone([teleporter], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: true, initializeObjects: true);
+        }
+
+        private static void AddTRex(LevelExplorer explorer, bool dismount)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L332_EggipusRex.pak"));
+            IgzFile mainIgz = sourceArchive.FindFile("L332_EggipusRex.igz")!.ToIgzFile();
+
+            explorer.GetOrCreateIgzFile("TRex", out IgArchiveFile newFile, out IgzFile newIgz);
+
+            if (dismount)
+            {
+                var entity = mainIgz.FindObject<CGameEntity>("LevelEndDismountEntity")!;
+                var levelEnd = entity.GetComponent<L332_EggipusRex_C3_LevelEndTeleporterData>()!;
+                entity.ObjectName = "Trex_Dismount";
+                levelEnd._Entity.Reference = null;
+                levelEnd._VfxTeleporterData.Reference = null;
+                explorer.Clone([entity], sourceArchive, mainIgz, newFile, newIgz, initializeObjects: true, addToSelection: true);
+                return;    
+            }
+
+            IgzFile trexIgz = sourceArchive.FindFile("L332_EggipusRex_TRex.igz")!.ToIgzFile();
+            IgzFile artIgz = sourceArchive.FindFile("L332_EggipusRex_Art.igz")!.ToIgzFile();
+
+            var actor = mainIgz.FindObject<CActor>("Ride_TRex_Character2D")!;
+            var trex = trexIgz.FindObject<CEntity>("Prehistoric_Trex_Spawner")!;
+            var bed = artIgz.FindObject<igEntity>("Pltfrm05_09")!;
+            var spawner = trex.GetComponent<common_BabyT_SpawnManagerData>()!;
+            var handleList = trexIgz.FindObject<CEntityHandleList>("Prehistoric_Trex_Spawner_entityData_componentData_CommonBabyTSpawnManager_Entity_List_id_5l6fgya6")!;
+
+            spawner._Entity_0x38.Reference!.namespaceName = explorer.GetFileNameFromIdentifier("TRex");
+            spawner._Entity_0x38.Reference.isEXID = false;
+            spawner._Entity_0x48.Reference = null;
+            handleList._data.Clear();
+
+            explorer.Clone([actor], sourceArchive, mainIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
+            var trexObject = explorer.Clone([trex], sourceArchive, trexIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
+            var bedObject = explorer.Clone([bed], sourceArchive, artIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
+
+            explorer.SelectionManager.UpdateSelection(bedObject.Union(trexObject).ToList());
+            explorer.MoveSelectionToCamera(800);
+        }
+
         private static void AddBonusRoundTeleporter(LevelExplorer explorer)
         {
             SetupTemplateArchive();
@@ -751,16 +820,18 @@ namespace NST
             callback?.Invoke(clones);
         }
 
-        private static void AddGeneric(string archiveName, string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
+        private static void AddGeneric(string archiveName, string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400)
         {
             IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
             IgzFile sourceIgz = sourceArchive.FindFile(fileName, FileSearchType.Name, FileSearchParams.MapIgz)!.ToIgzFile();
             
             igObject obj = sourceIgz.FindObject<igObject>(objectName)!;
 
+            if (!string.IsNullOrEmpty(newObjectName)) obj.ObjectName = newObjectName;
+
             explorer.GetOrCreateIgzFile(identifier, out IgArchiveFile dstFile, out IgzFile dstIgz);
 
-            var clones = explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: false, initializeObjects: true);
+            var clones = explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, initializeObjects: true, camDistance: camDistance);
 
             callback?.Invoke(clones);
         }
@@ -962,6 +1033,10 @@ namespace NST
                     else if (obj is NSTEntity entity && !entity.IsPrefabInstance && !entity.IsPrefabChild && entity.IsSpawned
                              && (!isTeleport || !bounds.ContainsPoint(entity.Position))
                              )
+                    {
+                        selection.Add(obj);
+                    }
+                    else if (obj is NSTCamera cam)
                     {
                         selection.Add(obj);
                     }

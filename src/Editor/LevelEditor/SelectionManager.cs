@@ -380,10 +380,10 @@ namespace NST
 
             HashSet<NSTObject> toCopyPaste = _copyPaste.ToHashSet();
 
-            foreach (var entity in _copyPaste)
+            foreach (var obj in _copyPaste)
             {
                 // Add parent triggers when copying to external archive
-                foreach (var parent in entity.Parents.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity))
+                foreach (var parent in obj.Parents.OfType<NSTEntity>().Where(e => e.Object is CScriptTriggerEntity))
                 {
                     if (!copyToSameFile || parent.Object.GetComponent<common_Chase_BacktrackTriggerData>() != null)
                     {
@@ -394,7 +394,7 @@ namespace NST
                 // Add child triggers & templates when copying to external archive
                 if (!copyToSameFile)
                 {
-                    foreach (var child in entity.Children.OfType<NSTEntity>())
+                    foreach (var child in obj.Children.OfType<NSTEntity>())
                     {
                         if (child.Object is CScriptTriggerEntity)
                         {
@@ -411,6 +411,14 @@ namespace NST
                             {
                                 toCopyPaste.Add(spline);
                             }
+                        }
+                    }
+
+                    if (obj is NSTEntity e)
+                    {
+                        foreach (var child in obj.Children)
+                        {
+                            if (child is NSTEntity c) toCopyPaste.Add(child);
                         }
                     }
                 }
@@ -467,7 +475,15 @@ namespace NST
                             }
                             else
                             {
-                                dstIgz = fileManager.GetIgz(dstFile)!;
+                                if (fileManager.GetIgz(dstFile) is IgzFile existingIgz)
+                                {
+                                    dstIgz = existingIgz;
+                                }
+                                else
+                                {
+                                    dstIgz = new IgzFile(path, dstFile.Uncompress());
+                                    fileManager.Add(dstFile, dstIgz, true);
+                                }
                             }
                         }
                     }
@@ -516,7 +532,7 @@ namespace NST
                             HashSet<igObject> forceClone = [];
 
                             // Clone child templates
-                            if (entity.IsSpawned)
+                            if (entity.IsSpawned && entity.Object.GetComponent<common_Crate_StackCheckerData>() == null)
                             {
                                 forceClone = entity.Object
                                     .GetComponents()
