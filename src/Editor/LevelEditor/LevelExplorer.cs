@@ -264,7 +264,12 @@ namespace NST
                     }
                     else
                     {
-                        SelectionManager.UpdateSelection(objects.ToList());
+                        bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
+                        SelectionManager.UpdateSelection(objects.ToList(), newSelection);
+                        if (objects.FirstOrDefault() is NSTObject obj)
+                        {
+                            _treeView.SelectObject(obj);
+                        }
                     }
 				}
             };

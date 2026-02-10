@@ -54,6 +54,9 @@ namespace NST
             { typeof(common_Generic_Path_Teleporter_StartData), (c, m) =>      RenderComponent((common_Generic_Path_Teleporter_StartData)c, m) },
             { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
             { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
+            { typeof(CTintSphereComponentData), (c, m) =>                      RenderComponent((CTintSphereComponentData)c, m) },
+            { typeof(CPointLightComponentData), (c, m) =>                      RenderComponent((CPointLightComponentData)c, m) },
+            { typeof(CBoxLightComponentData), (c, m) =>                        RenderComponent((CBoxLightComponentData)c, m) },
         };
 
         private static readonly HashSet<Type> _emptyComponents = new ()
@@ -1032,6 +1035,47 @@ namespace NST
         }
 
 #endregion
+#region Lighintg / VFX / SFX
+
+        private static void RenderComponent(CTintSphereComponentData component, NSTComponent manager)
+        {
+            RenderColor("Color:       ", ref component._color, component, manager);
+            RenderFloat("Radius:      ", ref component._radius, component, manager);
+            RenderFloat("Intensity:   ", ref component._intensity, component, manager);
+            RenderFloat("Additiveness:", ref component._additiveness, component, manager);
+            ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
+            RenderCheckbox("Ignore occlusion boxes: ", ref component._ignoreOcclusionBoxes, component, manager);
+            RenderCheckbox("Depth blending enabled: ", ref component._depthBlendingEnabled, component, manager);
+            RenderFloat("Depth blending softness:", ref component._depthBlendingSoftness, component, manager);
+        }
+
+        private static void RenderComponent(CPointLightComponentData component, NSTComponent manager)
+        {
+            RenderColor("Color:    ", ref component._color, component, manager);
+            RenderFloat("Radius:   ", ref component._radius, component, manager);
+            RenderFloat("Intensity:", ref component._intensity, component, manager);
+            ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
+            RenderEnum("Light bake type:", ref component._lightBakeType, component, manager);
+            RenderCheckbox("Distance cull:  ", ref component._distanceCull, component, manager);
+        }
+
+        private static void RenderComponent(CBoxLightComponentData component, NSTComponent manager)
+        {
+            RenderColor( "Color:     ", ref component._color, component, manager);
+            RenderFloat( "Intensity: ", ref component._intensity, component, manager);
+            RenderFloat3("Dimensions:", ref component._dimensions, component, manager);
+            ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
+            RenderFloat("Near attenuation:", ref component._nearAttenuation, component, manager);
+            RenderFloat("Attenuation:     ", ref component._attenuation, component, manager);
+            RenderFloat("X Falloff:       ", ref component._xFalloff, component, manager);
+            RenderFloat("Y Falloff:       ", ref component._yFalloff, component, manager);
+            RenderFloat("Wrap:            ", ref component._wrap, component, manager);
+            RenderString("Cookie Texture:  ", ref component._cookieTextureName, component, manager);
+            RenderEnum("Light bake type: ", ref component._lightBakeType, component, manager);
+            RenderCheckbox("Distance cull:   ", ref component._distanceCull, component, manager);
+        }
+
+#endregion
 #region References
 
         public static void RenderNullableCEntityHandleList(string label, igHandleMetaField listHandle, igObject parent, NSTComponent manager)
@@ -1573,6 +1617,59 @@ namespace NST
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
             if (ImGui.InputFloat4("##" + name, ref tmp))
+            {
+                value._x = tmp.X;
+                value._y = tmp.Y;
+                value._z = tmp.Z;
+                value._w = tmp.W;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool RenderColor(string name, ref igVec3fMetaField value, igObject obj, NSTComponent manager)
+        {
+            if (RenderColor(name, ref value))
+            {
+                manager.SetUpdated(obj);
+                return true;
+            }
+            return false;
+        }
+        private static bool RenderColor(string name, ref igVec3fMetaField value)
+        {
+            var tmp = value.ToNumericsVector3();
+
+            ImGui.Text(name);
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.ColorEdit3("##" + name, ref tmp))
+            {
+                value._x = tmp.X;
+                value._y = tmp.Y;
+                value._z = tmp.Z;
+                return true;
+            }
+            return false;
+        }
+
+        private static bool RenderColor(string name, ref igVec4fMetaField value, igObject obj, NSTComponent manager)
+        {
+            if (RenderColor(name, ref value))
+            {
+                manager.SetUpdated(obj);
+                return true;
+            }
+            return false;
+        }
+        private static bool RenderColor(string name, ref igVec4fMetaField value)
+        {
+            var tmp = value.ToNumericsVector4();
+
+            ImGui.Text(name);
+            ImGui.SameLine();
+            ImGui.SetNextItemWidth(-1);
+            if (ImGui.ColorEdit4("##" + name, ref tmp))
             {
                 value._x = tmp.X;
                 value._y = tmp.Y;
