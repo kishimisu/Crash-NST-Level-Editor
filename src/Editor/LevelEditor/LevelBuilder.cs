@@ -193,10 +193,6 @@ namespace NST
             IgArchiveFile packageFile = archive.FindPackageFile()!;
             packageFile.Rename($"{newLevelName}_pkg.igz");
 
-            // Update Crash data if necessary
-
-            UpdateCrashCharacterData(archive, newLevelName, "Crash");
-
             // Create zone info file
 
             int index = packageFile.GetPath().IndexOf("maps/");
@@ -207,6 +203,9 @@ namespace NST
             
             (CZoneInfo zoneInfo, igLocalizedInfo localizedInfo) = ObjectFactory.CreateZoneInfo(levelIdentifier, year);
             
+            string? mode = IgArchiveExtensions.GetSpecialLevelMode(newLevelName);
+            if (mode != null) zoneInfo._build = IgArchiveExtensions.UpdateSpecialZoneInfoOptions(zoneInfo._build, [mode]);
+
             IgArchiveFile infoFile = new IgArchiveFile(zoneInfoPath);
             IgzFile infoIgz = new IgzFile(zoneInfoPath);
             
@@ -217,87 +216,6 @@ namespace NST
             archive.AddFile(infoFile);
 
             return newLevelName;
-        }
-
-        private static void UpdateCrashCharacterData(IgArchive archive, string levelName, string characterName = "Crash")
-        {
-            IgArchive crashArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, $"{characterName}.pak"))!;
-            IgArchiveFile file = crashArchive.FindFile($"{characterName}_CharacterData.igz")!;
-            IgzFile igz = file.ToIgzFile();
-
-            string levelID = levelName.Substring(0, 4);
-            bool updated = true;
-
-            switch (levelID)
-            {
-                case "L107":
-                case "L114":
-                    var hogData = igz.FindObject<Crash_Ride_HogData>()!;
-                    hogData._Zone_Info_0x78.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L208":
-                case "L213":
-                case "L215":
-                case "L226":
-                    var bearData = igz.FindObject<Crash_Ride_BearData>()!;
-                    bearData._Zone_Info_0xb0.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L217":
-                case "L220":
-                    var diggingData = igz.FindObject<Crash_DiggingData>()!;
-                    diggingData._Zone_Info_0x80.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L222":
-                case "L224":
-                case "B205":
-                    var jetPackData = igz.FindObjects<Crash_JetPackData>().Last()!;
-                    jetPackData._Zone_Info_0x138.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L303":
-                case "L310":
-                    var tigerData = igz.FindObject<Crash_Ride_TigerData>()!;
-                    tigerData._Zone_Info_0x80.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L305":
-                case "L318":
-                case "L326":
-                case "L331":
-                    var jetskiData = igz.FindObject<Crash_Ride_JetskiData>()!;
-                    jetskiData._Zone_Info_0x38.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                case "L317":
-                case "L324":
-                case "L330":
-                    var planeData = igz.FindObject<Crash_Ride_PlaneData>()!;
-                    planeData._Zone_Info_0x38.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                    break;
-
-                // case "L104":
-                // case "L113":
-                // case "L205":
-                // case "L209":
-                // case "L215":
-                //     Crash_BoulderData boulderData = igz.FindObject<Crash_BoulderData>()!;
-                //     boulderData._Zone_Info_0x38.Reference!.namespaceName = $"{levelName}_zoneInfo";
-                //     break;
-
-                default:
-                    updated = false;
-                    break;
-            }
-
-            if (updated)
-            {
-                file.SetData(igz.Save());
-                file.SetPath($"update/Characters/Playable/{characterName}_CharacterData.igz", false);
-                archive.AddFile(file);
-            }
         }
 
         private static IgArchive CreateNewLevel(string level, string musicLevel, int crashMode, ProgressManager progress)

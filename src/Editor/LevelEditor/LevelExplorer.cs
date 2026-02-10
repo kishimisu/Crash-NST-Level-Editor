@@ -1105,6 +1105,32 @@ namespace NST
                     ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
                 }
 
+                Dictionary<string, string> options = new()
+                {
+                    {"Hog Ride", "hog"},
+                    {"Bear Ride", "bear"},
+                    {"Tiger Ride", "tiger"},
+                    {"Digging", "digging"},
+                };
+
+                List<string> enabledOptions = IgArchiveExtensions.GetSpecialZoneInfoOptions(_zoneInfo._build);
+
+                foreach ((string displayName, string name) in options)
+                {
+                    bool on = enabledOptions.Contains(name);
+
+                    ImGuiUtils.Prefix($"Enable {displayName}:");
+                    if (ImGui.Checkbox($"##list_option_{name}", ref on))
+                    {
+                        if (on) enabledOptions.Add(name);
+                        else enabledOptions.Remove(name);
+
+                        _zoneInfo._build = IgArchiveExtensions.UpdateSpecialZoneInfoOptions(_zoneInfo._build, enabledOptions);
+
+                        ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+                    }
+                }
+
                 ImGuiUtils.ColoredSeparator("Time trial", levelColor);
                 
                 ImGuiUtils.Prefix("Platinum time:", 110);
