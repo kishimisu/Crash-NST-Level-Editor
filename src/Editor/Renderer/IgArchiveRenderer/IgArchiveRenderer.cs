@@ -213,7 +213,7 @@ namespace NST
                 if (ImGui.BeginMenu("Backup"))
                 {
                     uint hash = NamespaceUtils.ComputeHash(Archive.GetPath());
-                    string autoBackupPath = Path.Join(LocalStorage.GetStoragePath("backups"), $"{hash}.pak");
+                    string autoBackupPath = Path.Join(LocalStorage.AutoBackupPath, $"{hash}.pak");
                     bool hasAutoBackup = File.Exists(autoBackupPath);
 
                     if (!_hasBackup && !hasAutoBackup)
@@ -233,6 +233,17 @@ namespace NST
                         if (!_hasBackup && ImGui.MenuItem("Create backup")) CreateBackup();
                         if (_hasBackup && ImGui.MenuItem("Restore manual backup")) RestoreBackup(fromLevelEditor);
                         if (_hasBackup && ImGui.MenuItem("Delete manual backup")) DeleteBackup();
+                        if (!string.IsNullOrEmpty(LocalStorage.AutoBackupSize))
+                        {
+                            ImGui.Separator();
+                            if (ImGui.MenuItem("Clear auto-backup folder", LocalStorage.AutoBackupSize))
+                            {
+                                ModalRenderer.ShowDeleteModal(
+                                    $"Are you sure you want to delete all automatic backups? ({LocalStorage.AutoBackupSize})\n\nFolder to remove: {LocalStorage.AutoBackupPath}", 
+                                    LocalStorage.DeleteAutoBackupFolder
+                                );
+                            }
+                        }
                     }
                     ImGui.EndMenu();
                 }
@@ -734,7 +745,7 @@ namespace NST
                     {
                         // Create backup
                         uint hash = NamespaceUtils.ComputeHash(path);
-                        string backupDir = LocalStorage.GetStoragePath("backups");
+                        string backupDir = LocalStorage.AutoBackupPath;
                         string backupPath = Path.Join(backupDir, $"{hash}.pak");
                         Directory.CreateDirectory(backupDir);
                         File.Copy(Archive.GetPath(), backupPath, true);

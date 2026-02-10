@@ -17,8 +17,10 @@ namespace NST
         public static string? GamePath { get; private set; } = null; // Path to the game folder
         public static string ArchivePath => Path.Join(GamePath ?? DEFAULT_GAME_PATH, "archives"); // Path to the archives folder
         public static string UpdateFilePath => Path.Join(ArchivePath, "update.pak"); // Path to the update file
+        public static string AutoBackupPath => GetStoragePath("backups");
 
         private static string _storageFilePath = ""; // Path to the main local storage file
+        public static string AutoBackupSize { get; private set; } = "";
 
         /// <summary>
         /// Initialize the local storage.
@@ -50,6 +52,24 @@ namespace NST
             {
                 GamePath = null;
                 Remove("game_path");
+            }
+
+            // Compute the size of the auto-backup folder
+            if (Directory.Exists(AutoBackupPath))
+            {
+                DirectoryInfo dir = new DirectoryInfo(AutoBackupPath);
+                FileInfo[] files = dir.GetFiles();
+                long size = 0;
+
+                foreach (FileInfo file in files)
+                {
+                    size += file.Length;
+                }
+
+                const double MB = 1024d * 1024;
+                const double GB = 1024d * 1024 * 1024;
+
+                AutoBackupSize = size >= GB ? $"{size / GB:F2} GB" : $"{size / MB:F2} MB";
             }
             
             RecentFiles = Get<List<string>>("recent_files") ?? [];
@@ -160,6 +180,12 @@ namespace NST
             string appFolder = Path.Combine(folderPath, STORAGE_FOLDER_NAME);
 
             return Path.Combine(appFolder, fileName);
+        }
+
+        public static void DeleteAutoBackupFolder()
+        {
+            Directory.Delete(AutoBackupPath, true);
+            AutoBackupSize = "";
         }
 
         /// <summary>
