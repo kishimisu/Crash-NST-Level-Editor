@@ -129,16 +129,10 @@ namespace NST
                     else if (entity.Model == null && entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object is not CPlayerStartEntity)
                     {
                         if (entity.Parents.Any(p => p is not NSTEntity e || !e.IsTemplate) && entity.Object.GetComponent<common_Spawner_TemplateData>() == null) continue;
-                        else if (entity.Object.GetType() == typeof(igEntity) && entity.Object.ObjectName == "Main_OutdoorLightEntity") light.Add(obj);
                         else if (entity.Object.GetComponents().Any(c => _componentsWithoutModel.Any(t => c.GetType().IsAssignableTo(t)))) added = false;
-                        else if (entity.Object.GetComponent<CTintSphereComponentData>() != null)    light.Add(obj);
-                        else if (entity.Object.GetComponent<CPointLightComponentData>() != null)    light.Add(obj);
-                        else if (entity.Object.GetComponent<CBoxLightComponentData>() != null)      light.Add(obj);
-                        else if (entity.Object.GetComponent<CVisualDataBoxComponentData>() != null) light.Add(obj);
-                        else if (entity.Object.GetComponent<CStaticVfxComponentData>() != null)     vfx.Add(obj);
-                        else if (entity.Object.GetComponent<CLoopingVfxComponentData>() != null)    vfx.Add(obj);
-                        else if (entity.Object.GetComponent<CAmbientAudioComponentData>() != null)  sfx.Add(obj);
-                        else if (entity.Object.GetComponent<common_OnStartMusicData>() != null)     sfx.Add(obj);
+                        else if (entity.IsLight) light.Add(obj);
+                        else if (entity.IsVFX)   vfx.Add(obj);
+                        else if (entity.IsSFX)   sfx.Add(obj);
                         else other.Add(obj);
                     }
                     else added = false;
@@ -257,7 +251,7 @@ namespace NST
                     return;
                 }
 
-                foreach (EntityTreeNode child in node.Children)
+                foreach (EntityTreeNode child in node.Children.Cast<EntityTreeNode>())
                 {
                     queue.Enqueue(child);
                 }
@@ -266,10 +260,14 @@ namespace NST
 
         private static uint GetUniqueColor(string name)
         {
+            if (name == "Lighting") return NSTEntity.ColorLighting.ToImGuiColor(60);
+            if (name == "VFX") return NSTEntity.ColorVFX.ToImGuiColor(120);
+            if (name == "SFX") return NSTEntity.ColorSFX.ToImGuiColor(120);
+
             Random rng = new Random((int)NamespaceUtils.ComputeHash(name)+1);
-            int r = rng.Next(130, 255);
-            int g = rng.Next(130, 255);
-            int b = rng.Next(130, 255);
+            int r = rng.Next(120, 255);
+            int g = rng.Next(120, 255);
+            int b = rng.Next(120, 255);
             return 0xff000000 | (uint)((b << 16) | (g << 8) | r);
         }
 
@@ -352,7 +350,7 @@ namespace NST
 
             if (Object != null)
             {
-                ImGui.PushStyleColor(ImGuiCol.Text, Object.GetObject().GetType().GetUniqueColor());
+                ImGui.PushStyleColor(ImGuiCol.Text, Object is NSTEntity e ? e.Color.ToImGuiColor() : Object.GetObject().GetType().GetUniqueColor());
                 ImGui.Text("\uEA1E");
                 ImGui.PopStyleColor();
                 ImGui.SameLine(0, 5);
@@ -373,12 +371,17 @@ namespace NST
                 return;
             }
 
-            if (Object.IsSelected) flags |= ImGuiTreeNodeFlags.Selected;
+            if (Object.IsSelected || tree.SelectedNode == this) flags |= ImGuiTreeNodeFlags.Selected;
             else flags &= ~ImGuiTreeNodeFlags.Selected;
 
             string displayName = Object is NSTEntity entity && entity.IsPrefabInstance ? $"[Prefab] {Name}" : Name;
+            bool subselected = Object.IsSelected && tree.SelectedNode != this;
+
+            if (subselected) ImGui.PushStyleColor(ImGuiCol.Header, new System.Numerics.Vector4(1, 1, 1, 0.15f));
 
             IsOpen = ImGui.TreeNodeEx("###" + Name + Object.FileNamespace, flags);
+
+            if (subselected) ImGui.PopStyleColor();
 
             if (ImGui.IsItemClicked())
             {

@@ -30,6 +30,18 @@ namespace NST
             return color;
         }
 
+        /// <summary>
+        /// Converts a THREE.Color to an ImGui color (uint)
+        /// </summary>
+        public static uint ToImGuiColor(this THREE.Color color, float soften = 0)
+        {
+            byte r = (byte)(color.R * (255 - soften) + soften);
+            byte g = (byte)(color.G * (255 - soften) + soften);
+            byte b = (byte)(color.B * (255 - soften) + soften);
+            uint a = 255;
+            return (a << 24) | ((uint)b << 16) | ((uint)g << 8) | r;
+        }
+
         // Alchemy -> THREE
         public static THREE.Vector3 ToVector3(this igVec3fMetaField v) => new THREE.Vector3(v._x, v._y, v._z);
         public static THREE.Euler ToEuler(this igVec3fMetaField v) => new THREE.Euler(v._x, v._y, v._z, THREE.RotationOrder.ZYX);

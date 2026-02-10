@@ -30,6 +30,10 @@ namespace NST
         public bool IsHidden { get; set; } = false;
         public bool IsSpawned => !IsPrefabTemplate && !IsTemplate && !IsHidden;
 
+        public bool IsLight { get; set; } = false;
+        public bool IsVFX { get; set; } = false;
+        public bool IsSFX { get; set; } = false;
+
         // Parent CScriptTriggerEntity focus
         public bool ClickedAgain { get; set; } = false;
         public bool OutlineTrigger { get; set; } = false;
@@ -38,13 +42,28 @@ namespace NST
         public THREE.Object3D? TriggerVolumeBox { get; private set; }
         private Dictionary<CWaypoint, NSTWaypoint> _waypoints = [];
 
+        public THREE.Color Color { get; }
+        
+        public static readonly THREE.Color ColorLighting = new THREE.Color(1, 0.9f, 0.3f);
+        public static readonly THREE.Color ColorVFX = new THREE.Color(0, 1, 1);
+        public static readonly THREE.Color ColorSFX = new THREE.Color(0, 1, 0.35f);
+
         public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
         {
             Object = obj;
             ArchiveFile = archiveFile;
 
+            InitType();
             InitSpline();
 
+            if (IsLight) Color = ColorLighting;
+            else if (IsVFX) Color = ColorVFX;
+            else if (IsSFX) Color = ColorSFX;
+            else Color = MathUtils.FromImGuiColor(Object.GetType().GetUniqueColor());
+        }
+
+        private void InitType()
+        {
             if (!Object._bitfield._canSpawn || Object._bitfield._isArchetype)
             {
                 if (Object.GetType() != typeof(igEntity) || Object.GetComponent<CModelComponentData>() == null)
@@ -60,6 +79,36 @@ namespace NST
             {
                 IsHidden = true;
             }
+
+            if (Model == null)
+            {
+                int lightCount = 0;
+                int vfxCount = 0;
+                int sfxCount = 0;
+                int otherCount = 0;
+
+                if (Object.ObjectName == "Main_OutdoorLightEntity") lightCount++;
+
+                foreach (var c in Object.GetComponents())
+                {
+                    if      (c is CTintSphereComponentData)    lightCount++;
+                    else if (c is CPointLightComponentData)    lightCount++;
+                    else if (c is CBoxLightComponentData)      lightCount++;
+                    else if (c is CVisualDataBoxComponentData) lightCount++;
+                    else if (c is CStaticVfxComponentData)     vfxCount++;
+                    else if (c is CLoopingVfxComponentData)    vfxCount++;
+                    else if (c is CAmbientAudioComponentData)  sfxCount++;
+                    else if (c is common_OnStartMusicData)     sfxCount++;
+                    else otherCount++;
+                }
+
+                if (otherCount == 0)
+                {
+                    if (lightCount > 0) IsLight = true;
+                    else if (vfxCount > 0) IsVFX = true;
+                    else if (sfxCount > 0) IsSFX = true;
+                }
+            }
         }
 
         public override THREE.Object3D CreateObject3D(bool selected = false)
@@ -69,7 +118,7 @@ namespace NST
             if (Model == null && !IsPrefabInstance && Object is not CScriptTriggerEntity && Object is not CDynamicClipEntity)
             {
                 var geo = new THREE.BoxGeometry(20, 20, 20);
-                var mat = new THREE.MeshPhongMaterial() { Color = MathUtils.FromImGuiColor(Object.GetType().GetUniqueColor()) };
+                var mat = new THREE.MeshPhongMaterial() { Color = Color };
                 group.Add(new THREE.Mesh(geo, mat));
             }
 

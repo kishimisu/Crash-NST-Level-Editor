@@ -79,7 +79,7 @@ namespace NST
                 LevelExplorer.DebugMode.Instanced => instances.Select(e => highlightColor),
 
                 _ => _model == null 
-                    ? instances.Select(e => MathUtils.FromImGuiColor(e.Object.GetType().GetUniqueColor()))
+                    ? instances.Select(e => e.Color)
                     : instances.Select(e => new THREE.Color(1, 1, 1)) 
             }
             ).ToList();
