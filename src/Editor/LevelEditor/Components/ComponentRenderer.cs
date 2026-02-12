@@ -10,10 +10,12 @@ namespace NST
 
         private static readonly Dictionary<Type, Action<igComponentData, NSTComponent>> _renderMethods = new ()
         {
+            // Static objects
             { typeof(CModelComponentData), (c, m) =>                           RenderComponent((CModelComponentData)c, m) },
             { typeof(CStaticComponentData), (c, m) =>                          RenderComponent((CStaticComponentData)c, m) },
             { typeof(CStaticCollisionComponentData), (c, m) =>                 RenderComponent((CStaticCollisionComponentData)c, m) },
             { typeof(igPrefabComponentData), (c, m) =>                         RenderComponent((igPrefabComponentData)c, m) },
+            // Crates
             { typeof(Multiple_Spawner_Template_c), (c, m) =>                   RenderComponent((Multiple_Spawner_Template_c)c, m) },
             { typeof(common_Spawner_TemplateData), (c, m) =>                   RenderComponent((common_Spawner_TemplateData)c, m) },
             { typeof(common_Crate_SlotMachine_SpawnedData), (c, m) =>          RenderComponent((common_Crate_SlotMachine_SpawnedData)c, m) },
@@ -34,6 +36,10 @@ namespace NST
             { typeof(common_Crate_Flood_BehaviorData), (c, m) =>               RenderComponent((common_Crate_Flood_BehaviorData)c, m) },
             { typeof(Egypt_Hazard_FloodWater_BehaviorData), (c, m) =>          RenderComponent((Egypt_Hazard_FloodWater_BehaviorData)c, m) },
             { typeof(Egypt_Platform_FloodWater_BehaviorData), (c, m) =>        RenderComponent((Egypt_Platform_FloodWater_BehaviorData)c, m) },
+            // Levels
+            { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
+            { typeof(Enemy_PlayAnimation_OnSplineDistance_BehaviorData), (c, m) => RenderComponent((Enemy_PlayAnimation_OnSplineDistance_BehaviorData)c, m) },
+            // Other
             { typeof(common_Level_ManagerData), (c, m) =>                      RenderComponent((common_Level_ManagerData)c, m) },
             { typeof(DDA_CheckpointData), (c, m) =>                            RenderComponent((DDA_CheckpointData)c, m) },
             { typeof(CVisualDataBoxComponentData), (c, m) =>                   RenderComponent((CVisualDataBoxComponentData)c, m) },
@@ -48,12 +54,13 @@ namespace NST
             { typeof(common_ChangeCrashGameMode_TriggerData), (c, m) =>        RenderComponent((common_ChangeCrashGameMode_TriggerData)c, m) },
             { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
             { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
+            { typeof(common_Collectible_Gem_TemplateData), (c, m) =>           RenderComponent((common_Collectible_Gem_TemplateData)c, m) },
             { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
             { typeof(common_Generic_Path_Platform_SwapGameModeData), (c, m) => RenderComponent((common_Generic_Path_Platform_SwapGameModeData)c, m) },
             { typeof(common_Path_Platform_Mover), (c, m) =>                    RenderComponent((common_Path_Platform_Mover)c, m) },
             { typeof(common_Generic_Path_Teleporter_StartData), (c, m) =>      RenderComponent((common_Generic_Path_Teleporter_StartData)c, m) },
             { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
-            { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
+            // Lighting
             { typeof(CTintSphereComponentData), (c, m) =>                      RenderComponent((CTintSphereComponentData)c, m) },
             { typeof(CPointLightComponentData), (c, m) =>                      RenderComponent((CPointLightComponentData)c, m) },
             { typeof(CBoxLightComponentData), (c, m) =>                        RenderComponent((CBoxLightComponentData)c, m) },
@@ -547,10 +554,22 @@ namespace NST
 
         private static void RenderComponent(L201_TurtleWoods_MousePit_CameraTriggerData component, NSTComponent manager)
         {
-            RenderObjectReference("Enable camera:", component._Camera_Base_0x28, typeof(CCameraBase), manager);
+            RenderObjectReference("Enable camera: ", component._Camera_Base_0x28, typeof(CCameraBase), manager);
             RenderObjectReference("Disable camera:", component._Camera_Base_0x38, typeof(CCameraBase), manager);
-            RenderFloat("Transition speed in:", ref component._Float_0x30, component, manager);
+            RenderFloat("Transition speed in: ", ref component._Float_0x30, component, manager);
             RenderFloat("Transition speed out:", ref component._Float_0x40, component, manager);
+        }
+
+        private static void RenderComponent(Enemy_PlayAnimation_OnSplineDistance_BehaviorData component, NSTComponent manager)
+        {
+            RenderObjectReference("Spline:", component._Entity, typeof(CEntity), manager);
+            RenderFloat("Activation radius:", ref component._Float_0x30, component, manager);
+            RenderString("Idle animation:   ", ref component._String_0x38, component, manager);
+            RenderString("Active animation: ", ref component._String_0x40, component, manager);
+            RenderFloat("Float_0x48: ", ref component._Float_0x48, component, manager);
+            RenderString("String_0x50:", ref component._String_0x50, component, manager);
+            RenderCheckbox("Bool_0x58:  ", ref component._Bool_0x58, component, manager);
+            RenderCheckbox("Bool_0x59:  ", ref component._Bool_0x59, component, manager);
         }
 
 #endregion
@@ -814,6 +833,11 @@ namespace NST
         private static void RenderComponent(common_Collectible_TimeTrial_StartData component, NSTComponent manager)
         {
             RenderCheckbox("Always spawn:", ref component._Bool, component, manager);
+        }
+
+        private static void RenderComponent(common_Collectible_Gem_TemplateData component, NSTComponent manager)
+        {
+            RenderEnum("Gem type:", ref component._E_Zone_Collectible_Type, component, manager);
         }
 
         private static void RenderComponent(common_BonusRoundTeleporterData component, NSTComponent manager)

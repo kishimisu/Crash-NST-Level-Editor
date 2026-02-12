@@ -124,14 +124,14 @@ namespace Alchemy
 
         public override igObjectBase Clone(CloneProperties props)
         {
+            // Skip object references
+            if (Reference != null || GetType() == typeof(igMetaObject) || GetType() == typeof(igObject)) return this;
+
             // (Shallow copy) Skip if not root object
             if (!props.mode.HasFlag(CloneMode.Deep) && !props.mode.HasFlag(CloneMode.ShallowAndChildren) && props.clones.Count > 0 && this is not igComponentList) return this;
 
             // Skip entities
             if (props.mode.HasFlag(CloneMode.SkipEntities) && this is igEntity && props.clones.Count > 0) return this;
-
-            // Skip empty objects
-            if (GetType() == typeof(igMetaObject) || GetType() == typeof(igObject)) return this;
 
             // Skip already cloned objects
             if (props.clones.ContainsKey(this)) return props.clones[this];

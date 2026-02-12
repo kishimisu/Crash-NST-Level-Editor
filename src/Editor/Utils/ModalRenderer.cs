@@ -176,6 +176,12 @@ namespace NST
     /// </summary>
     public class DeleteModal(string text = "Delete File") : ModalBase<Action>(text)
     {
+        public void Open(string title, string message, Action? callback)
+        {
+            base.Open(message, callback);
+            _title = title;
+        }
+
         public override bool Render()
         {
             if (!base.Render()) return false;
@@ -195,7 +201,7 @@ namespace NST
         }
     }
 
-    public class WarningModal() : DeleteModal("This archive has pending changes!") { }
+    public class WarningModal() : DeleteModal("Warning") { }
 
     /// <summary>
     /// Modal for renaming a file (OK / Cancel)
@@ -282,7 +288,11 @@ namespace NST
         /// </summary>
         public static void ShowWarningModal(string fileName, Action action)
         {
-            _warningModal.Open(fileName, action);
+            _warningModal.Open("Warning", fileName, action);
+        }
+        public static void ShowWarningModal(string title, string fileName, Action action)
+        {
+            _warningModal.Open(title, fileName, action);
         }
 
         /// <summary>

@@ -230,7 +230,7 @@ namespace Alchemy
                 {
                     references.AddRange(metaField.GetHandles());
                 }
-                else if (value is igMetaObject metaObject && metaObject.Reference != null)
+                else if (value is igObject metaObject && metaObject.Reference != null)
                 {
                     references.Add(metaObject.Reference);
                 }

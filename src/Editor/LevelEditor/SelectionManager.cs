@@ -418,7 +418,34 @@ namespace NST
                     {
                         foreach (var child in obj.Children)
                         {
-                            if (child is NSTEntity c) toCopyPaste.Add(child);
+                            if (child is NSTEntity || child is NSTCamera)
+                            {
+                                toCopyPaste.Add(child);
+                            }
+                        }
+
+                        // Special case for L303_OrientExpress: remove child spline if it already exists
+                        NamedReference? reference = null;
+
+                        if (e.Object.TryGetComponent(out Enemy_PlayAnimation_OnSplineDistance_BehaviorData? l303a) && l303a._Entity.Reference != null)
+                        {
+                            reference = l303a._Entity.Reference;
+                        }
+                        else if (e.Object.TryGetComponent(out GreatWall_Enemy_Ramp_LabAssistant_BehaviorData? l303b) && l303b._Entity.Reference != null)
+                        {
+                            reference = l303b._Entity.Reference;
+                        }
+                        else if (e.Object.TryGetComponent(out GreatWall_Enemy_Basket_LabAssistant_BehaviorData? l310a) && l310a._Entity.Reference != null)
+                        {
+                            reference = l310a._Entity.Reference;
+                        }
+
+                        if (reference != null && _explorer.InstanceManager.AllEntities.Any(c => NamedReference.Compare(c.ToReference(), reference)))
+                        {
+                            if (toCopyPaste.FirstOrDefault(c => NamedReference.Compare(c.ToReference(), reference)) is NSTObject toRemove)
+                            {
+                                toCopyPaste.Remove(toRemove);
+                            }
                         }
                     }
                 }
@@ -439,53 +466,19 @@ namespace NST
 
             Task.Run(() =>
             {
+                string cameraNamespace = _explorer.GetFileNameFromIdentifier("Camera");
+
                 foreach ((IgArchiveFile file, List<NSTObject> objects) in instances)
                 {
                     List<NSTEntity> entities = objects.OfType<NSTEntity>().ToList();
                     IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
                     
-                    IgArchiveFile? dstFile;
-                    IgzFile dstIgz;
+                    IgArchiveFile? dstFile = file;
+                    IgzFile dstIgz = srcIgz;
 
-                    if (copyToSameFile)
+                    if (!copyToSameFile)
                     {
-                        dstFile = file;
-                        dstIgz = srcIgz;
-                    }
-                    else
-                    {
-                        string path = file.GetPath();
-
-                        if (Path.GetFileNameWithoutExtension(path).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
-                        {
-                            _explorer.GetOrCreateIgzFile("Camera", out dstFile, out dstIgz);
-                        }
-                        else
-                        {
-                            dstFile = renderer.Archive.FindFile(path, FileSearchType.Path);
-
-                            if (dstFile == null)
-                            {
-                                dstIgz = new IgzFile(path);
-                                dstFile = new IgArchiveFile(path);
-                                
-                                renderer.AddFile(dstFile);
-
-                                fileManager.Add(dstFile, dstIgz, true);
-                            }
-                            else
-                            {
-                                if (fileManager.GetIgz(dstFile) is IgzFile existingIgz)
-                                {
-                                    dstIgz = existingIgz;
-                                }
-                                else
-                                {
-                                    dstIgz = new IgzFile(path, dstFile.Uncompress());
-                                    fileManager.Add(dstFile, dstIgz, true);
-                                }
-                            }
-                        }
+                        _explorer.GetOrCreateExternalIgzFile(file.GetPath(), out dstFile, out dstIgz);
                     }
                     
                     // Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
@@ -585,6 +578,14 @@ namespace NST
                     {
                         newClones.Add(dst);
                         renderer.SetObjectUpdated(dstFile, dst);
+
+                        foreach (NamedReference handle in dst.GetHandles())
+                        {
+                            if (handle.namespaceName.EndsWith("_Camera"))
+                            {
+                                handle.namespaceName = cameraNamespace;
+                            }
+                        }
 
                         if (src is CCamera srcCam && dst is CCamera dstCam)
                         {

@@ -149,10 +149,7 @@ namespace NST
             progress.SetProgress("newlevel", 0.0f, $"Duplicating level...");
 
             string levelName = level.Split("/").Last();
-
-            string levelPath = Directory
-                .GetFiles(LocalStorage.ArchivePath)
-                .First(f => Path.GetFileName(f).ToLowerInvariant() == $"{levelName}.pak");
+            string levelPath = Path.Combine(LocalStorage.ArchivePath, $"{levelName}.pak");
 
             IgArchive archive = IgArchive.Open(levelPath);
 
@@ -171,7 +168,8 @@ namespace NST
 
         public static string ConvertToCustomLevel(IgArchive archive)
         {
-            string newLevelName = archive.FindPackageFile()!.GetName(false).Replace("_pkg", "_Custom");
+            string levelName  = archive.FindPackageFile()!.GetName(false).Replace("_pkg", "");
+            string newLevelName = levelName + "_Custom";
 
             // Rename collision files
 
@@ -200,11 +198,32 @@ namespace NST
             string zoneInfoPath = $"update/maps/{levelIdentifier}_zoneinfo.igz";
             string crashMode = levelIdentifier.Substring(0, levelIdentifier.IndexOf('/'));
             EGameYear year = GetGameYear(crashMode);
-            
-            (CZoneInfo zoneInfo, igLocalizedInfo localizedInfo) = ObjectFactory.CreateZoneInfo(levelIdentifier, year);
-            
-            string? mode = IgArchiveExtensions.GetSpecialLevelMode(newLevelName);
-            if (mode != null) zoneInfo._build = IgArchiveExtensions.UpdateSpecialZoneInfoOptions(zoneInfo._build, [mode]);
+
+            CZoneInfo zoneInfo;
+            igLocalizedInfo localizedInfo;
+
+            try
+            {
+                string chunkInfosPath = Path.Combine(LocalStorage.ArchivePath, "chunkInfos.pak");
+                IgArchive chunkInfosArchive = IgArchive.Open(chunkInfosPath);
+                IgArchiveFile chunkInfosFile = chunkInfosArchive.FindFile($"{levelName}_zoneinfo.igz")!;
+                IgzFile chunkInfosIgz = chunkInfosFile.ToIgzFile();
+
+                zoneInfo = chunkInfosIgz.FindObject<CZoneInfo>()!;
+                localizedInfo = chunkInfosIgz.FindObject<igLocalizedInfo>()!;
+
+                zoneInfo._displayName ??= "Custom Level";
+                zoneInfo._hint ??= "Hello, World!";
+                zoneInfo._name = levelIdentifier;
+                zoneInfo._year = year;
+            }
+            catch
+            {
+                (zoneInfo, localizedInfo) = ObjectFactory.CreateZoneInfo(levelIdentifier, year);
+            }
+
+            string? mode = GameplayModeManager.GetSpecialLevelMode(newLevelName);
+            if (mode != null) zoneInfo._build = GameplayModeManager.UpdateSpecialZoneInfoOptions(zoneInfo._build, [mode]);
 
             IgArchiveFile infoFile = new IgArchiveFile(zoneInfoPath);
             IgzFile infoIgz = new IgzFile(zoneInfoPath);

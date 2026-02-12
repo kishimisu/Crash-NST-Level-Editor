@@ -35,8 +35,9 @@ namespace NST
 
         private IgArchiveFile? _zoneInfoFile;
         private CZoneInfo? _zoneInfo;
-        private int _crashMode = 0;
         private int _defaultCharacter = 0;
+        private int _crashMode = 0;
+        private int _gameplayMode = 0;
 
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
@@ -86,6 +87,12 @@ namespace NST
         private static bool _clearMemoryOnExit = false;
 
         public bool CanUseBoxSelection => !_gizmos.dragging && _clickedInsideScene && IsWindowFocused;
+
+        public EntityTreeView TreeView => _treeView;
+        public IgArchiveFile? ZoneInfoFile => _zoneInfoFile;
+        public CZoneInfo? ZoneInfo => _zoneInfo;
+        public int CrashMode => _crashMode;
+        public int DefaultCharacter { set => _defaultCharacter = value; }
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
         public void RebuildTree() => _treeView.RebuildTree(InstanceManager.AllObjects);
@@ -289,6 +296,15 @@ namespace NST
                 _zoneInfo = zoneInfoIgz.FindObject<CZoneInfo>();
                 _crashMode = _zoneInfo?._year == EGameYear.eGY_2017_Crash1 ? 0 : _zoneInfo?._year == EGameYear.eGY_2017_Crash3 ? 2 : 1;
                 _defaultCharacter = int.Max(0, LevelBuilder.CrashCharacters.ToList().IndexOf(_zoneInfo?._overrideCharacter ?? ""));
+
+                if (_zoneInfo != null)
+                {
+                    var options = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
+                    if      (options.Contains("swim"))   _gameplayMode = 1;
+                    else if (options.Contains("bike"))   _gameplayMode = 2;
+                    else if (options.Contains("jetski")) _gameplayMode = 3;
+                    else if (options.Contains("plane"))  _gameplayMode = 4;
+                }
             }
         }
 
@@ -683,15 +699,15 @@ namespace NST
             });
         }
 
-        private void DeleteSelection()
+        public void RemoveObjects(List<NSTObject> toRemove, bool clearSelection = false, bool rebuildTree = false)
         {
-            if (SelectionManager._selection.Count == 0) return;
+            if (toRemove.Count == 0) return;
             
             HashSet<NSTObject> removedObjects = [];
             HashSet<InstanceManager> managersToRefresh = [];
             Dictionary<NSTSpline, List<NSTObject>> splines = [];
 
-            foreach (NSTObject selected in SelectionManager._selection)
+            foreach (NSTObject selected in toRemove)
             {
                 // Special cases for spline children
                 if (selected is NSTSplineControlPoint cp)
@@ -723,7 +739,7 @@ namespace NST
                 if (selected is NSTEntity entity && entity.IsPrefabChild)
                 {
                     if (entity.ParentPrefabInstance!.IsSelected) continue;
-                    if (SelectionManager._selection.Where(o => o is NSTEntity e && e.PrefabTemplate == entity.PrefabTemplate).ToList().IndexOf(entity) > 0) continue;
+                    if (toRemove.Where(o => o is NSTEntity e && e.PrefabTemplate == entity.PrefabTemplate).ToList().IndexOf(entity) > 0) continue;
                 }
 
                 FileUpdateInfos infos = FileManager.GetInfos(selected.ArchiveFile)!;
@@ -814,13 +830,16 @@ namespace NST
             {
                 SelectionManager.UpdateSelection([marker.Parent.Parent], true);
             }
-            else
+            else if (clearSelection)
             {
                 SelectionManager.ClearSelection();
                 _gizmos.Visible = false;
             }
 
-            _treeView.RebuildTree(InstanceManager.AllObjects);
+            if (rebuildTree)
+            {
+                _treeView.RebuildTree(InstanceManager.AllObjects);
+            }
 
             RenderNextFrame = true;
         }
@@ -882,7 +901,7 @@ namespace NST
             {
                 if (ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
                 {
-                    ModalRenderer.ShowWarningModal($"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
+                    ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
                     IsOpen = true;
                 }
                 else
@@ -1068,7 +1087,7 @@ namespace NST
             else if (ImGui.GetIO().WantCaptureKeyboard) return;
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
-                DeleteSelection();
+                RemoveObjects(SelectionManager._selection, true, true);
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
             {
@@ -1108,6 +1127,13 @@ namespace NST
                 {
                     _zoneInfo._year = LevelBuilder.GetGameYear(_crashMode);
                     ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+                    this.TryAddC3IntroCutscene();
+                }
+
+                ImGuiUtils.Prefix("Gameplay Mode:");
+                if (ImGui.Combo("##gameplayMode", ref _gameplayMode, GameplayModeManager.GameplayModes, GameplayModeManager.GameplayModes.Length))
+                {
+                    this.ChangeGameMode(GameplayModeManager.GameplayModes[_gameplayMode]);
                 }
 
                 Dictionary<string, string> options = new()
@@ -1115,10 +1141,11 @@ namespace NST
                     {"Hog Ride", "hog"},
                     {"Bear Ride", "bear"},
                     {"Tiger Ride", "tiger"},
-                    {"Digging", "digging"},
+                    {"Jetpack", "jetpack"},
+                    {"Digging", "dig"},
                 };
 
-                List<string> enabledOptions = IgArchiveExtensions.GetSpecialZoneInfoOptions(_zoneInfo._build);
+                List<string> enabledOptions = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
 
                 foreach ((string displayName, string name) in options)
                 {
@@ -1130,9 +1157,11 @@ namespace NST
                         if (on) enabledOptions.Add(name);
                         else enabledOptions.Remove(name);
 
-                        _zoneInfo._build = IgArchiveExtensions.UpdateSpecialZoneInfoOptions(_zoneInfo._build, enabledOptions);
+                        _zoneInfo._build = GameplayModeManager.UpdateSpecialZoneInfoOptions(_zoneInfo._build, enabledOptions);
 
                         ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+
+                        if (on && name == "jetpack") this.ChangeGameMode("Jetpack");
                     }
                 }
 
@@ -1431,7 +1460,6 @@ namespace NST
                 infos.igz ??= existing.ToIgzFile();
                 file = existing;
                 igz = infos.igz;
-                // Console.WriteLine($"(existing) fileIdentifier: {fileIdentifier} ({identifier}) -> {existing.GetName()}");
             }
             else
             {
@@ -1442,7 +1470,41 @@ namespace NST
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
-                // Console.WriteLine($"(new) fileIdentifier: {fileIdentifier} ({identifier}) -> {file.GetName()}");
+            }
+        }
+
+        public void GetOrCreateExternalIgzFile(string path, out IgArchiveFile file, out IgzFile igz)
+        {
+            if (Path.GetFileNameWithoutExtension(path).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
+            {
+                GetOrCreateIgzFile("Camera", out file, out igz);
+                return;
+            }
+            
+            IgArchiveFile? existing = Archive.FindFile(path, FileSearchType.Path);
+
+            if (existing == null)
+            {
+                igz = new IgzFile(path);
+                file = new IgArchiveFile(path);
+                
+                ArchiveRenderer.AddFile(file);
+
+                FileManager.Add(file, igz, true);
+            }
+            else
+            {
+                file = existing;
+
+                if (FileManager.GetIgz(existing) is IgzFile existingIgz)
+                {
+                    igz = existingIgz;
+                }
+                else
+                {
+                    igz = new IgzFile(path, file.Uncompress());
+                    FileManager.Add(existing, igz, true);
+                }
             }
         }
 

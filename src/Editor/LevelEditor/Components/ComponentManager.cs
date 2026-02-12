@@ -49,6 +49,22 @@ namespace NST
             List<NSTComponent> components = [];
             Dictionary<string, igComponentData> dict = Entity.Object.GetComponentsDictionary();
 
+            if (Entity.Object is CPlayerStartEntity && Entity.Object.TryGetComponent(out common_mount_bikeData? mountBike) && mountBike._Entity_Data.Reference != null)
+            {
+                IgzFile? igz = explorer.FileManager.GetIgz(Entity.ArchiveFile);
+                var actorData = (CActorData?)igz?.FindObject(mountBike._Entity_Data.Reference);
+
+                if (actorData?._componentData != null)
+                {
+                    foreach (var k in actorData._componentData.Dict)
+                    {
+                        dict.Add(k.Key, (igComponentData)k.Value);
+                    }
+                }
+            }
+
+            int enabledComponentCount = dict.Values.Count(c => c._bitfield._isEnabled);
+
             _isCrate = dict.Values.Any(e => e is common_Crate_StackCheckerData);
 
             foreach ((string key, igComponentData component) in dict)
@@ -67,6 +83,10 @@ namespace NST
                 if (_isCrate || _selection.Count > 0) continue;
 
                 if (dict.Count == 1 || _autoFocusComponents.Contains(component.GetType()))
+                {
+                    _selection.Add(c);
+                }
+                else if (enabledComponentCount == 1 && component._bitfield._isEnabled)
                 {
                     _selection.Add(c);
                 }

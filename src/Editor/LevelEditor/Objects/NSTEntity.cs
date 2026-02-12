@@ -136,6 +136,8 @@ namespace NST
                 });
             }
 
+            if (Model != null) group.Traverse(e => { if (e.Material != null) e.Material.Visible = true; });
+
             foreach (THREE.Object3D child in CreateChildrenObject3D(selected))
             {
                 group.Attach(child);
@@ -188,7 +190,7 @@ namespace NST
 
             foreach (NSTObject child in Children)
             {
-                if (child.IsSelected || child is NSTEntity) continue;
+                if (child.IsSelected || child is NSTEntity || child is NSTCamera) continue;
 
                 group.Add(child.CreateObject3D(selected));
             }
@@ -270,6 +272,16 @@ namespace NST
         {
             var components = Object.GetComponents();
             var handles = components.SelectMany(c => c.GetHandles()).ToList();
+
+            if (Object is CPlayerStartEntity playerStart && playerStart._camera?.Reference is NamedReference camReference)
+            {
+                NSTObject? cam = objects.Find(o => o.GetObject().ObjectName == camReference.objectName && o.FileNamespace == camReference.namespaceName);
+                if (cam != null)
+                {
+                    cam.Parents.Add(this);
+                    Children.Add(cam);
+                }
+            }
 
             if (Object.TryGetComponent(out CMovementControllerComponentData? movementController) && movementController._controllerList?._data.Count > 0)
             {

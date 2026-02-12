@@ -89,7 +89,7 @@ namespace NST
 
             foreach (IgzTreeNode node in TreeView.ObjectNodes.ToList())
             {
-                if (node.Object == null) continue;
+                if (node?.Object == null) continue;
                 
                 if (node.Object.GetType().IsAssignableTo(type))
                 {

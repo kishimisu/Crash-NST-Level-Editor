@@ -379,7 +379,6 @@ namespace NST
                 zoneInfo = newZoneInfo;
                 zoneInfoIgz = new IgzFile(zoneInfoPath, [ newZoneInfo, newLocalizedInfo ]);
                 zoneInfoFile = new IgArchiveFile(zoneInfoPath);
-                zoneInfoFile.SetData(zoneInfoIgz.Save());
                 update.AddFile(zoneInfoFile);
             }
 
@@ -389,12 +388,19 @@ namespace NST
             if (previousCharacterFileCrash != null) update.RemoveFile(previousCharacterFileCrash);
             if (previousCharacterFileCoco != null) update.RemoveFile(previousCharacterFileCoco);
 
-            List<string> options = GetSpecialZoneInfoOptions(zoneInfo._build);
+            List<string> options = GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build);
             if (options.Count > 0)
             {
-                IgArchiveFile characterData = CreateCharacterData(options, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter ?? "Crash");
+                IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter ?? "Crash");
                 update.AddFile(characterData);
             }
+
+            zoneInfo._zoneVehicle = null;
+
+            if (options.Contains("jetski")) zoneInfo._zoneVehicle = "CocoJetski";
+            else if (options.Contains("plane")) zoneInfo._zoneVehicle = "CrashCocoPlane";
+
+            zoneInfoFile.SetData(zoneInfoIgz.Save());
 
             chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = zoneInfoPath});
             packageFile.SetData(packageIgz.Save());
@@ -429,116 +435,5 @@ namespace NST
 
             ModManager.LaunchLevel(levelIdentifier);
         }
-
-        public static List<string> GetSpecialZoneInfoOptions(string? buildName)
-        {
-            if (buildName == null) return [];
-
-            var match = ZoneInfoOptionsRegex().Match(buildName);
-
-            if (!match.Success) return [];
-
-            return match.Groups[1].Value.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries).ToList();
-        }
-
-        public static string UpdateSpecialZoneInfoOptions(string? buildName, List<string> options)
-        {
-            string optionsStr = "";
-
-            if (options.Count > 0)
-            {
-                optionsStr = ",{" + string.Join(",", options) + "}";
-            }
-
-            buildName ??= "";
-
-            var match = ZoneInfoOptionsRegex().Match(buildName);
-
-            if (match.Success)
-            {
-                return ZoneInfoOptionsRegex().Replace(buildName, optionsStr);
-            }
-            
-            return buildName + optionsStr;
-        }
-
-        private static IgArchiveFile CreateCharacterData(List<string> options, string zoneInfoName, string characterName = "Crash")
-        {
-            IgArchive crashArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, $"{characterName}.pak"))!;
-            IgArchiveFile file = crashArchive.FindFile($"{characterName}_CharacterData.igz")!;
-            IgzFile igz = file.ToIgzFile();
-
-            foreach (var type in options)
-            {
-                Console.WriteLine($"Setup Character Data for {type}");
-
-                switch (type)
-                {
-                    case "hog":
-                        var hogData = igz.FindObject<Crash_Ride_HogData>()!;
-                        hogData._Zone_Info_0x78.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "bear":
-                        var bearData = igz.FindObject<Crash_Ride_BearData>()!;
-                        bearData._Zone_Info_0xb0.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "tiger":
-                        var tigerData = igz.FindObject<Crash_Ride_TigerData>()!;
-                        tigerData._Zone_Info_0x80.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "jetpack":
-                        var jetPackData = igz.FindObjects<Crash_JetPackData>().Last()!;
-                        jetPackData._Zone_Info_0x138.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "jetski":
-                        var jetskiData = igz.FindObject<Crash_Ride_JetskiData>()!;
-                        jetskiData._Zone_Info_0x28.Reference!.namespaceName = zoneInfoName;
-                        // jetskiData._Zone_Info_0x38.Reference!.isEXID = false;
-                        break;
-
-                    case "plane":
-                        var planeData = igz.FindObject<Crash_Ride_PlaneData>()!;
-                        planeData._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "digging":
-                        var diggingData = igz.FindObject<Crash_DiggingData>()!;
-                        diggingData._Zone_Info_0x80.Reference!.namespaceName = zoneInfoName;
-                        break;
-
-                    case "boulder":
-                        Crash_BoulderData boulderData = igz.FindObject<Crash_BoulderData>()!;
-                        boulderData._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
-                        break;
-                }
-            }
-
-            file.SetData(igz.Save());
-
-            return file;
-        }
-
-        public static string? GetSpecialLevelMode(string levelName)
-        {
-            string id = levelName.Substring(0, 4);
-
-            if (id == "L107" || id == "L114")                                 return "hog";
-            if (id == "L208" || id == "L213" || id == "L215" || id == "L226") return "bear";
-            if (id == "L217" || id == "L220")                                 return "digging";
-            if (id == "L222" || id == "L224" || id == "B205")                 return "jetpack";
-            if (id == "L303" || id == "L310")                                 return "tiger";
-            if (id == "L305" || id == "L318" || id == "L326" || id == "L331") return "jetski";
-            if (id == "L317" || id == "L324" || id == "L330")                 return "plane";
-            // if (id == "L104" || id == "L113" || id == "L205" || id == "L209" || id == "L215") return "boulder";
-
-            return null;
-        }
-
-        [GeneratedRegex(@",\{([^}]*)\}")]
-        private static partial Regex ZoneInfoOptionsRegex();
     }
 }

@@ -325,7 +325,7 @@ namespace NST
             }
             else
             {
-                ModalRenderer.ShowWarningModal($"Are you sure you want to reload {Archive.GetName()} without saving?", () => Reload(fromLevelEditor));
+                ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to reload {Archive.GetName()} without saving?", () => Reload(fromLevelEditor));
             }
         }
 
@@ -600,7 +600,7 @@ namespace NST
         {
             if (!App.CanCloseArchive(this))
             {
-                ModalRenderer.ShowWarningModal($"Are you sure you want to close {Archive.GetName()} without saving?", () => { IsUpdated = false; IsOpen = false; });
+                ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { IsUpdated = false; IsOpen = false; });
                 IsOpen = true;
                 return false;
             }
@@ -934,6 +934,11 @@ namespace NST
             if (ImGui.Selectable("Delete"))    RemoveFile(file);
         }
 
+        private static readonly HashSet<string> _jetpackExternalDependencies = new()
+        {
+            "proxy_Alarm.igz", "common_AlarmLightVFX.igz", "common_JetPackVehicle.igz", "common_JetPackIntroOutroSequence.igz", 
+        };
+
         /// <summary>
         /// Clone an object from an external archive, including all its dependencies
         /// </summary>
@@ -944,8 +949,30 @@ namespace NST
             foreach (IgArchiveFile file in newFiles)
             {
                 bool addToPkg = !file.GetPath().StartsWith("maps/");
+
+                // Skip any map file
                 if (excludeMapFiles && (file.GetPath().StartsWith("maps/") || file.GetName().StartsWith("StaticCollision_"))) continue;
-                if (file.GetPath().StartsWith("vfx/Crash1/Hub") || file.GetPath().StartsWith("vfx/Crash3/Hub")) continue;
+
+                // Fix black screen when importing C3 enemies to non-C3 levels
+                // if (file.GetPath().StartsWith("vfx/Crash1/Hub") || file.GetPath().StartsWith("vfx/Crash3/Hub")) continue;
+
+                int n = 0;
+                if      (file.GetPath().StartsWith("vfx/Crash1/Hub")) n = 1;
+                else if (file.GetPath().StartsWith("vfx/Crash2/Hub") || _jetpackExternalDependencies.Contains(file.GetName())) n = 2;
+                else if (file.GetPath().StartsWith("vfx/Crash3/Hub")) n = 3;
+
+                if (n > 0 && Archive.FindFile($"ui_bank_c{n}_bank.igz") == null)
+                {
+                    IgArchive externalArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, $"crash{n}.pak"));
+
+                    foreach (IgArchiveFile externalFile in externalArchive.GetFiles())
+                    {
+                        if (externalFile.GetPath().StartsWith("sound") && Archive.FindFile(externalFile.GetName()) == null)
+                        {
+                            AddFile(externalFile, true);
+                        }
+                    }
+                }
 
                 AddFile(file, addToPkg);
             }
