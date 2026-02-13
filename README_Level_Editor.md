@@ -2,12 +2,18 @@
 
 - [New Level](#new-level)
 - [Level Editor](#level-editor)
+- [Controls/shortcuts](#controls)
 - [Create new objects](#create-new-objects)
-- [Object Properties](#object-properties)
-- [Custom Components](#components)
+- [Object properties](#object-properties)
+---
+- [Special objects](#special-objects)
   - [Static Models](#static-models)
   - [Spawner Templates](#spawner-templates)
-  - [Prefabs](#prefabs)
+  - [Prefab Instances](#prefab-instances)
+  - [Script Triggers](#script-triggers)
+  - [Dynamic Clips](#dynamic-clips)
+---
+- [Special components](#special-components)
   - [Splines](#splines)
   - [Trigger Volumes](#trigger-volumes)
   - [Outline Switch Crate](#outline-switch-crate)
@@ -16,7 +22,7 @@
 
 # New Level
 
-You can either create a new level from scratch or duplicate an existing level.
+You can either create a new level from scratch or duplicate an existing level:
 
 ![New Level](assets/readme/level_editor/new_level.jpg)
 
@@ -30,15 +36,14 @@ You can either create a new level from scratch or duplicate an existing level.
   - a platform with collisions
   - most common crates
 
-Choosing "`none`" also unlock these additional parameters:
+Choosing "`none`" also unlocks these additional parameters:
   - **Lighting**: Import the main lighting/ambience from another level
   - **Music**: Import the main music theme from another level (you can still import custom music later on)
   - **Mode**: Crash 1, 2 or 3 (used to create the level start & end)
 
 _basic empty template_:
 
-<img src="assets/readme/level_editor/empty_level.jpg" alt="Empty Level" width="600"/>
-
+<img src="assets/readme/level_editor/empty_level.jpg" alt="Empty Level" width="700"/>
 
 # Level Editor
 
@@ -46,10 +51,11 @@ _basic empty template_:
 
 ![Editor Settings](assets/readme/demo.gif)
 
-- You can open multiple levels at once (click on the `Home` icon in the top left or `File -> Open` after opening a first level)
-- You can select multiple objects using Shift
-- You can copy and paste selected objects (Ctrl+C / Ctrl+V) from one level editor to another
-- You can create tabs by clicking on the title of a window and dragging it over another window's title to make it easier to switch between levels
+- Open multiple levels at once (click on the `Home` icon in the top left or `File -> Open` after opening a first level)
+- Select multiple objects using Shift
+- Copy and paste selected objects (Ctrl+C / Ctrl+V) from one level editor to another
+- Use the quick-access menu (right-click) to easily import useful objects
+- Create tabs by clicking on the title of a window and dragging it over another window's title to make it easier to switch between levels
 
 You can also find the list of all objects that have already been tested here: [docs.google.com/spreadsheets/d/1jVLJTm1idsps4p5KSXfI80fT5y7HFQuSiLOLkI18K30](https://docs.google.com/spreadsheets/d/1jVLJTm1idsps4p5KSXfI80fT5y7HFQuSiLOLkI18K30/edit?usp=sharing)
 
@@ -71,15 +77,19 @@ It won't include unsaved changes.
 ## Level Infos
 
 Settings & properties for the current level.
-This option is only available for custom levels.
+These options are only available for custom levels.
 
 ![Level Infos](assets/readme/level_editor/level_infos.jpg)
 
+Level Name
 - **Name**: Level's name (appears on level load)
 - **Hint**: Level's hint (appears on level load)
+
+Level settings:
 - **Character**: Which character to use when starting the level (Crash/Coco)
 - **Crash Mode**: The current Crash version (affects the pause menu style and the level start/end)
-- **Time Trial**: Times for the platinum, gold and sapphire relics
+- **Gameplay Mode**: The starting gameplay mode/vehicle (Traditional, Swimming, Motorbike, Jetski, Plane)
+- **Enable Ride**: Whether to enable special objects for this level (they won't work otherwise)
 
 ## Editor Settings
 
@@ -105,24 +115,31 @@ Contains the list of all objects in the level, grouped by type. Click on an elem
 
 ![Objects](assets/readme/level_editor/objects.jpg)
 
-3D Entities:
+3D Game Objects:
 
-- **Static Objects**: Contains static entities, which represent most of the level's geometry and can have baked-in collisions (See [#static objects](#static-models))
-- **Prefabs**: Contains all instanciated prefab entities (See [#prefabs](#prefabs))
-- **Crates**: Contains all crates in the level
-- **Splines**: Contains all spline entities (See [#splines](#splines))
-- **Player Start**: Contains the player start entity (where the character is spawned when starting the level)
+- **Static Objects**: Contains static models, which represent most of the level's geometry and can have baked-in collisions (See [#static models](#static-models))
+- **Prefabs**: Contains all instanciated prefab entities (See [#prefabs](#prefab-instances))
 - **CEntity / CGameEntity / CPhysicalEntity**: Contains most of the level's game objects (enemies, hazards, obstacles... see [#spawner templates](#spawner-templates))
 - **CActor**: Contains character entities (bosses and advanced enemies...)
+- **Crates**: Contains all crates in the level
+- **Collectibles**: Contains all collectibles in the level
 
-Objects without a model:
-(these appear as colored cubes in the level editor)
+Other Game Objects:
 
-- **CScriptTriggerEntity**: Contains trigger entities (activates something when the player enters its bounds)
-- **CDynamicClipEntity**: Contains clipping entities (invisible boxes that collide with the player)
-- **Other**: Contains all other entities without a model such as VFX, SFX or area effects
+- **Player Start**: Contains the player start entity (where the character is spawned when starting the level)
+- **Triggers**: Contains `CScriptTriggerEntity` objects (see [#script triggers](#script-triggers))
+- **Clips**: Contains `CDynamicClipEntity` objects (see [#dynamic clips](#dynamic-clips))
 - **Cameras**: Contains all types of cameras
 - **CameraBox**: Contains camera transitions
+
+Other:
+
+- **Lighting**: Contains light sources and visual boxes
+- **VFX**: Contains visual effects
+- **SFX**: Contains sound effects and music
+- **Other**: Contains all other entities without a model, such as the WorldInstance
+
+Hidden:
 - **Templates**: Spawner templates (see [#spawner templates](#spawner-templates))
 - **Hidden**: Hidden objects
 
@@ -140,12 +157,11 @@ This is where you can move around in the level, select one or multiple objects, 
 
 <img src="assets/readme/level_editor/qa_crates.jpg" alt="Create crates" height="400"/>
 
-
 Use the quick-access menu (right-click) to create various objects:
 - **New Crate**: Create all types of crates
 - **New Collectible**: Create all types of collectibles
-- **New Platform**: Create new gem platforms, path platforms and teleporters
-- **New Vehicle**: Create new vehicles (Jet Board)
+- **New Platform**: Create new platforms and teleporters
+- **New Vehicle**: Create new vehicles (Jet Board, Baby TRex, Hog, Bear, Tiger, Jetpack)
 - **New Bonus Round**: Import a bonus round from C1 (tawna/brio/cortex) or any bonus round from C2/C3
 - **New Camera**: Create a new camera (Relative Camera, Spline Camera or Free Camera) or a new camera transition zone
 - **Other**: Create other useful objects (Death Trigger, Invisible Walls...)
@@ -154,7 +170,9 @@ Use the quick-access menu (right-click) to create various objects:
 
 Contains every editable property for the currently selected object.
 
-The first line contains the object's type and name, the second line contains its parent file (click to open)
+The first line contains the object's type and name, the second line contains the parent file name (click to open)
+
+If the object has any parent or children, they will also be displayed (click to focus)
 
 ![Object Transform](assets/readme/level_editor/object_transform.jpg)
 
@@ -163,18 +181,20 @@ The first line contains the object's type and name, the second line contains its
 Edit the position, rotation and scale of the object.
 Note that you can also do this using the 3D gizmos (Ctrl+E to translate, Ctrl+R to rotate, Ctrl+T to scale)
 
-- `Click & drag` to edit values like a slider
+- `Click & drag` to edit values like a slider (use shift, ctrl or alt to change the speed)
 - `Double click` to manually input values
 - Click the icon on the right to copy/paste values
+
+When applicable, the object's model can also be changed via a dropdown containing the list of all currently loaded models across level editors.
 
 ### Components
 
 This is where the object's behavior, model, animations, sounds, properties and so on... are defined.
-You can copy, paste, delete or replace components between difference objects.
+You can copy, paste, delete or replace components between different objects.
 
 ![Object Components](assets/readme/level_editor/object_components.jpg)
 
-You can find the list of components at the top, and the currently selected component at the bottom.
+The list of all components is located at the top, and the currently selected component at the bottom.
 
 - Click on the checkbox on the right to enable/disable a component
 - `Click` on a component to select it
@@ -185,29 +205,41 @@ You can also copy/paste values from a component to another instead of pasting it
 
 ![Object Components Paste](assets/readme/level_editor/object_components_paste.jpg)
 
-# Special components
+# Special objects
 
 ## Static models
 
-<img src="assets/readme/level_editor/c_static.jpg" alt="Static models" width="600"/>
+These objects represent most of the level's geometry and can have baked-in collisions.
+
+<img src="assets/readme/level_editor/c_static.jpg" alt="Static models" width="700"/><br>
 
 Static models always have 3 components:
 
-- `CModelComponent`: used to change the object's model
-- `CStaticComponent`: used to change the object's visibility
-- `CStaticCollisionComponent`: used to enable or disable collisions for the object. If the option is greyed out, it means that this object doesn't come with baked-in collisions.
+- `CModelComponent`: can be used to change the object's model
+- `CStaticComponent`: can be used to change the object's visibility
+- `CStaticCollisionComponent`: can be used to enable or disable collisions for the object. If the option is greyed out, it means that this object doesn't come with baked-in collisions.
 
 ## Spawner Templates
 
-<img src="assets/readme/level_editor/c_template.jpg" alt="Template Spawners" width="600"/>
+These objects are responsible for spawning most entities in the game (crates, enemies, platforms...)
 
-This is what is responsible for spawning most objects in the game other than static models (crates, enemies, platforms...)
+<img src="assets/readme/level_editor/c_template.jpg" alt="Template Spawners" width="700"/><br>
 
-Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that is actually spawned and that contains all the advanced properties. 
+You can spot them by their `Spawner_Template` component, which is selected and expanded by default.
 
-The spawner usually only contains very few components and is mainly used to set the position and rotation for spawning the underlying template.
+Objects with this component are called "Spawners", and they reference a "Template" object, which is the object that is actually spawned and that contains all the advanced properties.
 
-## Prefabs
+The spawner itself usually contains very few components (such as splines or trigger volumes) and is mainly used to set the position and rotation for spawning the underlying template.
+
+Template objects are hidden by default because their position is meaningless (it's the parent spawner that defines the spawn point). However for some very specific enemies, the position of the template is actually meaningful, this is why you can enable them using `Editor settings -> Visible Camera Layers -> Templates`
+
+<img src="assets/readme/level_editor/templates.jpg" alt="Templates" width="700"/><br>
+
+Templates with multiple references:
+
+If a template has multiple parents, updating it from its parent spawner (using the `Spawner_Template` component) instead of directly from the template will result in a copy of the template being made first, such that no other spawner is affected by that change.
+
+## Prefab Instances
 
 Prefabs are a special type of objects as they reference a group of child objects that is reused across all instances of the same prefab.
 
@@ -218,15 +250,46 @@ without affecting any other instance.
 
 - **Edit prefab child**: However if you click a second time on a child object (2nd picture), you'll see that every occurence of this object in other instances becomes highlighted. You now have control over the child object inside the prefab, you can still copy/paste, move and delete it but this will reflect across all other prefab instances.
 
-<img src="assets/readme/level_editor/prefab0.jpg" alt="Prefab instance" width="600"/>
-<img src="assets/readme/level_editor/prefab1.jpg" alt="Prefab child" width="600"/>
+<img src="assets/readme/level_editor/prefab0.jpg" alt="Prefab instance" width="700"/>
+<img src="assets/readme/level_editor/prefab1.jpg" alt="Prefab child" width="700"/>
+
+## Script Triggers
+
+`CScriptTriggerEntity` objects are invisible boxes that trigger an action for one or multiple other objects when the player enters its bounds. 
+
+They're pretty flexible, they can either be a parent or a child of the object to trigger, and can reference/be referenced by multiple objects.
+
+<img src="assets/readme/level_editor/triggers.jpg" alt="Triggers" width="700"/><br>
+
+Among other things, they are used with [Spawner Templates](#spawner-templates) to trigger the actual spawn or make the object active. This is done for performance reasons, so that not all objects are loaded at once, but they can also be used to trigger other effects or behaviors.
+
+Most of the time if you have an issue where an object doesn't spawn in-game but appears fine in the editor, it's because of a misplaced trigger volume.
+
+They're hidden by default to improve visibility, but you can enable them using `Editor settings -> Visible Camera Layers -> Triggers`.
+
+Trigger and child selection:
+- `Click` on a trigger to select all of its children
+- `Click twice` on a trigger to select it individually
+- `Click twice` on an entity to select all of its parent triggers
+
+Trigger and child copy/paste:
+- `Copy/paste` child entities (without selecting any trigger) will add the new objects to the previous triggers
+- `Copy/paste` child entities + their parent triggers will add the new objects to the new triggers
+
+## Dynamic Clips
+
+`CDynamicClipEntity` objects are invisible boxes that collide with the player (and/or enemies), acting as invisible walls/floors.
+
+<img src="assets/readme/level_editor/clips.jpg" alt="Clips" width="700"/><br>
+
+# Special components
 
 ## Splines
 
-Splines are a special type of component that represent a path made of positions and rotations.
+`CSplineComponent` are a special type of component that represent a path made of positions and rotations.
 They are primarily used for camera paths and enemy/platforms movement.
 
-<img src="assets/readme/level_editor/spline.jpg" alt="Spline" width="700"/>
+<img src="assets/readme/level_editor/spline.jpg" alt="Spline" width="700"/><br>
 
 The GUI for the spline component consists of up to 4 sections:
 
@@ -253,27 +316,26 @@ The controls points (positions) are always visible in the 3D scene, however the 
 
 ## Trigger Volumes
 
-<img src="assets/readme/level_editor/c_trigger.jpg" alt="Trigger Volume" width="600"/>
+`CTriggerVolumeBox` components are similar to [Script Triggers](#script-triggers) objects as they define a 3D bounding box that triggers an event.
 
+However, unlike script triggers which are separate objects, trigger volume components are part of the object to trigger. They are only visible when the component is selected.
 
-This component is similar to `CScriptTriggerEntity` objects as it defines a 3D bounding box that triggers an event.
-
-However, unlike `CScriptTriggerEntity` which are separate objects, `CTriggerVolumeBox` components are part of the triggered object. They are only visible when the component is selected.
+<img src="assets/readme/level_editor/c_trigger.jpg" alt="Trigger Volume" width="700"/>
 
 ## Outline Switch Crate
 
-<img src="assets/readme/level_editor/c_outline.jpg" alt="Outline Switch Crate" width="600"/>
-
 Outline switch crates have a custom GUI where you can add, remove or change children outlined crates.
+
+<img src="assets/readme/level_editor/c_outline.jpg" alt="Outline Switch Crate" width="700"/>
 
 ## Checkpoint Text
 
-<img src="assets/readme/level_editor/c_checkpoint.jpg" alt="Checkpoint Text" width="600"/>
-
 It's possible to change the text that is displayed when breaking checkpoints, along with some other properties
+
+<img src="assets/readme/level_editor/c_checkpoint.jpg" alt="Checkpoint Text" width="700"/>
 
 ## On Start Music
 
-<img src="assets/readme/level_editor/c_music.jpg" alt="On Start Music" width="300"/>
-
 You can listen to the default music, and import your own audio files (.mp3) using this component.
+
+<img src="assets/readme/level_editor/c_music.jpg" alt="On Start Music" width="300"/>

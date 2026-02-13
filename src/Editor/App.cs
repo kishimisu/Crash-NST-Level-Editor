@@ -92,6 +92,9 @@ namespace NST
                 if (ImGui.MenuItem("Open project page (Github)")) {
                     OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
                 }
+                if (ImGui.MenuItem("Editor documentation (Github)")) {
+                    OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor/blob/main/README_Level_Editor.md");
+                }
                 if (ImGui.MenuItem("Report an issue (Discord)")) {
                     OpenURL("https://discord.gg/vsnVrPvVjc");
                 }
