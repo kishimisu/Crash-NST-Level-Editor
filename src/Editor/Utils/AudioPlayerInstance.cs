@@ -55,7 +55,7 @@ namespace NST
             using (MediaFoundationReader mediaFoundationReader = new MediaFoundationReader(rawPathTmp))
             {
                 _duration = (float)mediaFoundationReader.TotalTime.TotalSeconds;
-                MediaFoundationEncoder.EncodeToMp3(mediaFoundationReader, mp3PathTmp, 192000);
+                MediaFoundationEncoder.EncodeToMp3(mediaFoundationReader, mp3PathTmp, 320000);
             }
 
             _rawData = audioBuffer;
@@ -234,7 +234,7 @@ namespace NST
 
             var mp3Config = new LameConfig
             {
-                BitRate = 128,
+                BitRate = 320,
                 OutputSampleRate = 48000,
                 Mode = channels == 1 ? MPEGMode.Mono : MPEGMode.Stereo,
                 VBR = VBRMode.ABR,
