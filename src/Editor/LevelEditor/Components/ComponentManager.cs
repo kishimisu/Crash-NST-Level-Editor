@@ -49,7 +49,7 @@ namespace NST
             List<NSTComponent> components = [];
             Dictionary<string, igComponentData> dict = Entity.Object.GetComponentsDictionary();
 
-            if (Entity.Object is CPlayerStartEntity && Entity.Object.TryGetComponent(out common_mount_bikeData? mountBike) && mountBike._Entity_Data.Reference != null)
+            if (Entity.Object.TryGetComponent(out common_mount_bikeData? mountBike) && mountBike._Entity_Data.Reference != null)
             {
                 IgzFile? igz = explorer.FileManager.GetIgz(Entity.ArchiveFile);
                 var actorData = (CActorData?)igz?.FindObject(mountBike._Entity_Data.Reference);
@@ -64,6 +64,7 @@ namespace NST
             }
 
             int enabledComponentCount = dict.Values.Count(c => c._bitfield._isEnabled);
+            NSTComponent? autoFocusFallback = null;
 
             _isCrate = dict.Values.Any(e => e is common_Crate_StackCheckerData);
 
@@ -90,6 +91,15 @@ namespace NST
                 {
                     _selection.Add(c);
                 }
+                else if (autoFocusFallback == null && component is CTriggerVolumeBoxComponentData)
+                {
+                    autoFocusFallback = c;
+                }
+            }
+
+            if (_selection.Count == 0 && autoFocusFallback != null)
+            {
+                _selection.Add(autoFocusFallback);
             }
 
             components.Sort((a, b) => a.DisplayName.CompareTo(b.DisplayName));

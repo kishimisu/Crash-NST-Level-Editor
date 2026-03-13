@@ -39,6 +39,7 @@ namespace NST
             // Levels
             { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
             { typeof(Enemy_PlayAnimation_OnSplineDistance_BehaviorData), (c, m) => RenderComponent((Enemy_PlayAnimation_OnSplineDistance_BehaviorData)c, m) },
+            { typeof(common_finish_raceData), (c, m) =>                        RenderComponent((common_finish_raceData)c, m) },
             // Other
             { typeof(common_Level_ManagerData), (c, m) =>                      RenderComponent((common_Level_ManagerData)c, m) },
             { typeof(DDA_CheckpointData), (c, m) =>                            RenderComponent((DDA_CheckpointData)c, m) },
@@ -570,6 +571,17 @@ namespace NST
             RenderString("String_0x50:", ref component._String_0x50, component, manager);
             RenderCheckbox("Bool_0x58:  ", ref component._Bool_0x58, component, manager);
             RenderCheckbox("Bool_0x59:  ", ref component._Bool_0x59, component, manager);
+        }
+
+        private static void RenderComponent(common_finish_raceData component, NSTComponent manager)
+        {
+            RenderCheckbox("Multi-lap:", ref component._Bool, component, manager);
+            RenderInt("Int_0x38: ", ref component._Int_0x38, component, manager);
+            RenderHandleNamespace("Zone info:", "CZoneInfo", component._Zone_Info, component, manager);
+            RenderInt("Int_0x48: ", ref component._Int_0x48, component, manager);
+            RenderFloat("Float:    ", ref component._Float, component, manager);
+            RenderObjectReference("Collectible:", component._Entity, typeof(CEntity), manager);
+            RenderEnum("Collectible type:", ref component._E_Zone_Collectible_Type, component, manager);
         }
 
 #endregion
@@ -1749,6 +1761,20 @@ namespace NST
             {
                 if (handle.Reference == null) handle.Reference = new(namespaceName, objectName);
                 else handle.Reference.objectName = objectName;
+                manager.SetUpdated(component);
+                return true;
+            }
+            return false;
+        }
+
+        private static bool RenderHandleNamespace(string name, string objectName, igHandleMetaField handle, igComponentData component, NSTComponent manager)
+        {
+            string namespaceName = handle.Reference?.namespaceName ?? "";
+
+            if (RenderString(name, ref namespaceName))
+            {
+                if (handle.Reference == null) handle.Reference = new(namespaceName, objectName);
+                else handle.Reference.namespaceName = namespaceName;
                 manager.SetUpdated(component);
                 return true;
             }

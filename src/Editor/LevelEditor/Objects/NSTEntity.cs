@@ -303,7 +303,7 @@ namespace NST
                     {
                         if (handleMetaField.Reference == null) continue;
 
-                        link = objects.Find(o => o.GetObject().ObjectName ==  handleMetaField.Reference.objectName && o.FileNamespace == handleMetaField.Reference.namespaceName);
+                        link = objects.Find(o => o.GetObject().ObjectName == handleMetaField.Reference.objectName && o.FileNamespace == handleMetaField.Reference.namespaceName);
 
                         if (link != null)
                         {
@@ -311,6 +311,14 @@ namespace NST
                             Children.Add(link);
                         }
                     }
+                }
+            }
+
+            if (Object is CWorldEntity) // special case for boss levels
+            {
+                foreach (var c in Children.OfType<NSTEntity>())
+                {
+                    if (!c.Object._bitfield._isArchetype) c.IsTemplate = false;
                 }
             }
         }

@@ -22,10 +22,10 @@ namespace NST
 
         private static readonly Dictionary<string, List<string>> _objectGroupNames = new()
         {
-            { "3D Game Objects",  new List<string>() { "igEntity", "Prefabs", "CEntity", "CGameEntity", "CPhysicalEntity", "CActor", "Crates", "Collectibles" } },
-            { "Game Objects", new List<string>() { "CPlayerStartEntity", "CScriptTriggerEntity", "CDynamicClipEntity", "Cameras", "CCameraBox" } },
-            { "Other",         new List<string>() { "Lighting", "VFX", "SFX", "Other" } },
-            { "Hidden",        new List<string>() { "Templates", "Hidden" } }
+            { "3D Game Objects", new List<string>() { "igEntity", "Prefabs", "CEntity", "CGameEntity", "CPhysicalEntity", "CActor", "Crates", "Collectibles" } },
+            { "Game Objects",    new List<string>() { "CPlayerStartEntity", "CScriptTriggerEntity", "CDynamicClipEntity", "Cameras", "CCameraBox" } },
+            { "Other",           new List<string>() { "Lighting", "VFX", "SFX", "Other" } },
+            { "Hidden",          new List<string>() { "Templates", "Hidden" } }
         };
         private static readonly List<string> _typeOrder = 
         [
@@ -121,11 +121,12 @@ namespace NST
                     }
                     else if (entity.IsHidden) hidden.Add(obj);
                     else if (entity.IsPrefabChild) continue;
+                    else if (entity.Object is CActor) added = false;
                     else if (entity.Object.GetType() == typeof(CEntity) && entity.Object.GetComponent<common_Crate_StackCheckerData>() != null) crates.Add(obj);
                     else if (entity.Object.GetType() == typeof(CEntity) && entity.Children.Any(c => c is NSTEntity e && e.Object.GetComponent<common_Collectible_Template_SpawnedData>() != null)) collectibles.Add(obj);
                     else if (entity.Object is CScriptTriggerEntity && entity.Parents.Any(p => p.GetObject() is not CScriptTriggerEntity)) continue;
                     else if (entity.Object is CPlayerStartEntity || entity.Object.GetComponents().Any(c => _alwaysDisplayComponents.Any(t => c.GetType().IsAssignableTo(t)))) added = false;
-                    else if (entity.Parents.Count(p => p is NSTEntity e && e.IsSpawned && e.Object is not CScriptTriggerEntity && e.Object.GetComponent<common_Spawner_TemplateData>() == null) == 1) continue;
+                    else if (entity.Parents.Count(p => p is NSTEntity e && e.IsSpawned && e.Object is not CWorldEntity && e.Object is not CScriptTriggerEntity && e.Object.GetComponent<common_Spawner_TemplateData>() == null) == 1) continue;
                     else if (entity.Model == null && entity.Object is not CScriptTriggerEntity && entity.Object is not CDynamicClipEntity && entity.Object is not CPlayerStartEntity)
                     {
                         if (entity.Parents.Any(p => p is not NSTEntity e || !e.IsTemplate) && entity.Object.GetComponent<common_Spawner_TemplateData>() == null) continue;

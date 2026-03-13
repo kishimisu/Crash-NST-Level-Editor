@@ -237,7 +237,7 @@ namespace NST
             {
                 ImGui.SeparatorText("Spline camera");
 
-                ComponentRenderer.RenderObjectReference("Spline entity:", splineCam._splineEntity.Reference, typeof(igEntity), explorer, (value) =>
+                ComponentRenderer.RenderObjectReference("Spline entity:", splineCam._splineEntity.Reference, typeof(CEntity), explorer, (value) =>
                 {
                     splineCam._splineEntity.Reference = value;
                     explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
@@ -259,13 +259,36 @@ namespace NST
             {
                 ImGui.SeparatorText("Cutscene camera");
 
-                ComponentRenderer.RenderObjectReference("Attach to entity:", cutsceneCamera._attachToEntity.Reference, typeof(igEntity), explorer, (value) =>
+                ComponentRenderer.RenderObjectReference("Attach to entity:", cutsceneCamera._attachToEntity.Reference, typeof(CEntity), explorer, (value) =>
                 {
                     cutsceneCamera._attachToEntity.Reference = value;
                     explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
                 });
 
                 ComponentRenderer.RenderFloat("Move speed:", ref cutsceneCamera._splineMoveSpeed, this, explorer);
+            }
+
+            if (Object is CMotorcycleCamera motorcycleCamera)
+            {
+                ImGui.SeparatorText("Motorcycle camera");
+
+                ComponentRenderer.RenderObjectReference("Attach to entity:", motorcycleCamera._splineEntity.Reference, typeof(CEntity), explorer, (value) =>
+                {
+                    motorcycleCamera._splineEntity.Reference = value;
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
+                });
+
+                ComponentRenderer.RenderObjectReference("Focused entity:", motorcycleCamera._focusedEntity.Reference, typeof(CEntity), explorer, (value) =>
+                {
+                    motorcycleCamera._focusedEntity.Reference = value;
+                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
+                });
+
+                if (ImGui.TreeNodeEx($"Advanced properties...##{Object}", ImGuiTreeNodeFlags.NoTreePushOnOpen))
+                {
+                    IgzRenderer renderer = explorer.FileManager.GetOrCreateRenderer(ArchiveFile, explorer.ArchiveRenderer);
+                    renderer.RenderObject(motorcycleCamera, motorcycleCamera.GetFields().Skip(31).ToList());
+                }
             }
         }
     }

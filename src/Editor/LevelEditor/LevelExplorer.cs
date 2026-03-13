@@ -472,7 +472,7 @@ namespace NST
                     continue;
                 }
 
-                NSTMaterial mat = new NSTMaterial(matObject);
+                NSTMaterial mat = new NSTMaterial(matObject, materialRef);
 
                 materials.Add(materialRef, mat);
                 _cachedMaterials.Add(materialRef, mat);
@@ -1239,6 +1239,8 @@ namespace NST
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
+                ImGui.BulletText("A,E: move down/up");
+                ImGui.BulletText("Scroll: zoom in/out");
                 ImGuiUtils.ColoredSeparator("Selection", controlsColor);
                 ImGui.BulletText("Left click: select object(s)");
                 ImGui.BulletText("(Click again to select parent/child objects)");

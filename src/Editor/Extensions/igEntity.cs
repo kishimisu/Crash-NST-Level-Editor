@@ -165,14 +165,7 @@ namespace NST
                         }
                     }
                 }
-                else if (entity.TryGetComponent(out common_BabyT_SpawnManagerData? babyT) && babyT._Entity_0x38.Reference != null)
-                {
-                    if (AlchemyUtils.FindObjectInArchives(babyT._Entity_0x38.Reference, explorer.Archive, explorer, igz) is CActor actor)
-                    {
-                        modelName = GetModelName(actor, igz, explorer);
-                    }
-                }
-            }            
+            }
 
             if (string.IsNullOrEmpty(modelName)) // Multiple_Spawner_Template_c
             {
@@ -204,9 +197,27 @@ namespace NST
                 }
             }
 
-            if (string.IsNullOrEmpty(modelName))
+            if (string.IsNullOrEmpty(modelName)) // CCollectibleComponentData
             {
                 modelName = GetCollectibleModelName(entity, explorer);
+            }
+
+            // common_BabyT_SpawnManagerData
+            if (string.IsNullOrEmpty(modelName) && entity.TryGetComponent(out common_BabyT_SpawnManagerData? babyT) && babyT._Entity_0x38.Reference != null)
+            {
+                if (AlchemyUtils.FindObjectInArchives(babyT._Entity_0x38.Reference, explorer.Archive, explorer, igz) is CActor actor)
+                {
+                    modelName = GetModelName(actor, igz, explorer);
+                }
+            }
+            
+            // Scripts_SpawnCollectiblesComponentData
+            if (string.IsNullOrEmpty(modelName) && entity.TryGetComponent(out Scripts_SpawnCollectiblesComponentData? collectible))
+            {
+                if (collectible.SeletionMethod is Scripts_SpawnCollectiblesComponentData_RandomRangedSelectionMethod selectionMethod && selectionMethod.Collectibles?._data.Count > 0)
+                {
+                    modelName = GetModelName(selectionMethod.Collectibles._data[0], igz, explorer);
+                }
             }
 
             return modelName;

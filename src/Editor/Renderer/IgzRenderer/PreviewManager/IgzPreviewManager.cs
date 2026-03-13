@@ -80,7 +80,7 @@ namespace NST
             foreach (igFxMaterial material in materials)
             {
                 IgzTreeNode node = _renderer.TreeView.FindNode(material)!;
-                NSTMaterial mat = new NSTMaterial(material);
+                NSTMaterial mat = new NSTMaterial(material, material.ToNamedReference(_igz.GetName(false)));
 
                 _materials.Add(node, mat);
 

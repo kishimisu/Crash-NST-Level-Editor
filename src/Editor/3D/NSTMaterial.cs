@@ -98,8 +98,9 @@ namespace NST
         };
 
         public NSTMaterial() { }
-        public NSTMaterial(igFxMaterial igMaterial)
+        public NSTMaterial(igFxMaterial igMaterial, NamedReference handle)
         {
+            materialHandle = handle;
             SetupFromIgFxMaterial(igMaterial);
         }
 
@@ -276,7 +277,14 @@ namespace NST
                 material.PolygonOffsetUnits = 1.0f;
             }
 
-            if (type == typeof(CFlowWaterMaterial) || type == typeof(CWaterMaterial))
+            bool waterDecal = materialHandle?.objectName == "waterDecal";
+
+            if (waterDecal)
+            {
+                material.Color = new THREE.Color(0.3f, 0.8f, 1.0f);
+            }
+
+            if (waterDecal || type == typeof(CFlowWaterMaterial) || type == typeof(CWaterMaterial))
             {
                 material.Opacity = 0.5f;
                 material.Transparent = true;

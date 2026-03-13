@@ -119,7 +119,7 @@ Contains the list of all objects in the level, grouped by type. Click on an elem
 
 - **Static Objects**: Contains static models, which represent most of the level's geometry and can have baked-in collisions (See [#static models](#static-models))
 - **Prefabs**: Contains all instanciated prefab entities (See [#prefabs](#prefab-instances))
-- **CEntity / CGameEntity / CPhysicalEntity**: Contains most of the level's game objects (enemies, hazards, obstacles... see [#spawner templates](#spawner-templates))
+- **CEntity / CGameEntity / CPhysicalEntity**: Contains most of the level's game objects and spawners (enemies, hazards, obstacles... see [#spawner templates](#spawner-templates))
 - **CActor**: Contains character entities (bosses and advanced enemies...)
 - **Crates**: Contains all crates in the level
 - **Collectibles**: Contains all collectibles in the level
@@ -140,7 +140,7 @@ Other:
 - **Other**: Contains all other entities without a model, such as the WorldInstance
 
 Hidden:
-- **Templates**: Spawner templates (see [#spawner templates](#spawner-templates))
+- **Templates**: Template objects (see [#spawner templates](#spawner-templates))
 - **Hidden**: Hidden objects
 
 # Scene View
@@ -231,13 +231,13 @@ Objects with this component are called "Spawners", and they reference a "Templat
 
 The spawner itself usually contains very few components (such as splines or trigger volumes) and is mainly used to set the position and rotation for spawning the underlying template.
 
-Template objects are hidden by default because their position is meaningless (it's the parent spawner that defines the spawn point). However for some very specific enemies, the position of the template is actually meaningful, this is why you can enable them using `Editor settings -> Visible Camera Layers -> Templates`
+Template objects are hidden by default because their position is usually meaningless (it's the parent spawner that defines the spawn point). However for some very specific enemies, the position of the template is actually meaningful, this is why you can enable them using `Editor settings -> Visible Camera Layers -> Templates`
 
 <img src="assets/readme/level_editor/templates.jpg" alt="Templates" width="700"/><br>
 
 Templates with multiple references:
 
-If a template has multiple parents, updating it from its parent spawner (using the `Spawner_Template` component) instead of directly from the template will result in a copy of the template being made first, such that no other spawner is affected by that change.
+If a template has multiple parent spawners, updating it from one of its parents (using the `Spawner_Template` component) instead of directly from the template will result in a copy of the template being made first, such that no other parent is affected by that change.
 
 ## Prefab Instances
 

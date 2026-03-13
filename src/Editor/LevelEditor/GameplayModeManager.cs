@@ -498,9 +498,11 @@ namespace NST
 
             if (id == "L107" || id == "L114")                                 return "hog";
             if (id == "L208" || id == "L213" || id == "L215" || id == "L226") return "bear";
-            if (id == "L217" || id == "L220")                                 return "dig";
-            if (id == "L222" || id == "L224" || id == "B205")                 return "jetpack";
             if (id == "L303" || id == "L310")                                 return "tiger";
+            if (id == "L222" || id == "L224" || id == "B205")                 return "jetpack";
+            if (id == "L217" || id == "L220")                                 return "dig";
+            if (id == "L302" || id == "L312")                                 return "swim";
+            if (id == "L308" || id == "L314" || id == "L322" || id == "L328") return "bike";
             if (id == "L305" || id == "L318" || id == "L326" || id == "L331") return "jetski";
             if (id == "L317" || id == "L324" || id == "L330")                 return "plane";
             // if (id == "L104" || id == "L113" || id == "L205" || id == "L209" || id == "L215") return "boulder";
