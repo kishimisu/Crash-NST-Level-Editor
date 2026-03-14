@@ -1,7 +1,9 @@
 using Alchemy;
 using Havok;
 using ImGuiNET;
+using SkiaSharp;
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 
 namespace NST
 {
@@ -496,18 +498,17 @@ namespace NST
 
                 try 
                 {
-                    igImage2 texture = (igImage2)AlchemyUtils.FindObjectInArchives(textureRef, Archive);
+                    igImage2 image = (igImage2)AlchemyUtils.FindObjectInArchives(textureRef, Archive);
+                    byte[] pixels = image.GetPixels();
 
-                    TextureData data = new TextureData()
-                    {
-                        pixels = texture.GetPixels(),
-                        width = texture._width,
-                        height = texture._height,
-                    };
+                    SKBitmap bitmap = new SKBitmap(image._width, image._height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+                    Marshal.Copy(pixels, 0, bitmap.GetPixels(), pixels.Length);
+
+                    THREE.Texture texture = new THREE.Texture(bitmap) { NeedsUpdate = true };
 
                     foreach (NSTMaterial mat in _textureToMaterials[textureRef])
                     {
-                        mat.CreateThreeTexture(data);
+                        mat.texture = texture;
                     }
                 }
                 catch (Exception e)

@@ -1,5 +1,3 @@
-using System.Text.RegularExpressions;
-
 namespace Alchemy
 {
     public enum FileSearchType 
@@ -87,14 +85,18 @@ namespace Alchemy
         /// <summary>
         /// Opens a .pak file from disk
         /// </summary>
-        /// <param name="filePath">The path to the .pak file</param>
+        /// <param name="archivePath">The path to the .pak file</param>
         /// <returns>A new IgArchive instance</returns>
-        public static IgArchive Open(string filePath) => Open(new FileStream(filePath, FileMode.Open, FileAccess.Read), filePath);
+        public static IgArchive Open(string archivePath)
+        {
+            using var fs = new FileStream(archivePath, FileMode.Open, FileAccess.Read);
+            return Open(fs, archivePath);
+        }
 
-        public static IgArchive Open(Stream fs, string filePath) 
+        public static IgArchive Open(Stream fs, string archivePath) 
         {
             // Open file
-            using BinaryReader reader = new BinaryReader(fs);
+            BinaryReader reader = new BinaryReader(fs);
 
             // Parse header
             IgArchiveHeader header = reader.ReadStruct<IgArchiveHeader>();
@@ -120,15 +122,12 @@ namespace Alchemy
 
             // Construct files objects
             List<IgArchiveFile> files = [];
-
-            reader.Seek(0);
-            byte[] allBytes = reader.ReadBytes((int)fs.Length); //todo: clean
-
+            
             for (int i = 0; i < header.fileCount; i++)
             {
                 (string fullPath, string path) = filePaths[i];
 
-                IgArchiveFile file = new IgArchiveFile(path, fileInfos[i], blockTables, allBytes);
+                IgArchiveFile file = new IgArchiveFile(archivePath, path, fileInfos[i], blockTables, fs);
 
                 if (fileIds[i] != file.GetHash())
                     Console.WriteLine($"[ERROR] {i}: {fileIds[i]} != {file.GetHash()} for {path}");
@@ -138,7 +137,7 @@ namespace Alchemy
                 files.Add(file);
             }
 
-            return new IgArchive(filePath, files);
+            return new IgArchive(archivePath, files);
         }
 
         /// <summary>

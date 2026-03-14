@@ -572,11 +572,13 @@ namespace NST
             igEntity modelEntity = modelIgz.FindObject<igEntity>("Pltfrm05_01")!;
             modelEntity._parentSpacePosition = new igVec3fMetaField(0, 0, -35);
 
-            Stream template = Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.L332_CollisionTemplate.pak")!;
+            using Stream template = Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.L332_CollisionTemplate.pak")!;
             IgArchive collisionArchive = IgArchive.Open(template, "L332_CollisionTemplate.pak");
             
             foreach (IgArchiveFile collisionFile in collisionArchive.GetFiles())
             {
+                collisionFile.archiveStream = template;
+                
                 string newPath = collisionFile.GetPath().Replace("maps/Crash1", basePath);
                 archive.AddFile(collisionFile.Clone(newPath));
             }
