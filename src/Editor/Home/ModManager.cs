@@ -231,7 +231,7 @@ namespace NST
                 update.AddFile(file);
             }
 
-            update.Save();
+            update.SafeSave();
 
             _isGameModded = true;
             ModalRenderer.ShowMessageModal("Information", $"{enabledMods.Count} mod{(enabledMods.Count > 1 ? "s were" : " was")} applied to the game!");

@@ -141,7 +141,23 @@ namespace Alchemy
         }
 
         /// <summary>
-        /// Save the archive to disk
+        /// Safely saves an archive by writing it to a temporary file first, then moving it to the destination path.
+        /// This avoids concurrent streams issues when reading and writing to the same archive.
+        /// </summary>
+        public void SafeSave(string temporaryPath, string? filePath = null, bool updatePath = false)
+        {
+            Save(temporaryPath, false);
+
+            if (filePath != null && updatePath)
+            {
+                _path = filePath;
+            }
+
+            File.Replace(temporaryPath, _path, null);
+        }
+
+        /// <summary>
+        /// Save the archive to disk. Use SafeSave() instead if overwriting the original archive
         /// </summary>
         /// <param name="filePath">The path to save the archive to</param>
         /// <param name="updatePath">Whether to update this IgArchive's path to match the file path</param>

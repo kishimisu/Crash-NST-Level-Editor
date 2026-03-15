@@ -758,7 +758,7 @@ namespace NST
                 }
 
                 // Save archive
-                Archive.Save(path, true);
+                Archive.SafeSave(path, true);
                 IsUpdated = false;
 
                 postSaveCallback?.Invoke();

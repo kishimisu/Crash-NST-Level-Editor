@@ -264,6 +264,17 @@ namespace NST
             return added;
         }
 
+        /// <summary>
+        /// Safely saves an archive by writing it to a temporary file first, then moving it to the destination path.
+        /// This avoids concurrent streams issues when reading and writing to the same archive.
+        /// </summary>
+        public static void SafeSave(this IgArchive archive, string? filePath = null, bool updatePath = false)
+        {
+            string temporaryPath = LocalStorage.GetStoragePath("tmp_archive.pak");
+
+            archive.SafeSave(temporaryPath, filePath, updatePath);
+        }
+
         public static IgArchiveFile? FindCustomZoneInfoFile(this IgArchive archive)
         {
             return archive.GetFiles().Find(e => e.GetPath().StartsWith("update/") && e.GetPath().EndsWith("_zoneinfo.igz"));
@@ -424,7 +435,7 @@ namespace NST
             }
 
             update.AddFile(packageFile);
-            update.Save();
+            update.SafeSave();
 
             if (archive.GetPath() != archivePath)
             {
