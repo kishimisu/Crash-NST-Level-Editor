@@ -146,6 +146,14 @@ namespace Alchemy
         /// </summary>
         public void SafeSave(string temporaryPath, string? filePath = null, bool updatePath = false)
         {
+            // File doesn't exist, no risk of concurrent read/write
+            if (!File.Exists(filePath ?? _path))
+            {
+                Save(filePath, updatePath);
+                return;
+            }
+
+            // Save to a temporary file
             Save(temporaryPath, false);
 
             if (filePath != null && updatePath)
@@ -153,6 +161,7 @@ namespace Alchemy
                 _path = filePath;
             }
 
+            // Move to destination
             File.Replace(temporaryPath, _path, null);
         }
 
