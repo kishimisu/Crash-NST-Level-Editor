@@ -141,36 +141,11 @@ namespace Alchemy
         }
 
         /// <summary>
-        /// Safely saves an archive by writing it to a temporary file first, then moving it to the destination path.
-        /// This avoids concurrent streams issues when reading and writing to the same archive.
-        /// </summary>
-        public void SafeSave(string temporaryPath, string? filePath = null, bool updatePath = false)
-        {
-            // File doesn't exist, no risk of concurrent read/write
-            if (!File.Exists(filePath ?? _path))
-            {
-                Save(filePath, updatePath);
-                return;
-            }
-
-            // Save to a temporary file
-            Save(temporaryPath, false);
-
-            if (filePath != null && updatePath)
-            {
-                _path = filePath;
-            }
-
-            // Move to destination
-            File.Replace(temporaryPath, _path, null);
-        }
-
-        /// <summary>
         /// Save the archive to disk. Use SafeSave() instead if overwriting the original archive
         /// </summary>
         /// <param name="filePath">The path to save the archive to</param>
         /// <param name="updatePath">Whether to update this IgArchive's path to match the file path</param>
-        public void Save(string? filePath = null, bool updatePath = false)
+        public void Save(string? filePath = null, bool updatePath = false, string? temporaryPath = null)
         {
             if (filePath == null)
             {
@@ -191,7 +166,7 @@ namespace Alchemy
             IgArchiveHeader header = BuildHeader(blockTables);
 
             // Create writer
-            using FileStream fs = new FileStream(filePath, FileMode.Create, FileAccess.Write);
+            using FileStream fs = new FileStream(temporaryPath ?? filePath, FileMode.Create, FileAccess.ReadWrite);
             using BinaryWriter writer = new BinaryWriter(fs);
             
             uint filesOffset = HEADER_SIZE + header.tocSize;
@@ -255,6 +230,15 @@ namespace Alchemy
 
             for (int i = 0; i < blockTables.smallBlocks.Count; i++)
                 writer.Write(blockTables.smallBlocks[i]);
+
+            // Update file infos
+            for (int i = 0; i < _files.Count; i++)
+                _files[i].Setup(fs, filePath, blockTables, fileInfos[i]);
+
+            fs.Dispose();
+
+            if (temporaryPath != null)
+                File.Replace(temporaryPath, filePath, null);
 
             Console.WriteLine($"Saved {filePath} ({_files.Count} files, {archiveSize/1024f/1024f:0.00} MB)");
         }

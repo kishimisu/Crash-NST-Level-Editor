@@ -270,9 +270,17 @@ namespace NST
         /// </summary>
         public static void SafeSave(this IgArchive archive, string? filePath = null, bool updatePath = false)
         {
-            string temporaryPath = LocalStorage.GetStoragePath("tmp_archive.pak");
-
-            archive.SafeSave(temporaryPath, filePath, updatePath);
+            // File doesn't exist, no risk of concurrent read/write
+            if (!File.Exists(filePath ?? archive.GetPath()))
+            {
+                archive.Save(filePath, updatePath);
+            }
+            else
+            {
+                // Save to a temporary file
+                string temporaryPath = LocalStorage.GetStoragePath("tmp_archive.pak");
+                archive.Save(filePath, updatePath, temporaryPath);
+            }
         }
 
         public static IgArchiveFile? FindCustomZoneInfoFile(this IgArchive archive)

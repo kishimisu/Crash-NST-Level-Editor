@@ -578,6 +578,7 @@ namespace NST
             foreach (IgArchiveFile collisionFile in collisionArchive.GetFiles())
             {
                 collisionFile.archiveStream = template;
+                collisionFile.SetData(collisionFile.Uncompress());
                 
                 string newPath = collisionFile.GetPath().Replace("maps/Crash1", basePath);
                 archive.AddFile(collisionFile.Clone(newPath));

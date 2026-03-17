@@ -84,10 +84,28 @@ namespace Alchemy
         {
             _path = path;
             _sectorSize = sectorSize;
-            _uncompressedSize = fileInfo.uncompressedSize;
-
-            // Compute file hash
             _hash = NamespaceUtils.ComputeHash(path);
+
+            Setup(igArchiveStream, archivePath, blockTables, fileInfo);
+        }
+
+        /// <summary>
+        /// Constructor used when cloning a file
+        /// </summary>
+        private IgArchiveFile(string path, byte[]? data, int uncompressedSize, CompressionType compressionType, BlockData[] blocksData, int sectorSize = IgArchive.SECTOR_SIZE)
+        {
+            _path = path;
+            _data = data;
+            _sectorSize = sectorSize;
+            _uncompressedSize = uncompressedSize;
+            _compressionType = compressionType;
+            _blocksData = blocksData;
+            _hash = NamespaceUtils.ComputeHash(path);
+        }
+
+        public void Setup(Stream igArchiveStream, string archivePath, IgArchive.BlockTables blockTables, IgArchive.FileInfo fileInfo)
+        {
+            _uncompressedSize = fileInfo.uncompressedSize;
 
             // Get compression type (uncompressed or LZMA)
             _compressionType = GetCompressionType(fileInfo.blockIndex);
@@ -97,20 +115,6 @@ namespace Alchemy
 
             _archivePath = archivePath;
             _archiveOffset = fileInfo.offset;
-        }
-
-        /// <summary>
-        /// Constructor used when cloning a file
-        /// </summary>
-        private IgArchiveFile(string path, byte[] data, int uncompressedSize, CompressionType compressionType, BlockData[] blocksData, int sectorSize = IgArchive.SECTOR_SIZE)
-        {
-            _path = path;
-            _data = data;
-            _sectorSize = sectorSize;
-            _uncompressedSize = uncompressedSize;
-            _compressionType = compressionType;
-            _blocksData = blocksData;
-            _hash = NamespaceUtils.ComputeHash(path);
         }
 
         /// <summary>
@@ -161,11 +165,11 @@ namespace Alchemy
         /// <returns>A new copy of this file</returns>
         public IgArchiveFile Clone(string? path = null)
         {
-            byte[] data = _data == null
-                ? ReadDataFromDisk()
-                : _data.ToArray();
-            
-            IgArchiveFile clone = new IgArchiveFile(_path, data, _uncompressedSize, _compressionType, _blocksData, _sectorSize);
+            IgArchiveFile clone = new IgArchiveFile(_path, _data, _uncompressedSize, _compressionType, _blocksData, _sectorSize)
+            {
+                _archivePath = _archivePath,
+                _archiveOffset = _archiveOffset,
+            };
 
             if (path != null)
             {
