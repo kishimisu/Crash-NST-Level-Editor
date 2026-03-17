@@ -238,7 +238,10 @@ namespace Alchemy
             fs.Dispose();
 
             if (temporaryPath != null)
-                File.Replace(temporaryPath, filePath, null);
+            {
+                File.Move(temporaryPath, filePath, true);
+                File.Delete(temporaryPath);
+            }
 
             Console.WriteLine($"Saved {filePath} ({_files.Count} files, {archiveSize/1024f/1024f:0.00} MB)");
         }
