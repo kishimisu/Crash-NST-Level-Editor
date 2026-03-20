@@ -200,10 +200,13 @@ public class SelectionBox
 					{
 						entities ??= instanceManager.Entities.Where(e => !e.IsSelected).ToList();
 
-                        selection.Add(entities[instanceId]);
+						if (entities[instanceId].IsPrefabChild)
+							selection.Add(entities[instanceId].ParentPrefabInstance!);
+						else
+                        	selection.Add(entities[instanceId]);
 					}
 				}
-			} 
+			}
 			else if (obj.Geometry != null) 
 			{
 				if ( obj.Geometry.BoundingSphere == null ) obj.Geometry.ComputeBoundingSphere();
@@ -216,7 +219,10 @@ public class SelectionBox
 				{
                     if (obj.UserData.TryGetValue("entity", out object? entityValue))
                     {
-                        selection.Add((NSTObject)entityValue);    
+						if (entityValue is NSTEntity entity && entity.IsPrefabChild)
+                        	selection.Add(entity.ParentPrefabInstance!);
+						else
+                        	selection.Add((NSTObject)entityValue);
                     }
 				}
 			}

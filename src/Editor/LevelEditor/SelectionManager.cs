@@ -6,7 +6,7 @@ namespace NST
     public class SelectionManager
     {
         private static List<NSTObject> _copyPaste = [];
-        private static LevelExplorer _copyExplorer;
+        private static LevelExplorer? _copyExplorer;
 
         public List<NSTObject> _selection = [];
         public THREE.Group _selectionContainer = new THREE.Group();
@@ -16,6 +16,8 @@ namespace NST
         private readonly THREE.OutlinePass _outlinePass;
         private bool _revertGizmos = false;
         private int _scaleMode = 0;
+
+        public static LevelExplorer? CopyExplorer { get => _copyExplorer; set => _copyExplorer = value; }
 
         public SelectionManager(THREE.Object3D rootObject, THREE.Silk.TransformControls gizmos, THREE.OutlinePass outlinePass, LevelExplorer explorer)
         {
@@ -374,7 +376,7 @@ namespace NST
            It'll need to be improved in the future, but as long as it works... For your own sanity, I'd recommend not spending too much time on it. */
         public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3? spawnPoint = null, Action<NSTObject?>? callback = null)
         {
-            if (_copyPaste.Count == 0) return;
+            if (_copyPaste.Count == 0 || _copyExplorer == null) return;
 
             bool copyToSameFile = (_explorer == _copyExplorer);
 
@@ -767,49 +769,53 @@ namespace NST
                 // Register new collisions
                 foreach ((NSTEntity original, NSTEntity clone) in newCollisionEntities)
                 {
-                    if (copyToSameFile)
+                    // Special case: clone prefab child with collision
+                    if (original.IsPrefabChild)
                     {
-                        // Special case: clone prefab child with collision
-                        if (original.IsPrefabChild)
+                        // Make igPrefabComponentData unique
+                        NSTEntity parentPrefabInstance = clone.ParentPrefabInstance!;
+                        
+                        if (parentPrefabInstance.Components == null)
                         {
-                            // Make igPrefabComponentData unique
-                            NSTEntity parentPrefabInstance = clone.ParentPrefabInstance!;
-                            parentPrefabInstance.Components ??= new ComponentManager(parentPrefabInstance);
+                            parentPrefabInstance.Components = new ComponentManager(parentPrefabInstance);
                             parentPrefabInstance.Components.SetupComponents(_explorer);
-                            parentPrefabInstance.Components!.MakeUnique(parentPrefabInstance.Components.GetComponent<igPrefabComponentData>()!);
-                            
-                            // Remove clone from parent instance and template
-                            parentPrefabInstance.Children.Remove(clone);
-                            clone.PrefabTemplate!.PrefabTemplateInstances.Remove(clone);
+                        }
+                        parentPrefabInstance.Components.MakeUnique(parentPrefabInstance.Components.GetComponent<igPrefabComponentData>()!);
 
-                            // Clone the object
-                            IgzFile igz = _explorer.FileManager.GetIgz(clone.ArchiveFile)!;
-                            igEntity cloneObj = igz.AddClone(clone.Object);
-                            cloneObj._bitfield._isArchetype = false;
+                        // Remove clone from parent instance and template
+                        parentPrefabInstance.Children.Remove(clone);
+                        clone.PrefabTemplate!.PrefabTemplateInstances.Remove(clone);
 
-                            // Clone the template & prefab child entities
-                            NSTEntity cloneTemplate = clone.Clone(cloneObj);
-                            NSTEntity newPrefabChild = cloneTemplate.CloneAsPrefabChild(parentPrefabInstance);
-                            
-                            newPrefabChild.CollisionShapeIndex = original.CollisionShapeIndex;
-                            
-                            // Register new clone
-                            _explorer.InstanceManager.PrefabTemplates[cloneObj] = cloneTemplate;
-                            _explorer.InstanceManager.Unregister(clone);
-                            _explorer.InstanceManager.Register(newPrefabChild);
-                            _explorer.InstanceManager.FakePrefabChilds.Add(newPrefabChild);
+                        // Clone the object
+                        IgzFile igz = _explorer.FileManager.GetIgz(clone.ArchiveFile)!;
+                        igEntity cloneObj = igz.AddClone(clone.Object);
+                        cloneObj._bitfield._isArchetype = false;
 
-                            var prefabComponentData = parentPrefabInstance.Object.GetComponent<igPrefabComponentData>()!._prefabEntities!._data;
+                        // Clone the template & prefab child entities
+                        NSTEntity cloneTemplate = clone.Clone(cloneObj);
+                        NSTEntity newPrefabChild = cloneTemplate.CloneAsPrefabChild(parentPrefabInstance);
+                        
+                        newPrefabChild.CollisionShapeIndex = original.CollisionShapeIndex;
+                        
+                        // Register new clone
+                        _explorer.InstanceManager.PrefabTemplates[cloneObj] = cloneTemplate;
+                        _explorer.InstanceManager.Unregister(clone);
+                        _explorer.InstanceManager.Register(newPrefabChild);
+                        _explorer.InstanceManager.FakePrefabChilds.Add(newPrefabChild);
 
-                            // Update igPrefabComponentData
-                            int idx = prefabComponentData.IndexOf(clone.Object);
-                            prefabComponentData.Remove(clone.Object);
-                            prefabComponentData.Insert(idx, newPrefabChild.Object);
+                        var prefabComponentData = parentPrefabInstance.Object.GetComponent<igPrefabComponentData>()!._prefabEntities!._data;
 
-                            // Update new objects
-                            newObjects.Remove(clone);
-                            newObjects.Add(newPrefabChild);
+                        // Update igPrefabComponentData
+                        int idx = prefabComponentData.IndexOf(clone.Object);
+                        prefabComponentData.Remove(clone.Object);
+                        prefabComponentData.Insert(idx, newPrefabChild.Object);
 
+                        // Update new objects
+                        newObjects.Remove(clone);
+                        newObjects.Add(newPrefabChild);
+
+                        if (copyToSameFile)
+                        {
                             // If an updated collision shape is found for the original object, it means the collision index comes from another archive. Reuse this collision shape
                             if (_explorer.FileManager.GetInfos(original.ArchiveFile)?.updatedCollisions.TryGetValue(original, out var infos) == true)
                             {
@@ -821,7 +827,16 @@ namespace NST
                                 renderer.SetEntityUpdated(newPrefabChild);
                             }
                         }
-                        else if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
+                        else
+                        {
+                            // Console.WriteLine($"Paste prefab collision shape to another level ({clone.ParentPrefabInstance?.Object.ObjectName} -> {clone.Object.ObjectName}), hash: {original.CollisionPrefabHash}");
+                            hknpShapeInstance? shape = _copyExplorer.FindHavokShape(original);
+                            renderer.SetEntityUpdated(newPrefabChild, shape);
+                        }
+                    }
+                    else if (copyToSameFile)
+                    {
+                        if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
                         {
                             Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
                             renderer.SetEntityUpdated(clone, infos.shapeInstance);
@@ -838,18 +853,8 @@ namespace NST
                         
                         // Console.WriteLine($"IsPrefabInstance: {clone.IsPrefabInstance}, IsPrefabTemplate: {clone.IsPrefabTemplate}, IsPrefabChild: {clone.IsPrefabChild}, CollisionPrefabHash: {clone.CollisionPrefabHash}, CollisionShapeIndex: {clone.CollisionShapeIndex}");
                         
-                        if (clone.IsPrefabChild)
-                        {
-                            Console.WriteLine($"Paste prefab collision shape to another level ({clone.ParentPrefabInstance?.Object.ObjectName} -> {clone.Object.ObjectName}), hash: {original.CollisionPrefabHash}");
-                            clone.Object._bitfield._isArchetype = false;
-                            _explorer.InstanceManager.FakePrefabChilds.Add(clone);
-                            renderer.SetEntityUpdated(clone, shape);
-                        }
-                        else
-                        {
-                            Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
-                            renderer.SetEntityUpdated(clone, shape);
-                        }
+                        Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
+                        renderer.SetEntityUpdated(clone, shape);
                     }
                 }
 

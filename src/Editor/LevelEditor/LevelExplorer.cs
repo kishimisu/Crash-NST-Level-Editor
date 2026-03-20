@@ -265,7 +265,9 @@ namespace NST
 
 				if (min != null && max != null)
 				{
-					var objects = _selectionBox.Select(new THREE.Vector3(-min.X, min.Y, 0.5f), new THREE.Vector3(-max.X, max.Y, 0.5f));
+					var objects = _selectionBox
+                        .Select(new THREE.Vector3(-min.X, min.Y, 0.5f), new THREE.Vector3(-max.X, max.Y, 0.5f))
+                        .SelectMany(e => InstanceManager.Select(e)).ToList();
 
                     if (objects.Count > 400)
                     {
@@ -274,7 +276,7 @@ namespace NST
                     else
                     {
                         bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
-                        SelectionManager.UpdateSelection(objects.ToList(), newSelection);
+                        SelectionManager.UpdateSelection(objects, newSelection);
                         if (objects.FirstOrDefault() is NSTObject obj)
                         {
                             _treeView.SelectObject(obj);
@@ -864,7 +866,6 @@ namespace NST
 
                     var previousPosition = prefabChild.Object._parentSpacePosition;
                     var previousName = prefabChild.Object.ObjectName;
-                    var previousIndex = prefabComponentData.IndexOf(prefabChild.Object);
 
                     prefabComponentData.Remove(prefabChild.Object);
 
@@ -874,7 +875,7 @@ namespace NST
 
                     postSaveCallbacks.Add(() =>
                     {
-                        prefabComponentData.Insert(previousIndex, prefabChild.Object);
+                        prefabComponentData.Add(prefabChild.Object);
 
                         prefabChild.Object.ObjectName = previousName;
                         prefabChild.Object._parentSpacePosition = previousPosition;
@@ -1640,6 +1641,9 @@ namespace NST
 
         public override void Dispose()
         {
+            if (SelectionManager.CopyExplorer == this)
+                SelectionManager.CopyExplorer = null;
+
             _gizmos.Dispose();
             base.Dispose();
         }
