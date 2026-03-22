@@ -5,6 +5,9 @@ namespace NST
 {
     public class NSTCameraBox : NSTObject<CCameraBox>
     {
+        public override THREE.Vector3 GetPosition() => Object._position.ToVector3();
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Object._position.ToVector3());
+
         public NSTCameraBox(CCameraBox cameraBox, IgArchiveFile archiveFile)
         {
             Object = cameraBox;
@@ -120,6 +123,9 @@ namespace NST
 
     public class NSTCamera : NSTObject<CCamera>
     {
+        public override THREE.Vector3 GetPosition() => Object._position.ToVector3();
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Object._position.ToVector3());
+
         public NSTCamera(CCamera camera, IgArchiveFile archiveFile)
         {
             Object = camera;

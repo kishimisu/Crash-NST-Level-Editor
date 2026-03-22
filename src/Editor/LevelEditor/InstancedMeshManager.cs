@@ -6,12 +6,15 @@ namespace NST
 {
     public class InstanceManager
     {
-        public List<NSTEntity> Entities { get; } = [];
+        public HashSet<NSTEntity> Entities { get; } = [];
 
         private NSTModel? _model = null;
         private THREE.Object3D group = new THREE.Group();
 
         public InstanceManager(NSTModel? model = null) => _model = model;
+
+        public bool SelectionMode = false;
+        public THREE.Object3D Object3D => group;
 
         public void Add(NSTEntity entity)
         {
@@ -51,20 +54,20 @@ namespace NST
 
             SetLayer();
 
-            Entities.ForEach(e => 
+            foreach (NSTEntity e in Entities)
             {
-                if (e.IsSelected) return;
+                if (e.IsSelected) continue;
 
                 foreach (THREE.Object3D child in e.CreateChildrenObject3D())
                 {
                     group.Add(child);
                 }
-            });
+            };
         }
 
         private THREE.Group CreateInstancedGroup(LevelExplorer.DebugMode debugMode)
         {
-            var instances = Entities.Where(e => !e.IsSelected);
+            var instances = Entities.Where(e => !e.IsSelected || SelectionMode);
 
             THREE.Color highlightColor = new THREE.Color(0xff5141);
             THREE.Color defaultColor = new THREE.Color(0xb6b6b6);
@@ -77,6 +80,7 @@ namespace NST
                 LevelExplorer.DebugMode.Collisions => instances.Select(e => e.CollisionShapeIndex != -1 ? highlightColor : defaultColor),
                 LevelExplorer.DebugMode.GameObjects => instances.Select(e => e.Object.GetType() != typeof(igEntity) ? highlightColor : defaultColor),
                 LevelExplorer.DebugMode.Instanced => instances.Select(e => highlightColor),
+                LevelExplorer.DebugMode.Selection => instances.Select(e => SelectionMode ? highlightColor : defaultColor),
 
                 _ => _model == null 
                     ? instances.Select(e => e.Color)
@@ -98,7 +102,7 @@ namespace NST
         {
             string? modelName = _model?.Name.ToLower();
 
-            if (Entities.Count > 0 && Entities[0].Object is CScriptTriggerEntity)
+            if (Entities.Count > 0 && Entities.First().Object is CScriptTriggerEntity)
             {
                 group.Layers.Set((int)LevelExplorer.CameraLayer.Triggers);
                 group.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Triggers));
@@ -134,6 +138,9 @@ namespace NST
         private LevelExplorer _explorer;
         private Dictionary<NSTModel, InstanceManager> _instances = [];
         private InstanceManager _entitiesWithoutModel = new InstanceManager();
+
+        private Dictionary<NSTModel, InstanceManager> _selectedInstances = [];
+        private InstanceManager _selectedEntitiesWithoutModel = new InstanceManager() { SelectionMode = true };
 
         public InstancedMeshManager(LevelExplorer explorer, THREE.Scene scene)
         {
@@ -303,7 +310,7 @@ namespace NST
             else if (hit.object3D.UserData.TryGetValue("instance", out object? instanceObj))
             {
                 InstanceManager instance = (InstanceManager)instanceObj;
-                NSTEntity entity = instance.Entities.Where(e => !e.IsSelected).ElementAt(hit.instanceId);
+                NSTEntity entity = instance.Entities.Where(e => !e.IsSelected || instance.SelectionMode).ElementAt(hit.instanceId);
                 return Select(entity);
             }
             else if (hit.object3D.UserData.TryGetValue("spline", out object? splineObj))
@@ -442,7 +449,7 @@ namespace NST
             }
             else if (obj is NSTCamera cam)
             {
-                if (obj.GetObject() is CSplineCamera splineCamera && cam.Children.FirstOrDefault() is NSTObject splineEntity && (!cam.IsSelected || !splineEntity.IsSelected))
+                if (obj.GetObject() is CSplineCamera splineCamera && cam.Children.FirstOrDefault() is NSTObject splineEntity && !splineEntity.IsSelected)
                 {
                     return [ cam, splineEntity ];
                 }
@@ -478,6 +485,64 @@ namespace NST
             return instances;
         }
 
+        public List<InstanceManager> RefreshSelectedInstances(List<NSTObject> entities)
+        {
+            if (entities.Count == 0) return [];
+
+            ClearSelectedInstances();
+
+            HashSet<InstanceManager> selectedInstances = [];
+
+            foreach (NSTObject obj in entities)
+            {
+                if (obj is NSTEntity entity)
+                {
+                    if (entity.IsPrefabTemplate || entity.Object3D != null) continue;
+
+                    InstanceManager? instance;
+
+                    if (entity.Model == null)
+                    {
+                        instance = _selectedEntitiesWithoutModel;
+                    }
+                    else if (!_selectedInstances.TryGetValue(entity.Model, out instance))
+                    {
+                        instance = new InstanceManager(entity.Model) { SelectionMode = true };
+                        _selectedInstances[entity.Model] = instance;
+                    }
+
+                    entity.PreviousInstanceManager = entity.InstanceManager;
+
+                    instance.Add(entity);
+                    selectedInstances.Add(instance);
+                }
+            }
+
+            foreach (InstanceManager instance in selectedInstances)
+            {
+                instance.ConvertToInstanced(RootObject, _explorer.DebugRenderMode);
+            }
+
+            return selectedInstances.ToList();
+        }
+
+        public void ClearSelectedInstances()
+        {
+            List<InstanceManager> managers = [ _selectedEntitiesWithoutModel ];
+            
+            foreach (InstanceManager instance in managers.Union(_selectedInstances.Values.Distinct()))
+            {
+                foreach (var e in instance.Entities)
+                {
+                    e.InstanceManager = e.PreviousInstanceManager;
+                }
+                instance.Object3D.Parent?.Remove(instance.Object3D);
+            }
+
+            _selectedInstances.Clear();
+            _selectedEntitiesWithoutModel = new InstanceManager() { SelectionMode = true };
+        }
+
         public void RefreshInstances(List<NSTObject> entities)
         {
             if (entities.Count == 0) return;
@@ -488,10 +553,10 @@ namespace NST
             
             foreach (NSTObject obj in entities)
             {
-                // Console.WriteLine($"Refresh {entity.Object.ObjectName}, InstanceManager: {entity.InstanceManager}, IsInstanced: {entity.IsInstanced}, Object3D: {entity.Object3D}, IsSelected: {entity.IsSelected}");
-                
                 if (obj is NSTEntity entity)
                 {
+                    // Console.WriteLine($"Refresh {entity.Object.ObjectName}, InstanceManager: {entity.InstanceManager}, Object3D: {entity.Object3D}, IsSelected: {entity.IsSelected}");
+
                     if (entity.IsPrefabTemplate) continue;
                 
                     if (entity.InstanceManager != null)

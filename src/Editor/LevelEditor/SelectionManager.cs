@@ -75,8 +75,17 @@ namespace NST
             var newObjects = _selection.Except(previousSelection);
             var removedObjects = previousSelection.Except(_selection);
 
-            _explorer.InstanceManager.RefreshInstances(newObjects.Union(removedObjects).ToList());
             _explorer.RenderNextFrame = true;
+            _explorer.InstanceManager.ClearSelectedInstances();
+            _explorer.InstanceManager.RefreshInstances(newObjects.Union(removedObjects).ToList());
+
+            var selectedInstances = _explorer.InstanceManager.RefreshSelectedInstances(_selection);
+
+            foreach (InstanceManager instance in selectedInstances)
+            {
+                _outlinePass.selectedObjects.Add(instance.Object3D);
+                _selectionContainer.Attach(instance.Object3D);
+            }
 
             if (_selection.Count == 0) _gizmos.Visible = false;
         }
@@ -95,7 +104,12 @@ namespace NST
 
         private void AddToSelection(NSTObject obj)
         {
-            THREE.Object3D object3D = obj.CreateObject3D(true);
+            THREE.Object3D? object3D = null;
+
+            if (obj is not NSTEntity e || e.InstanceManager == null || e.Spline != null || e.IsPrefabChild)
+            {
+                object3D = obj.CreateObject3D(true);
+            }
 
             if (_revertGizmos)
             {
@@ -105,7 +119,7 @@ namespace NST
 
             if (_selection.Count == 0)
             {
-                _selectionContainer.Position.Copy(object3D.Position);
+                _selectionContainer.Position.Copy(object3D?.Position ?? obj.GetPosition());
                 _selectionContainer.Quaternion.Copy(THREE.Quaternion.Identity());
                 _selectionContainer.Scale.Copy(THREE.Vector3.One());
 
@@ -119,8 +133,12 @@ namespace NST
             obj.IsSelected = true;
 
             _selection.Add(obj);
-            _outlinePass.selectedObjects.Add(object3D);
-            _selectionContainer.Attach(object3D);
+
+            if (object3D != null)
+            {
+                _outlinePass.selectedObjects.Add(object3D);
+                _selectionContainer.Attach(object3D);
+            }
         }
 
         private void RemoveFromSelection(NSTObject obj)
@@ -133,14 +151,20 @@ namespace NST
             
             RemoveObjectsFromScene([obj]);
 
-            _selectionContainer.Remove(obj.Object3D!);
+            if (obj.Object3D != null)
+            {
+                _selectionContainer.Remove(obj.Object3D!);
+                _outlinePass.selectedObjects.Remove(obj.Object3D!);
+            }
+
             _selection.Remove(obj);
-            _outlinePass.selectedObjects.Remove(obj.Object3D!);
         }
 
         public void ClearSelection(bool refreshInstances = false)
         {
             RemoveObjectsFromScene(_selection);
+
+            _explorer.InstanceManager.ClearSelectedInstances();
 
             if (refreshInstances)
             {
@@ -179,9 +203,23 @@ namespace NST
             foreach (NSTObject obj in _selection)
             {
                 // Get world transform
-                THREE.Vector3 worldPos = obj.Object3D!.GetWorldPosition(new THREE.Vector3());
-                THREE.Quaternion worldQuaternion = obj.Object3D.GetWorldQuaternion(new THREE.Quaternion());
-                THREE.Vector3 worldScale = obj.Object3D.GetWorldScale();
+                THREE.Vector3 worldPos = new THREE.Vector3();
+                THREE.Quaternion worldQuaternion = new THREE.Quaternion();
+                THREE.Vector3 worldScale = new THREE.Vector3();
+
+                if (obj.Object3D != null)
+                {
+                    worldPos = obj.Object3D.GetWorldPosition(new THREE.Vector3());
+                    worldQuaternion = obj.Object3D.GetWorldQuaternion(new THREE.Quaternion());
+                    worldScale = obj.Object3D.GetWorldScale();
+                }
+                else if (obj is NSTEntity e && e.InstanceManager?.Object3D != null)
+                {
+                    e.InstanceManager.Object3D.UpdateWorldMatrix(true, true);
+                    THREE.Matrix4 transform = new THREE.Matrix4().MultiplyMatrices(e.InstanceManager.Object3D.MatrixWorld, obj.ObjectToWorld());
+                    transform.Decompose(worldPos, worldQuaternion, worldScale);
+                }
+                
                 THREE.Euler worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
                 THREE.Vector3 worldEulerDegrees = worldEuler.ToVector3() * THREE.MathUtils.RAD2DEG;
 
@@ -315,7 +353,7 @@ namespace NST
                         }
                     }
 
-                    _explorer.InstanceManager.RefreshInstances(prefabChildren);
+                    // _explorer.InstanceManager.RefreshInstances(prefabChildren);
                 }
 
                 THREE.Matrix4 deltaMatrix = new THREE.Matrix4().Copy(entity3D.ObjectToWorld()).Multiply(previousMatrix.Inverted());
@@ -334,7 +372,7 @@ namespace NST
                 }
                 if (childTemplates.Any())
                 {
-                    _explorer.InstanceManager.RefreshInstances(childTemplates.Cast<NSTObject>().ToList());
+                    // _explorer.InstanceManager.RefreshInstances(childTemplates.Cast<NSTObject>().ToList());
                 }
                 // Update child waypoints position
                 if (_explorer.FileManager.GetIgz(entity3D.ArchiveFile) is IgzFile igz)
@@ -354,6 +392,22 @@ namespace NST
                 spline.RefreshDistances(_explorer);
                 spline.ComputeDistances();
                 spline.RefreshSpline();
+            }
+
+            // Refresh selected instances
+            {
+                foreach (var instance in _selection.OfType<NSTEntity>().Select(e => e.InstanceManager).Distinct())
+                {
+                    if (instance?.Object3D == null) continue;
+                    _outlinePass.selectedObjects.Remove(instance.Object3D);
+                    _selectionContainer.Remove(instance.Object3D);
+                }
+                var instances = _explorer.InstanceManager.RefreshSelectedInstances(_selection);
+                foreach (var instance in instances)
+                {
+                    _outlinePass.selectedObjects.Add(instance.Object3D);
+                    _selectionContainer.Attach(instance.Object3D);
+                }
             }
 
             if (_scaleMode == 1)

@@ -22,6 +22,9 @@ namespace NST
 
         public abstract igObject GetObject();
         public abstract THREE.Object3D CreateObject3D(bool selected = false);
+        public abstract THREE.Vector3 GetPosition();
+        public abstract THREE.Matrix4 ObjectToWorld();
+
         public NamedReference ToReference() => GetObject().ToNamedReference(FileNamespace);
 
         protected THREE.Mesh CreateBoxHelper(THREE.Vector3 min, THREE.Vector3 max, THREE.Color color, bool focused, LevelExplorer.CameraLayer? layer = null)

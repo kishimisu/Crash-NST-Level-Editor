@@ -44,7 +44,7 @@ namespace NST
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
 
-        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Instanced = 4 };
+        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Instanced = 4, Selection = 5 };
         private readonly string[] _debugModes = ["None", "Static Collisions", "Prefabs", "Game Objects"];
         
         public enum CameraLayer 
@@ -265,19 +265,28 @@ namespace NST
 
 				if (min != null && max != null)
 				{
-					var objects = _selectionBox
-                        .Select(new THREE.Vector3(-min.X, min.Y, 0.5f), new THREE.Vector3(-max.X, max.Y, 0.5f))
-                        .SelectMany(e => InstanceManager.Select(e)).ToList();
+					var objects = _selectionBox.Select(new THREE.Vector3(-min.X, min.Y, 0.5f), new THREE.Vector3(-max.X, max.Y, 0.5f));
 
-                    if (objects.Count > 400)
+                    // Special case when selecting both a camera and its spline child
+                    foreach (NSTObject e in objects.ToList())
                     {
-                        ModalRenderer.ShowWarningModal($"Are you sure you want to select {objects.Count} objects?", () => SelectionManager.UpdateSelection(objects.ToList()));
+                        if (e is NSTCamera cam && cam.GetObject() is CSplineCamera splineCamera && cam.Children.FirstOrDefault() is NSTObject splineEntity && !splineEntity.IsSelected && objects.Contains(splineEntity))
+                        {
+                            objects.Remove(splineEntity);
+                        }
                     }
-                    else
+
+                    var allObjects = objects.SelectMany(e => InstanceManager.Select(e)).ToList();
+
+                    // if (allObjects.Count > 400)
+                    // {
+                    //     ModalRenderer.ShowWarningModal($"Are you sure you want to select {allObjects.Count} objects?", () => SelectionManager.UpdateSelection(allObjects.ToList()));
+                    // }
+                    // else
                     {
                         bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
-                        SelectionManager.UpdateSelection(objects, newSelection);
-                        if (objects.FirstOrDefault() is NSTObject obj)
+                        SelectionManager.UpdateSelection(allObjects, newSelection);
+                        if (allObjects.FirstOrDefault() is NSTObject obj)
                         {
                             _treeView.SelectObject(obj);
                         }

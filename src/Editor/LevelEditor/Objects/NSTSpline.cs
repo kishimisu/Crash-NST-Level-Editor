@@ -29,6 +29,9 @@ namespace NST
         private bool _isVelocityListOpen = false;
         private bool _isMarkerListOpen = false;
 
+        public override THREE.Vector3 GetPosition() => Parent.Position;
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld();
+
         public NSTSpline(NSTEntity parent, igSpline2 spline)
         {
             Parent = parent;
@@ -1004,6 +1007,9 @@ namespace NST
     {
         public NSTSpline Parent { get; }
 
+        public override THREE.Vector3 GetPosition() => Object._position.ToVector3();
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Object._position.ToVector3());
+
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
         public NSTSplineControlPoint(NSTSpline parent, igSplineControlPoint2 point)
@@ -1036,6 +1042,11 @@ namespace NST
         public float LocalDistance { get; set; } = 0;
 
         public THREE.Vector3 Position { get; set; }
+
+        public THREE.Euler RotationEuler => Object._value.ToEuler();
+
+        public override THREE.Vector3 GetPosition() => Position;
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
@@ -1077,6 +1088,9 @@ namespace NST
         public NSTSpline Parent { get; }
         public THREE.Vector3 Position { get; set; }
 
+        public override THREE.Vector3 GetPosition() => Position;
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
+
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
         public NSTSplineVelocityKeyFrame(NSTSpline parent, CSplineVelocityKeyframe velocity)
@@ -1109,6 +1123,9 @@ namespace NST
     {
         public NSTSpline Parent { get; }
         public THREE.Vector3 Position { get; set; }
+
+        public override THREE.Vector3 GetPosition() => Position;
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
@@ -1144,6 +1161,9 @@ namespace NST
     public class NSTWaypoint : NSTObject<CWaypoint>
     {
         public NSTEntity Parent { get; }
+
+        public override THREE.Vector3 GetPosition() => Object._position.ToVector3();
+        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Object._position.ToVector3());
 
         public override void Render(LevelExplorer explorer) => Parent.Render(explorer);
 

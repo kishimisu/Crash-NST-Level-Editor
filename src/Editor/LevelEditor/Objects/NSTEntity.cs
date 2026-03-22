@@ -12,6 +12,7 @@ namespace NST
         public THREE.Vector3 Position => Object._parentSpacePosition.ToVector3();
 
         public InstanceManager? InstanceManager;
+        public InstanceManager? PreviousInstanceManager;
         public ComponentManager? Components;
 
         // Prefab parent
@@ -47,6 +48,9 @@ namespace NST
         public static readonly THREE.Color ColorLighting = new THREE.Color(1, 0.9f, 0.3f);
         public static readonly THREE.Color ColorVFX = new THREE.Color(0, 1, 1);
         public static readonly THREE.Color ColorSFX = new THREE.Color(0, 1, 0.35f);
+
+        public override THREE.Vector3 GetPosition() => Position;
+        public override THREE.Matrix4 ObjectToWorld() => ObjectToWorld(true);
 
         public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
         {
