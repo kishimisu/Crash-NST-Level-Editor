@@ -969,12 +969,12 @@ namespace NST
                     {
                         if (externalFile.GetPath().StartsWith("sound") && Archive.FindFile(externalFile.GetName()) == null)
                         {
-                            AddFile(externalFile, true);
+                            AddFile(externalFile.Clone(), true);
                         }
                     }
                 }
 
-                AddFile(file, addToPkg);
+                AddFile(file.Clone(), addToPkg);
             }
 
             return clone;
@@ -987,7 +987,7 @@ namespace NST
         {
             bool addToPkg = !file.GetPath().StartsWith("maps/");
             
-            AddFile(file, addToPkg, focus);
+            AddFile(file.Clone(), addToPkg, focus);
 
             if (!file.IsIGZ())
             {
@@ -1002,7 +1002,7 @@ namespace NST
             {
                 IgArchiveFile newFile = added[i];
                 addToPkg = !newFile.GetPath().StartsWith("maps/");
-                AddFile(newFile, addToPkg);
+                AddFile(newFile.Clone(), addToPkg);
             }
         }
     }
