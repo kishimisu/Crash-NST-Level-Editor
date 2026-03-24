@@ -752,9 +752,8 @@ namespace NST
             explorer.Clone([actor], sourceArchive, mainIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
             var trexObject = explorer.Clone([trex], sourceArchive, trexIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
             var bedObject = explorer.Clone([bed], sourceArchive, artIgz, newFile, newIgz, initializeObjects: true, addToSelection: null);
-
-            explorer.SelectionManager.UpdateSelection(bedObject.Union(trexObject).ToList());
-            explorer.MoveSelectionToCamera(800);
+            
+            explorer.SelectAndMoveToCamera(bedObject.Union(trexObject).ToList(), 800);
         }
 
         private static void AddBonusRoundTeleporter(LevelExplorer explorer)
@@ -795,6 +794,8 @@ namespace NST
                 List<igObject> crates = sourceIgz.Objects.Where(e => e.GetType() == typeof(CEntity) && e.ObjectName?.StartsWith("Crate_") == true).ToList();
                 crates.Insert(0, bonusPrefab);
 
+                explorer.SelectionManager.ClearSelection(true);
+
                 explorer.GetOrCreateIgzFile($"Bonus_{type}", out IgArchiveFile bonusFile, out IgzFile bonusIgz);
 
                 List<NSTObject> newObjects = explorer.Clone(crates, sourceArchive, sourceIgz, bonusFile, bonusIgz, 2000, true, true);
@@ -817,7 +818,7 @@ namespace NST
                     explorer.ArchiveRenderer.SetEntityUpdated(obj, shape);
                 }
 
-                explorer.InstanceManager.RefreshInstances(explorer.InstanceManager.AllObjects);
+                // explorer.InstanceManager.RefreshInstances(explorer.InstanceManager.AllObjects);
 
                 ModalRenderer.CloseLoadingModal();
             })
@@ -851,8 +852,7 @@ namespace NST
                 clones.AddRange(explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: null, initializeObjects: true));
             }
 
-            explorer.SelectionManager.UpdateSelection(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList());
-            explorer.MoveSelectionToCamera(400);
+            explorer.SelectAndMoveToCamera(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList(), 400);
 
             callback?.Invoke(clones);
         }
@@ -881,8 +881,7 @@ namespace NST
                 clones.AddRange(explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: null, initializeObjects: true));
             }
 
-            explorer.SelectionManager.UpdateSelection(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList());
-            explorer.MoveSelectionToCamera(400);
+            explorer.SelectAndMoveToCamera(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList(), 400);
         }
 
         private static void AddGeneric(string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400, bool addToSelection = false)
@@ -1137,8 +1136,7 @@ namespace NST
                 }
             }
 
-            explorer.SelectionManager.UpdateSelection(selection);
-            explorer.MoveSelectionToCamera(isTeleport ? 400 : 2000);
+            explorer.SelectAndMoveToCamera(selection, isTeleport ? 400 : 2000);
         }
 
         public static (CZoneInfo, igLocalizedInfo) CreateZoneInfo(string levelIdentifier, EGameYear crashMode)

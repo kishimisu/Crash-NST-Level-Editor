@@ -719,6 +719,11 @@ namespace NST
             HashSet<InstanceManager> managersToRefresh = [];
             Dictionary<NSTSpline, List<NSTObject>> splines = [];
 
+            if (clearSelection) 
+            {
+                InstanceManager.ClearSelectedInstances();
+            }
+
             foreach (NSTObject selected in toRemove)
             {
                 // Special cases for spline children
@@ -1223,6 +1228,8 @@ namespace NST
                 if (ImGui.Combo("##debugMode", ref _debugMode, _debugModes, _debugModes.Length))
                 {
                     _debugMode = _debugMode % _debugModes.Length;
+                    _gizmos.Visible = false;
+                    SelectionManager.ClearSelection();
                     InstanceManager.RefreshInstances(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
                     RenderNextFrame = true;
                 }
@@ -1623,12 +1630,16 @@ namespace NST
             return allObjects;
         }
 
-        public void MoveSelectionToCamera(float camDistance)
+        public void SelectAndMoveToCamera(List<NSTObject> selection, float camDistance)
         {
-            _treeView.RebuildTree(InstanceManager.AllObjects);
+            InstanceManager.ClearSelectedInstances();
             InstanceManager.RefreshInstances(InstanceManager.AllObjects);
+
+            SelectionManager.UpdateSelection(selection);
             SelectionManager._selectionContainer.Position = GetIntersectionPoint(camDistance * 2);
             SelectionManager.ApplyChanges(ArchiveRenderer);
+            
+            _treeView.RebuildTree(InstanceManager.AllObjects);
         }
         
         private THREE.Vector3 GetIntersectionPoint(float maxDistance = 5000.0f)

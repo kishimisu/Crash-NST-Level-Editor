@@ -67,9 +67,11 @@ namespace NST
                 ClearSelection();
             }
 
+            bool instanced = objects.Count > 1;
+
             for (int i = 0; i < objects.Count; i++)
             {
-                SelectObject(objects[i]);
+                SelectObject(objects[i], instanced && (i > 0 || !newSelection));
             }
 
             var newObjects = _selection.Except(previousSelection);
@@ -90,11 +92,11 @@ namespace NST
             if (_selection.Count == 0) _gizmos.Visible = false;
         }
 
-        private void SelectObject(NSTObject obj)
+        private void SelectObject(NSTObject obj, bool instanced)
         {
             if (!_selection.Contains(obj))
             {
-                AddToSelection(obj);
+                AddToSelection(obj, instanced);
             }
             else
             {
@@ -102,11 +104,11 @@ namespace NST
             }
         }
 
-        private void AddToSelection(NSTObject obj)
+        private void AddToSelection(NSTObject obj, bool instanced)
         {
             THREE.Object3D? object3D = null;
 
-            if (obj is not NSTEntity e || e.InstanceManager == null || e.Spline != null || e.IsPrefabChild)
+            if (!instanced || obj is not NSTEntity e || e.InstanceManager == null || e.Spline != null || e.IsPrefabChild)
             {
                 object3D = obj.CreateObject3D(true);
             }

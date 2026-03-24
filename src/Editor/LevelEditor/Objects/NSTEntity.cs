@@ -49,8 +49,14 @@ namespace NST
         public static readonly THREE.Color ColorVFX = new THREE.Color(0, 1, 1);
         public static readonly THREE.Color ColorSFX = new THREE.Color(0, 1, 0.35f);
 
-        public override THREE.Vector3 GetPosition() => Position;
         public override THREE.Matrix4 ObjectToWorld() => ObjectToWorld(true);
+        public override THREE.Vector3 GetPosition()
+        {
+            if (ParentPrefabInstance == null) return Position;
+            THREE.Vector3 worldPos = new THREE.Vector3();
+            ObjectToWorld(true).Decompose(worldPos, new THREE.Quaternion(), new THREE.Vector3());
+            return worldPos;
+        }
 
         public NSTEntity(igEntity obj, IgArchiveFile archiveFile)
         {
