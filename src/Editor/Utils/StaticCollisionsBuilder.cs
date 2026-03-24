@@ -161,6 +161,7 @@ namespace NST
             compoundShape._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._max.W);
             compoundShape._boundingVolumeData._min = new System.Numerics.Vector4(root.boundsMin.X, root.boundsMin.Y, root.boundsMin.Z, compoundShape._boundingVolumeData._min.W);
             compoundShape._boundingVolumeData._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._boundingVolumeData._max.W);
+            compoundShape._numShapeKeyBits = (byte)(32 - System.Numerics.BitOperations.LeadingZeroCount((uint)compoundShape._elements.Count-1));
 
             collisionHkxFile.SetData(collisionHkx.Save());
 
