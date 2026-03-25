@@ -145,7 +145,7 @@ namespace Alchemy
         /// </summary>
         /// <param name="filePath">The path to save the archive to</param>
         /// <param name="updatePath">Whether to update this IgArchive's path to match the file path</param>
-        public void Save(string? filePath = null, bool updatePath = false, string? temporaryPath = null)
+        public void Save(string? filePath = null, bool updatePath = false, bool compress = false, string? temporaryPath = null)
         {
             if (filePath == null)
             {
@@ -159,34 +159,56 @@ namespace Alchemy
             // Sort files by hash
             _files.Sort((f1, f2) => f1.GetHash().CompareTo(f2.GetHash()));
 
+            // Output writer
+            using FileStream fs = new FileStream(temporaryPath ?? filePath, FileMode.Create, FileAccess.ReadWrite);
+            using BinaryWriter writer = new BinaryWriter(fs);
+
+            // File data writer
+            using MemoryStream fileStream = new MemoryStream(_files.Count * SECTOR_SIZE);
+            using BinaryWriter fileWriter = new BinaryWriter(fileStream);
+
+            FileInfo[] fileInfos = new FileInfo[_files.Count];
+
+            // Dump file data
+            for (int i = 0; i < _files.Count; i++)
+            {
+                fileInfos[i].offset = fileWriter.GetPosition();
+
+                if (compress && !_files[i].SkipCompression())
+                {
+                    fileWriter.Write(_files[i].Compress(true));
+                }
+                else
+                {
+                    fileWriter.Write(_files[i].GetData());
+                }
+
+                fileWriter.Align(SECTOR_SIZE);
+            }
+
             // Build block tables
             BlockTables blockTables = BuildBlockTables();
 
             // Build header
             IgArchiveHeader header = BuildHeader(blockTables);
-
-            // Create writer
-            using FileStream fs = new FileStream(temporaryPath ?? filePath, FileMode.Create, FileAccess.ReadWrite);
-            using BinaryWriter writer = new BinaryWriter(fs);
             
             uint filesOffset = HEADER_SIZE + header.tocSize;
 
             writer.Seek((int)filesOffset, SeekOrigin.Begin);
             writer.Align(SECTOR_SIZE);
 
-            FileInfo[] fileInfos = new FileInfo[_files.Count];
-
-            // Write file contents and build file infos
+            // Build file infos
             for (int i = 0; i < _files.Count; i++)
             {
                 fileInfos[i].ordinal = (i - 1) << 0x8;
-                fileInfos[i].offset = writer.GetPosition();
+                fileInfos[i].offset += writer.GetPosition();
                 fileInfos[i].blockIndex = _files[i].GetBlockIndex();
                 fileInfos[i].uncompressedSize = _files[i].GetUncompressedSize();
-
-                writer.Write(_files[i].GetData());
-                writer.Align(SECTOR_SIZE);
             }
+
+            // Write file data
+            fileWriter.Write((byte)0);
+            writer.Write(fileStream.ToArray(), 0, fileWriter.GetPosition()-1);
 
             int pathsOffsetsStart = writer.GetPosition();
             int pathsNamesStart = writer.GetPosition() + _files.Count * sizeof(uint);
@@ -381,47 +403,6 @@ namespace Alchemy
         public T? FindObject<T>(NamedReference reference) where T : igObject
         {
             return FindObject(reference) as T;
-        }
-
-        /// <summary>
-        /// Compress all files in the archive
-        /// </summary>
-        public void CompressAll()
-        {
-            Compress(_files);
-        }
-
-        /// <summary>
-        /// Uncompress all files in the archive
-        /// </summary>
-        public void UncompressAll()
-        {
-            Uncompress(_files);
-        }
-
-        /// <summary>
-        /// Compress a list of files using multiple threads
-        /// </summary>
-        /// <param name="files">The files to compress</param>
-        public static void Compress(List<IgArchiveFile> files)
-        {
-            Parallel.For(0, files.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
-            {
-                if (files[i].GetPath().StartsWith("sound_samples") || files[i].GetPath().StartsWith("sound_streams")) return; // fix game freezing after a while
-                files[i].Compress();
-            });
-        }
-
-        /// <summary>
-        /// Uncompress a list of files using multiple threads
-        /// </summary>
-        /// <param name="files">The files to uncompress</param>
-        public static void Uncompress(List<IgArchiveFile> files)
-        {
-            Parallel.For(0, files.Count, new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount }, i =>
-            {
-                files[i].Uncompress();
-            });
         }
 
         private static List<(string, string)> ParseFilePaths(IgArchiveHeader header, BinaryReader reader)

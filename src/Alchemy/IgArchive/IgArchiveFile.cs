@@ -232,7 +232,7 @@ namespace Alchemy
         /// Read and uncompress data from the file
         /// </summary>
         /// <returns>The uncompressed data</returns>
-        public byte[] Uncompress()
+        public byte[] Uncompress(bool update = false)
         {
             byte[] data = GetData();
 
@@ -252,14 +252,25 @@ namespace Alchemy
             if (uncompressedData.Length != _uncompressedSize)
                 throw new Exception($"Invalid uncompressed size: {uncompressedData.Length} != {_uncompressedSize}");
 
-            return uncompressedData.ToArray();
+            byte[] uncompressedBytes = uncompressedData.ToArray();
+
+            if (update)
+            {
+                _blocksData = [];
+                _compressionType = CompressionType.Uncompressed;
+
+                if (_data != null)
+                    _data = uncompressedBytes;
+            }
+
+            return uncompressedBytes;
         }
 
         /// <summary>
         /// Compress the file using LZMA
         /// </summary>
         /// <returns>The compressed data</returns>
-        public byte[] Compress()
+        public byte[] Compress(bool update = false)
         {
             byte[] data = GetData();
 
@@ -306,8 +317,28 @@ namespace Alchemy
 
                 compressedData.Align(_sectorSize);
             }
+
+            byte[] compressedBytes = compressedData.ToArray();
+
+            if (update)
+            {
+                _blocksData = blocksData;
+                _compressionType = CompressionType.LZMA;
+
+                if (_data != null)
+                    _data = compressedBytes;
+            }
             
-            return data;
+            return compressedBytes;
+        }
+
+        /// <summary>
+        /// Whether to skip compression for this file or not.
+        /// Some files have been observed to freeze the game after a while when compressed.
+        /// </summary>
+        public bool SkipCompression()
+        {
+            return _path.StartsWith("sound_samples") || _path.StartsWith("sound_streams");
         }
 
         /// <summary>

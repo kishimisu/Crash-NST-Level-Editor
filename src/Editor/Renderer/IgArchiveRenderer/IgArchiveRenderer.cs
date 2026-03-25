@@ -734,11 +734,6 @@ namespace NST
                     if (newPackageFile != null) _treeView.AddFile(newPackageFile);
                 }
 
-                if (compress)
-                {
-                    Archive.CompressAll();
-                }
-
                 if (launchGame && File.Exists(Archive.GetPath()))
                 {
                     try
@@ -758,7 +753,7 @@ namespace NST
                 }
 
                 // Save archive
-                Archive.SafeSave(path, true);
+                Archive.SafeSave(path, true, compress);
                 IsUpdated = false;
 
                 postSaveCallback?.Invoke();

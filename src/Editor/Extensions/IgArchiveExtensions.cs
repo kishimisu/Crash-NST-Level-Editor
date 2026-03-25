@@ -268,18 +268,18 @@ namespace NST
         /// Safely saves an archive by writing it to a temporary file first, then moving it to the destination path.
         /// This avoids concurrent streams issues when reading and writing to the same archive.
         /// </summary>
-        public static void SafeSave(this IgArchive archive, string? filePath = null, bool updatePath = false)
+        public static void SafeSave(this IgArchive archive, string? filePath = null, bool updatePath = false, bool compress = false)
         {
             // File doesn't exist, no risk of concurrent read/write
             if (!File.Exists(filePath ?? archive.GetPath()))
             {
-                archive.Save(filePath, updatePath);
+                archive.Save(filePath, updatePath, compress);
             }
             else
             {
                 // Save to a temporary file
                 string temporaryPath = LocalStorage.GetStoragePath("tmp_archive.pak");
-                archive.Save(filePath, updatePath, temporaryPath);
+                archive.Save(filePath, updatePath, compress, temporaryPath);
             }
         }
 
