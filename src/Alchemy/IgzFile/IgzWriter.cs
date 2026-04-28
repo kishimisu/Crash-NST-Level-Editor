@@ -121,6 +121,8 @@ namespace Alchemy
         /// <returns>The raw data containing all dumped objects</returns>
         private byte[] BuildObjects(List<igObject> objects)
         {
+            MemoryPool defaultMemoryPool = objects.Count == 0 ? MemoryPool.Default : objects[0].MemoryPool;
+
             var objectList = (igObjectList?)objects.FirstOrDefault(e => e.GetType() == typeof(igObjectList));
             var nameList     = (igNameList?)objects.FirstOrDefault(e => e.GetType() == typeof(igNameList));
             var nameListNSPC = (igNameList?)objects.Where(e => e.GetType() == typeof(igNameList)).Skip(1).FirstOrDefault();
@@ -131,8 +133,6 @@ namespace Alchemy
             if (allObjects.Count == objects.Count) allObjects = objects;
 
             // Group memory pools
-
-            MemoryPool defaultMemoryPool = objects.Count == 0 ? MemoryPool.Default : objects[0].MemoryPool;
 
             if (_groupMemoryPools)
             {
