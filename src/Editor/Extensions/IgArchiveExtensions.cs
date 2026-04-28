@@ -247,6 +247,72 @@ namespace NST
 
             return added;
         }
+        
+        private record VertexData
+        {
+            public uint vertexSize { get; init; }
+            public int elementCount { get; init; }
+            public int platformCount { get; init; }
+            public uint platformHash { get; init; }
+            public byte[] platformData { get; init; }
+        }
+
+        // Converts a file from CTR:NF to NST - (WIP)
+        public static void FixVersionDifferences(this IgArchiveRenderer renderer, IgzFile igz)
+        {
+            IgArchive archive = renderer.Archive;
+            
+            if (igz.GameVersion == archive.GameVersion) return;
+
+            // Console.WriteLine($"Convert {igz.GetName()} from {igz.GameVersion} to {archive.GameVersion}");
+
+            igz.GameVersion = archive.GameVersion;
+
+            using Stream platformDataNST = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.platform_data.json")!;
+
+            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint, List<VertexData>>>(platformDataNST)!;
+
+            foreach (igObject obj in igz.Objects)
+            {
+                if (obj is igVertexFormat vertexFormat)
+                {
+                    // Console.WriteLine($"igVertexFormat: {vertexFormat}, Vertex size: {vertexFormat._vertexSize}, Elements: {vertexFormat._elements.Count}");
+                    var list = data[vertexFormat._vertexSize];
+                    var platformData = list.Find(e => e.elementCount == vertexFormat._elements.Count)!.platformData;
+                    vertexFormat._platformData.Set(platformData);
+                    vertexFormat._platformFormat = new igVertexFormatPlatform() { Reference = new NamedReference("vertexformat", "igVertexFormatDX11", true) };
+                }
+                else if (obj is igIndexBuffer indexBuffer)
+                {
+                    // Console.WriteLine("igIndexBuffer: " + indexBuffer._format?.Reference);
+                    indexBuffer._format = new igIndexFormat() { Reference = new NamedReference("indexformats", "i16_dx11", true) };
+                }
+                else if (obj is igMemoryCommandStream commandStream)
+                {
+                    byte[] bytes = commandStream._memory.ToArray();
+                    
+                    for (int i = 0; i <= commandStream._memory.Count - 4; i += 4)
+                    {
+                        int value = BitConverter.ToInt32(bytes, i);
+                        if (value == 56)
+                        {
+                            // Console.WriteLine($"igMemoryCommandStream: replaced command id {value}");
+                            commandStream._memory[i] = 54;
+                        }
+                    }
+                }
+                else if (obj is igImage2 image)
+                {
+                    // Console.WriteLine("igImage2: " + image._format?.Reference?.objectName);
+                    if (image._format?.Reference?.objectName.Contains("tile_ps4") == true)
+                    {
+                        image._data.Set(image.GetPixels(false));
+                        image._format.Reference.objectName = image._format.Reference.objectName.Replace("tile_ps4", "dx11");
+                        image._levelCount = 1;
+                    }
+                }
+            }
+        }
 
         /// <summary>
         /// Safely saves an archive by writing it to a temporary file first, then moving it to the destination path.

@@ -29,7 +29,6 @@ namespace NST
         /// </summary>
         public abstract List<TreeNode> FindDerivedObjectNodes(Type type, object? current, out int currentIndex);
 
-        public abstract byte[] SaveFile();
         public abstract void ReloadFile();
         public abstract void OnObjectRefChanged();
 

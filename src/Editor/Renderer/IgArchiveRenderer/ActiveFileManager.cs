@@ -65,7 +65,7 @@ namespace NST
         /// If the file is an IGZ file, its content will be saved.
         /// </summary>
         /// <returns>True if the file is empty and needs to be deleted</returns>
-        public bool Apply(GameVersion version)
+        public bool Apply(IgArchiveRenderer archiveRenderer)
         {
             updated = false;
             removeOnDiscard = false;
@@ -73,101 +73,52 @@ namespace NST
             updatedObjects.Clear();
             updatedCollisions.Clear();
 
-            if (renderer != null)
-            {
-                if (renderer is IgzRenderer igzRenderer)
-                {
-                    if (igzRenderer.Igz.Objects.Count == 0) return true;
+            renderer?.TreeView.RemoveUnreferencedNodes();
+            renderer?.TreeView.ClearUpdatedNodes();
 
-                    FixVersionDifferences(igzRenderer.Igz, version);
+            GameVersion version = archiveRenderer.Archive.GameVersion;
+
+            if (file.IsIGZ())
+            {
+                IgzFile? igzFile = (renderer as IgzRenderer)?.Igz ?? igz;
+
+                if (file.GameVersion != version)
+                {
+                    igzFile ??= file.ToIgzFile();
                 }
 
-                renderer.TreeView.RemoveUnreferencedNodes();
-                renderer.TreeView.ClearUpdatedNodes();
-
-                // Apply changes to IGZ file
-                file.SetData(renderer.SaveFile());
-            }
-            else if (igz != null)
-            {
-                int activeObjects = igz.Objects.Count(e => e.GetType() != typeof(igObjectList) && e.GetType() != typeof(igNameList));
-                if (activeObjects == 0) return true;
-
-                FixVersionDifferences(igz, version);
-
-                // Save IGZ file
-                file.SetData(igz.Save());
-            }
-            else if (file.GameVersion != version)
-            {
-                if (file.IsIGZ())
+                if (igzFile != null)
                 {
-                    IgzFile igz = file.ToIgzFile();
-                    FixVersionDifferences(igz, version);
-                    file.SetData(igz.Save());
+                    if (!igzFile.Objects.Any(e => e.GetType() != typeof(igObjectList) && e.GetType() != typeof(igNameList)))
+                    {
+                        return true; // Empty file
+                    }
+
+                    archiveRenderer.FixVersionDifferences(igzFile);
+
+                    file.SetData(igzFile.Save());
                 }
             }
+            else if (file.IsHKX())
+            {
+                HavokFile? havokFile = (renderer as HavokRenderer)?.HavokFile;
 
-            return false;
-        }
+                if (file.GameVersion != version)
+                {
+                    havokFile ??= file.ToHavokFile();
+                }
 
-        private record VertexData
-        {
-            public uint vertexSize { get; init; }
-            public int elementCount { get; init; }
-            public int platformCount { get; init; }
-            public uint platformHash { get; init; }
-            public byte[] platformData { get; init; }
-        }
+                if (havokFile != null)
+                {
+                    havokFile.GameVersion = version;
 
-        // Converts a file from CTR:NF to NST - (WIP)
-        private void FixVersionDifferences(IgzFile igz, GameVersion version)
-        {
-            if (igz.GameVersion == version) return;
-
-            Console.WriteLine($"Convert {file.GetPath()} from {file.GameVersion} to {version}");
+                    file.SetData(havokFile.Save());
+                }
+            }
 
             file.SetGameVersion(version);
-            igz.GameVersion = version;
 
-            using Stream platformDataNST = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.platform_data.json")!;
-
-            var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint, List<VertexData>>>(platformDataNST)!;
-
-            foreach (igObject obj in igz.Objects)
-            {
-                if (obj is igVertexFormat vertexFormat)
-                {
-                    // Console.WriteLine($"igVertexFormat: {vertexFormat}, Vertex size: {vertexFormat._vertexSize}, Elements: {vertexFormat._elements.Count}");
-                    var list = data[vertexFormat._vertexSize];
-                    var platformData = list.Find(e => e.elementCount == vertexFormat._elements.Count)!.platformData;
-                    vertexFormat._platformData.Set(platformData);
-                    vertexFormat._platformFormat = new igVertexFormatPlatform() { Reference = new NamedReference("vertexformat", "igVertexFormatDX11", true) };
-                }
-                else if (obj is igIndexBuffer indexBuffer)
-                {
-                    // Console.WriteLine("igIndexBuffer: " + indexBuffer._format?.Reference);
-                    indexBuffer._format = new igIndexFormat() { Reference = new NamedReference("indexformats", "i16_dx11", true) };
-                }
-                // else if (obj is igGraphicsMaterial material)
-                // {
-                //     Console.WriteLine("igGraphicsMaterial: " + material._effectHandle.Reference);
-                //     if (material._effectHandle.Reference?.namespaceName == "UberShaderBlended")
-                //     {
-                //         material._effectHandle.Reference.objectName = "effect";
-                //     }
-                // }
-                else if (obj is igImage2 image)
-                {
-                    // Console.WriteLine("igImage2: " + image._format?.Reference?.objectName);
-                    if (image._format?.Reference?.objectName.Contains("tile_ps4") == true)
-                    {
-                        image._data.Set(image.GetPixels(false));
-                        image._format.Reference.objectName = image._format.Reference.objectName.Replace("tile_ps4", "dx11");
-                        image._levelCount = 1;
-                    }
-                }
-            }
+            return false;
         }
 
         /// <summary>
@@ -399,9 +350,9 @@ namespace NST
         /// Apply the changes made to a file.
         /// </summary>
         /// <param name="removeFromActive">Whether to remove the file from the active list</param>
-        public bool ApplyChanges(FileUpdateInfos infos, GameVersion version, bool removeFromActive)
+        public bool ApplyChanges(IgArchiveRenderer archiveRenderer, FileUpdateInfos infos, bool removeFromActive)
         {
-            bool isFileEmpty = infos.Apply(version);
+            bool isFileEmpty = infos.Apply(archiveRenderer);
 
             if (removeFromActive && !infos.keepActive && !infos.IsWindow())
             {

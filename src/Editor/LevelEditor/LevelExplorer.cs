@@ -45,8 +45,8 @@ namespace NST
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
 
-        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Compatible = 4, Instanced = 5, Selection = 6 };
-        private readonly string[] _debugModes = ["None", "Static Collisions", "Prefabs", "Game Objects", "CTR -> NST compatible", /*"Instanced", "Selection"*/];
+        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Instanced = 4, Selection = 5 };
+        private readonly string[] _debugModes = ["None", "Static Collisions", "Prefabs", "Game Objects", /*"Instanced", "Selection"*/];
         
         public enum CameraLayer 
         { 
@@ -1254,8 +1254,7 @@ namespace NST
                 // }
 
                 ImGuiUtils.Prefix("Debug mode");
-                int debugModeLength = Archive.GameVersion == GameVersion.NST ? _debugModes.Length - 1 : _debugModes.Length;
-                if (ImGui.Combo("##debugMode", ref _debugMode, _debugModes, debugModeLength))
+                if (ImGui.Combo("##debugMode", ref _debugMode, _debugModes, _debugModes.Length))
                 {
                     _debugMode = _debugMode % _debugModes.Length;
                     _gizmos.Visible = false;

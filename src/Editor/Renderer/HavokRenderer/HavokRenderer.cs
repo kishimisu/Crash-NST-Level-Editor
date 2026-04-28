@@ -8,11 +8,10 @@ namespace NST
     /// </summary>
     public class HavokRenderer : FileRenderer
     {
-        private HavokFile _havokFile; // Current file being rendered
+        public HavokFile HavokFile { get; private set; } // Current file being rendered
 
         public override HavokTreeView TreeView { get; } = new HavokTreeView(); // hkObject tree
 
-        public override byte[] SaveFile() => _havokFile.Save();
         public override void ReloadFile() => SetFile(ArchiveFile.ToHavokFile());
 
         public HavokRenderer(HavokFile file, IgArchiveFile archiveFile, IgArchiveRenderer archiveRenderer)
@@ -27,7 +26,7 @@ namespace NST
         /// </summary>
         private void SetFile(HavokFile havokFile)
         {
-            _havokFile = havokFile;
+            HavokFile = havokFile;
 
             TreeView.BuildNodes(havokFile.RootLevelContainer, havokFile.GameVersion);
         }

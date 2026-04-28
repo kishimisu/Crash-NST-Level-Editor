@@ -756,7 +756,7 @@ namespace NST
                     updatedCollisions.AddRange(infos.updatedCollisions.Values);
 
                     // Save file
-                    bool isFileEmpty = FileManager.ApplyChanges(infos, Archive.GameVersion, _selectedFile != archiveFile);
+                    bool isFileEmpty = FileManager.ApplyChanges(this, infos, _selectedFile != archiveFile);
 
                     if (isFileEmpty) 
                     {

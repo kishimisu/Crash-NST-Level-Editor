@@ -135,7 +135,7 @@ namespace NST
                 string name = parentFolderName + "/" + Path.GetFileName(path);
                 
                 ImGui.SetNextItemAllowOverlap();
-                bool isClicked = ImGui.Selectable($"{name}##{isLevel}");
+                bool isClicked = ImGui.Selectable($"{name}##{path}{isLevel}");
                 bool isHoveredDelay = ImGui.IsItemHovered(ImGuiHoveredFlags.DelayShort | ImGuiHoveredFlags.NoSharedDelay);
 
                 ImGui.SameLine();

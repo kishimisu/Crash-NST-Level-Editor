@@ -16,8 +16,6 @@ namespace NST
         public bool SelectionMode = false;
         public THREE.Object3D Object3D => group;
 
-        private static readonly HashSet<string> _incompatibleMaterialsCTR = [ "UberShaderBlended", "GBufferDecal", "Water" ];
-
         public void Add(NSTEntity entity)
         {
             entity.InstanceManager = this;
@@ -83,7 +81,6 @@ namespace NST
                 LevelExplorer.DebugMode.GameObjects => instances.Select(e => e.Object.GetType() != typeof(igEntity) ? highlightColor : defaultColor),
                 LevelExplorer.DebugMode.Instanced => instances.Select(e => highlightColor),
                 LevelExplorer.DebugMode.Selection => instances.Select(e => SelectionMode ? highlightColor : defaultColor),
-                LevelExplorer.DebugMode.Compatible => instances.Select(e => e.Model == null || e.Model.Meshes.Any(m => m.Material.effectHandle != null && _incompatibleMaterialsCTR.Contains(m.Material.effectHandle.namespaceName)) ? defaultColor : highlightColor),
 
                 _ => _model == null 
                     ? instances.Select(e => e.Color)

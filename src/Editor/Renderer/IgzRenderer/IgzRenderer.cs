@@ -16,7 +16,6 @@ namespace NST
         public static igObject? CopyObject { get; set; } = null; // Clipboard object
         public static IgzRenderer? CopyRenderer { get; set; } = null; // Clipboard parent renderer
 
-        public override byte[] SaveFile() => Igz.Save();
         public override void ReloadFile() => SetIgz(ArchiveFile.ToIgzFile());
 
         public IgzRenderer(IgzFile igz, IgArchiveFile archiveFile, IgArchiveRenderer archiveRenderer)
