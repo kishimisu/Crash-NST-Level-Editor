@@ -3,7 +3,6 @@ using Havok;
 using ImGuiNET;
 using SkiaSharp;
 using System.Diagnostics;
-using System.Runtime.InteropServices;
 
 namespace NST
 {
@@ -64,6 +63,8 @@ namespace NST
             Clouds = 11, 
             Shadows = 12, 
             Hidden = 13,
+            StaticCollision = 14,
+            BorderCollision = 15,
             TriggersOn = 20,
         };
 
@@ -82,6 +83,8 @@ namespace NST
             { "Clouds", false },
             { "Shadows", false },
             { "Hidden", false },
+            { "Static Collisions", false },
+            { "Border Collisions", false },
         };
 
         public DebugMode DebugRenderMode => (DebugMode)_debugMode;
@@ -415,6 +418,8 @@ namespace NST
             // Step 9: Find collisions
             LoadCollisions(InstanceManager.AllEntities);
 
+            InstanceManager.ShowCollisions(true, _layers["Static Collisions"], _layers["Border Collisions"]);
+
             // Step 10: Add objects to tree
             _treeView = new EntityTreeView(this, InstanceManager.AllObjects);
 
@@ -520,7 +525,7 @@ namespace NST
                 NamedReference textureRef = _textureToMaterials.Keys.ElementAt(i);
                 if (progressBar) _progressManager.SetProgress("textures", (float)(i+1) / _textureToMaterials.Count, $"Loading textures {i + 1}/{_textureToMaterials.Count}...");
 
-                igImage2? image = (igImage2?)AlchemyUtils.FindObjectInArchives(textureRef, Archive)!;
+                igImage2? image = (igImage2?)AlchemyUtils.FindObjectInArchives(textureRef, Archive);
 
                 if (image != null)
                 {
@@ -1269,15 +1274,29 @@ namespace NST
 
                 foreach (KeyValuePair<string, bool> layer in _layers)
                 {
+                    if (layer.Key == "Dynamic Clips" || layer.Key == "Templates" || layer.Key == "Static Collisions")
+                    {
+                        ImGui.Separator();
+                    }
+
                     bool enabled = layer.Value;
-                    if (ImGui.Checkbox(layer.Key, ref enabled)) {
+                    if (ImGui.Checkbox(layer.Key, ref enabled)) 
+                    {
                         _layers[layer.Key] = enabled;
-                        RenderNextFrame = true;
                         UpdateActiveLayers(_camera.Layers);
                         LocalStorage.Set("layer_" + layer.Key, enabled);
+                        
+                        RenderNextFrame = true;
+
+                        if (layer.Key == "Static Collisions")
+                        {
+                            InstanceManager.ShowCollisions(enabled, true, false);
+                        }
+                        else if (layer.Key == "Border Collisions")
+                        {
+                            InstanceManager.ShowCollisions(enabled, false, true);
+                        }
                     }
-                    if (layer.Key == "Camera Boxes" || layer.Key == "Audio Boxes")
-                        ImGui.Separator();
                 }
                 ImGui.Spacing();
             }

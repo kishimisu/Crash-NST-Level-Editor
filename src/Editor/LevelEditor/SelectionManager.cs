@@ -412,6 +412,9 @@ namespace NST
                 }
             }
 
+            var collisionGizmos = _selection.OfType<NSTEntity>().Where(e => e.CollisionObject != null).ToList();
+            _explorer.InstanceManager.RefreshCollisionShapes(collisionGizmos);
+
             if (_scaleMode == 1)
             {
                 UpdateSelection(_selection.ToList());

@@ -9,6 +9,7 @@ namespace NST
 
         public int CollisionShapeIndex { get; set; } = -1;
         public uint CollisionPrefabHash { get; set; } = 0;
+        public THREE.Object3D? CollisionObject { get; set; } = null;
         public THREE.Vector3 Position => Object._parentSpacePosition.ToVector3();
 
         public InstanceManager? InstanceManager;
