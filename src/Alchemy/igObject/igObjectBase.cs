@@ -30,6 +30,7 @@ namespace Alchemy
         public IgzFile? dst = null;
         public CloneMode mode = CloneMode.Deep;
         public Dictionary<igObject, igObject> clones = [];
+        public Dictionary<igObject, igObject> newClones = [];
         public HashSet<igObject>? forceClone = null;
 
         public CloneProperties(IgzFile? src = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null, HashSet<igObject>? forceClone = null)

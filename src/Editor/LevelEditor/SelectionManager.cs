@@ -536,10 +536,11 @@ namespace NST
                     
                     IgArchiveFile? dstFile = file;
                     IgzFile dstIgz = srcIgz;
+                    bool newFile = false;
 
                     if (!copyToSameFile)
                     {
-                        _explorer.GetOrCreateExternalIgzFile(file.GetPath(), out dstFile, out dstIgz);
+                        newFile = _explorer.GetOrCreateExternalIgzFile(file.GetPath(), out dstFile, out dstIgz);
                     }
                     
                     // Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
@@ -556,7 +557,7 @@ namespace NST
                             }
                             else
                             {
-                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones);
+                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile);
                             }
                             continue;
                         }
@@ -626,7 +627,7 @@ namespace NST
                         // Paste to external archive
                         else
                         {
-                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true);
+                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile);
                         }
 
                         if (triggerHandleList != null && triggerData != null)

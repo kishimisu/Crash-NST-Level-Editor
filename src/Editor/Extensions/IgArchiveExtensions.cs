@@ -146,7 +146,7 @@ namespace NST
         /// <summary>
         /// Find all dependencies of a file in a source archive that are not already in the destination archive
         /// </summary>
-        public static List<IgArchiveFile> FindDependencies(IgArchive sourceArchive, IgArchive destinationArchive, HashSet<string> dependencies)
+        public static List<IgArchiveFile> FindDependencies(IgArchive sourceArchive, IgArchive destinationArchive, HashSet<string> dependencies, bool excludeMapFiles)
         {
             Dictionary<string, List<IgArchiveFile>> fileNamespaces = [];
             Queue<IgArchiveFile> files = [];
@@ -171,6 +171,8 @@ namespace NST
 
             foreach (IgArchiveFile f in sourceArchive.GetFiles())
             {
+                if (excludeMapFiles && (f.GetPath().StartsWith("maps/") || f.GetName().StartsWith("StaticCollision_"))) continue;
+
                 string originalName = f.GetName(false).ToLowerInvariant();
                 string name = originalName;
 

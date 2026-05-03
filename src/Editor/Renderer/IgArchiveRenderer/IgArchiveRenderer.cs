@@ -987,9 +987,16 @@ namespace NST
         /// <summary>
         /// Clone an object from an external archive, including all its dependencies
         /// </summary>
-        public T Clone<T>(T sourceObject, IgArchive sourceArchive, IgzFile sourceIgz, IgzFile destIgz, Dictionary<igObject, igObject>? clones = null, bool excludeMapFiles = false) where T : igObject
+        public T Clone<T>(
+            T sourceObject,
+            IgArchive sourceArchive, 
+            IgzFile sourceIgz, 
+            IgzFile destIgz, 
+            Dictionary<igObject, igObject>? clones = null, 
+            bool excludeMapFiles = false, 
+            bool preventDuplicateNames = true) where T : igObject
         {
-            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out List<IgArchiveFile> newFiles, clones);
+            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out var newFiles, clones, excludeMapFiles, preventDuplicateNames);
 
             foreach (IgArchiveFile file in newFiles)
             {
@@ -1041,7 +1048,7 @@ namespace NST
 
             HashSet<string> dependencies = file.ToIgzFile().GetDependencies().ToHashSet();
 
-            List<IgArchiveFile> added = IgArchiveExtensions.FindDependencies(sourceArchive, Archive, dependencies);
+            List<IgArchiveFile> added = IgArchiveExtensions.FindDependencies(sourceArchive, Archive, dependencies, false);
 
             for (int i = 0; i < added.Count; i++)
             {

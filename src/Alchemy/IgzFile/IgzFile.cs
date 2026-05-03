@@ -134,13 +134,22 @@ namespace Alchemy
         /// Clone an object from one archive to another
         /// </summary>
         /// <param name="dependencies">All dependencies of the object in the source archive</param>
-        public static T Clone<T>(T sourceObject, IgArchive sourceArchive, IgArchive destArchive, IgzFile sourceIgz, IgzFile destIgz, out List<IgArchiveFile> dependencies, Dictionary<igObject, igObject>? clones = null) where T : igObject
+        public static T Clone<T>(
+            T sourceObject, 
+            IgArchive sourceArchive, 
+            IgArchive destArchive, 
+            IgzFile sourceIgz, 
+            IgzFile destIgz,
+            out List<IgArchiveFile> dependencies, 
+            Dictionary<igObject, igObject>? clones = null, 
+            bool excludeMapFiles = false, 
+            bool preventDuplicateNames = true) where T : igObject
         {
-            igObject clone = destIgz.AddClone(sourceObject, sourceIgz, clones);
+            igObject clone = destIgz.AddClone(sourceObject, sourceIgz, clones, preventDuplicateNames: preventDuplicateNames);
 
             HashSet<string> objectStrings = sourceIgz.GetObjectDependencies(sourceObject);
 
-            dependencies = IgArchiveExtensions.FindDependencies(sourceArchive, destArchive, objectStrings);
+            dependencies = IgArchiveExtensions.FindDependencies(sourceArchive, destArchive, objectStrings, excludeMapFiles);
 
             return (T)clone;
         }
@@ -152,31 +161,29 @@ namespace Alchemy
         /// <param name="source">The source igz file</param>
         /// <param name="clones">The list of cloned objects</param>
         /// <returns>The cloned object</returns>
-        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep, HashSet<igObject>? forceClone = null) where T : igObject
+        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep, HashSet<igObject>? forceClone = null, bool preventDuplicateNames = true) where T : igObject
         {
             source ??= this;
             clones ??= new Dictionary<igObject, igObject>();
             
-            List<igObject> prevKeys = clones.Keys.ToList();
-
             // Clone child objects
-            T clone = (T)obj.Clone(new CloneProperties(source, this, mode, clones, forceClone));
-
-            Dictionary<igObject, igObject> newClones = clones.Where(kvp => !prevKeys.Contains(kvp.Key)).ToDictionary();
+            var props = new CloneProperties(source, this, mode, clones, forceClone);
+            T clone = (T)obj.Clone(props);
 
             string srcNamespace = source.GetName(false).ToLower();
             string dstNamespace = GetName(false);
 
+            Dictionary<igObject, igObject> newClones = [];
+
             // Add new objects and update handle namespaces
-            foreach ((igObject src, igObject dst) in newClones.ToList())
+            foreach ((igObject src, igObject dst) in props.newClones)
             {
                 if (Objects.Contains(dst))
                 {
-                    newClones.Remove(src);
                     continue;
                 }
 
-                if (dst.ObjectName != null)
+                if (preventDuplicateNames && dst.ObjectName != null)
                 {
                     string newName = FindSuitableName(dst.ObjectName);
                     // Console.WriteLine("Updating name: " + dst.ObjectName + " => " + newName);
@@ -196,6 +203,7 @@ namespace Alchemy
                 }
 
                 Objects.Add(dst);
+                newClones.Add(src, dst);
             }
 
             // Clone child handles

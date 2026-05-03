@@ -1547,7 +1547,7 @@ namespace NST
             return Path.GetFileNameWithoutExtension(path);
         }
 
-        public void GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
+        public bool GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
         {
             string identifier = $"_{(fileIdentifier == "Camera" ? "" : "My")}{fileIdentifier}";
 
@@ -1561,6 +1561,7 @@ namespace NST
                 infos.igz ??= existing.ToIgzFile();
                 file = existing;
                 igz = infos.igz;
+                return true;
             }
             else
             {
@@ -1571,15 +1572,15 @@ namespace NST
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
+                return false;
             }
         }
 
-        public void GetOrCreateExternalIgzFile(string path, out IgArchiveFile file, out IgzFile igz)
+        public bool GetOrCreateExternalIgzFile(string path, out IgArchiveFile file, out IgzFile igz)
         {
             if (Path.GetFileNameWithoutExtension(path).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
             {
-                GetOrCreateIgzFile("Camera", out file, out igz);
-                return;
+                return GetOrCreateIgzFile("Camera", out file, out igz);
             }
             
             IgArchiveFile? existing = Archive.FindFile(path, FileSearchType.Path);
@@ -1592,6 +1593,8 @@ namespace NST
                 ArchiveRenderer.AddFile(file);
 
                 FileManager.Add(file, igz, true);
+
+                return false;
             }
             else
             {
@@ -1606,6 +1609,8 @@ namespace NST
                     igz = new IgzFile(path, file.Uncompress(), Archive.GameVersion);
                     FileManager.Add(existing, igz, true);
                 }
+
+                return true;
             }
         }
 

@@ -152,6 +152,7 @@ namespace Alchemy
             igObject clone = (igObject)base.Clone(props);
             clone.MemoryPool = MemoryPool;
             props.clones[this] = clone;
+            props.newClones[this] = clone;
 
             return clone;
         }
