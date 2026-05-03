@@ -80,6 +80,18 @@ namespace NST
         {
             "Clear", "Blue", "Green", "Orange", "Purple", "Red", "Yellow"
         };
+
+        private static readonly List<string> _deathTriggerTypes = new()
+        {
+            "Fall_Fast", "Fall_Shoes", "Ashes", "Drowning", "Drowning_Shallow", "Swim_Whirlpool"
+        };
+        private static readonly Dictionary<string, string> _deathTriggerVFXs = new()
+        {
+            { "None", "" },
+            { "Water Splash", "Crash_Land_WaterSplash" },
+            { "Toxic Splash", "Factory_Death_GooSplash" },
+            { "Toad Kiss", "Crash_Death_Toad_Kiss" }
+        };
         
         private static readonly Dictionary<string, (string, string)> _bonusFiles = new()
         {
@@ -112,6 +124,8 @@ namespace NST
         private static string _gemColor = "Clear";
         private static bool _outlinedCrate = false;
         private static bool _bonusCrate = false;
+        private static string _deathTriggerType = "Fall_Fast";
+        private static string _deathTriggerVFX = "None";
 
         public static void RenderContextMenu(LevelExplorer explorer)
         {
@@ -363,9 +377,48 @@ namespace NST
 
                 if (ImGui.BeginMenu("Other..."))
                 {
+                    if (ImGui.BeginMenu("New Death Trigger..."))
+                    {
+                        ImGuiUtils.Prefix("Death animation:");
+                        if (ImGui.BeginCombo("##deathAnim", _deathTriggerType))
+                        {
+                            foreach (string type in _deathTriggerTypes)
+                            {
+                                if (ImGui.MenuItem(type))
+                                {
+                                    _deathTriggerType = type;
+
+                                    if (_deathTriggerVFX == "None" && (type == "Drowning" || type == "Drowning_Shallow" || type == "Swim_Whirlpool"))
+                                    {
+                                        _deathTriggerVFX = "Water Splash";
+                                    }
+                                    else if (_deathTriggerVFX == "Water Splash" && (type == "Fall_Fast" || type == "Fall_Shoes" || type == "Ashes"))
+                                    {
+                                        _deathTriggerVFX = "None";
+                                    }
+                                }
+                            }
+                            ImGui.EndCombo();
+                        }
+
+                        ImGuiUtils.Prefix("Visual effect:  ");
+                        if (ImGui.BeginCombo("##visualEffect", _deathTriggerVFX))
+                        {
+                            foreach (string vfx in _deathTriggerVFXs.Keys)
+                            {
+                                if (ImGui.MenuItem(vfx)) _deathTriggerVFX = vfx;
+                            }
+                            ImGui.EndCombo();
+                        }
+
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Create Death Trigger"))
+                        {
+                            TryAddObject(() => AddDeathTrigger(explorer, _deathTriggerType.Replace("_Shoes", ""), _deathTriggerVFXs[_deathTriggerVFX]));
+                        }
+                        ImGui.EndMenu();
+                    }
                     if (ImGui.MenuItem("New DynamicClipEntity")) TryAddObject(() => AddCDynamicClipEntity(explorer));
-                    if (ImGui.MenuItem("New Death Trigger")) TryAddObject(() => AddDeathTrigger(explorer));
-                    if (ImGui.MenuItem("New Death Trigger (Water)")) TryAddObject(() => AddDeathTrigger(explorer, true));
                     ImGui.Separator();
                     if (ImGui.MenuItem("New Boost Pad")) TryAddObject(() => AddGenericTemplate("Chase_BoostPad", "Platforms", explorer));
                     if (ImGui.MenuItem("New Bounce Mine")) TryAddObject(() => AddGenericTemplate("Chase_BounceMine", "Hazards", explorer));
@@ -677,24 +730,28 @@ namespace NST
             explorer.Clone([clip], sourceArchive, sourceIgz, clipFile, clipIgz);
         }
 
-        private static void AddDeathTrigger(LevelExplorer explorer, bool water = false)
+        private static void AddDeathTrigger(LevelExplorer explorer, string type, string vfx)
         {
-            IgArchive sourceArchive;
-            IgzFile sourceIgz;
-            CScriptTriggerEntity deathTrigger;
+            SetupTemplateArchive();
 
-            if (!water)
+            var deathTrigger = templateIgz!.FindObject<CScriptTriggerEntity>("Hazard_Pit")!;
+            var respawn = deathTrigger.GetComponent<Hazard_Respawn_LogicData>()!;
+
+            respawn._OverrideFallingDeathClip = $"Death_{type}";
+            respawn._Vfx_Effect.Reference =  null;
+
+            if (vfx != "")
             {
-                SetupTemplateArchive();
-                sourceArchive = templateArchive!;
-                sourceIgz = templateIgz!;
-                deathTrigger = templateIgz!.FindObject<CScriptTriggerEntity>("Hazard_Pit")!;
-            }
-            else
-            {
-                sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "B102_RipperRoo.pak"));
-                sourceIgz = sourceArchive.FindFile("B102_RipperRoo_Border.igz")!.ToIgzFile();
-                deathTrigger = sourceIgz.FindObject<CScriptTriggerEntity>("HazardPit_Water")!;
+                respawn._Vfx_Effect.Reference = new NamedReference(vfx, vfx);
+
+                if (explorer.Archive.FindFile(vfx, FileSearchType.Name) == null)
+                {
+                    IgArchiveFile? vfxFile = AlchemyUtils.FindFileInArchives(vfx, out IgArchive? vfxArchive);
+                    if (vfxArchive != null && vfxFile != null)
+                    {
+                        explorer.ArchiveRenderer.AddFileWithDependencies(vfxArchive, vfxFile);
+                    }
+                }
             }
 
             deathTrigger._min = new igVec3fMetaField(-600, -300, 0);
@@ -702,7 +759,7 @@ namespace NST
 
             explorer.GetOrCreateIgzFile("Hazards", out IgArchiveFile hazardFile, out IgzFile hazardIgz);
 
-            explorer.Clone([deathTrigger], sourceArchive, sourceIgz, hazardFile, hazardIgz, 800);
+            explorer.Clone([deathTrigger], templateArchive, templateIgz, hazardFile, hazardIgz, 800);
         }
 
         private static void AddFadeTeleporter(LevelExplorer explorer)
