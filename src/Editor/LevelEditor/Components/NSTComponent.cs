@@ -96,9 +96,12 @@ namespace NST
             ImGui.PopStyleColor();
         }
 
-        public void RenderAdvancedProperties(igObject obj, IReadOnlyList<CachedFieldAttr> fields, string name = "Advanced Properties...")
+        public void RenderAdvancedProperties(igObject obj, IReadOnlyList<CachedFieldAttr> fields, string name = "Advanced Properties...", bool defaultOpen = false)
         {
-            if (ImGui.TreeNodeEx($"{name}##{obj.GetType()}", ImGuiTreeNodeFlags.NoTreePushOnOpen))
+            var flags = ImGuiTreeNodeFlags.NoTreePushOnOpen;
+            if (defaultOpen) flags |= ImGuiTreeNodeFlags.DefaultOpen;
+
+            if (ImGui.TreeNodeEx($"{name}##{obj.GetType()}", flags))
             {
                 IgzRenderer renderer = Explorer.FileManager.GetOrCreateRenderer(Entity.ArchiveFile, Explorer.ArchiveRenderer);
 

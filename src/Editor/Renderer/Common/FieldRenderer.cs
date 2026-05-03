@@ -622,9 +622,9 @@ namespace NST
 
                 if (ImGui.Button("Add element", new Vector2(-1, 0)))
                 {
-                    if (type.IsAssignableTo(typeof(igMetaField)))
+                    if (typeof(T).IsAssignableTo(typeof(igMetaField)))
                     {
-                        mem.Add((T?)Activator.CreateInstance(typeof(T)));
+                        mem.Add(Activator.CreateInstance<T>());
                     }
                     else
                     {

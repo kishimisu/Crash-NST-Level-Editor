@@ -413,7 +413,7 @@ namespace NST
                 }
             }
 
-            HandleNavigation(tree, !Object.IsSelected);
+            HandleNavigation(tree, tree.SelectedNode != this);
 
             if (updated)
             {

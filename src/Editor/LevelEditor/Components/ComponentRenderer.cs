@@ -156,7 +156,7 @@ namespace NST
                     }
                 }
 
-                c.RenderAdvancedProperties(c.Object, fields);
+                c.RenderAdvancedProperties(c.Object, fields, defaultOpen: c.Manager.Count == 1);
             }
         }
 

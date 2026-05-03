@@ -1561,7 +1561,7 @@ namespace NST
                 infos.igz ??= existing.ToIgzFile();
                 file = existing;
                 igz = infos.igz;
-                return true;
+                return false;
             }
             else
             {
@@ -1572,7 +1572,7 @@ namespace NST
 
                 ArchiveRenderer.AddFile(file);
                 FileManager.Add(file, igz, true);
-                return false;
+                return true;
             }
         }
 
@@ -1594,7 +1594,7 @@ namespace NST
 
                 FileManager.Add(file, igz, true);
 
-                return false;
+                return true;
             }
             else
             {
@@ -1610,7 +1610,7 @@ namespace NST
                     FileManager.Add(existing, igz, true);
                 }
 
-                return true;
+                return false;
             }
         }
 

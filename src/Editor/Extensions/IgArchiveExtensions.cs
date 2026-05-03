@@ -308,8 +308,20 @@ namespace NST
                     // Console.WriteLine("igImage2: " + image._format?.Reference?.objectName);
                     if (image._format?.Reference?.objectName.Contains("tile_ps4") == true)
                     {
-                        image._data.Set(image.GetPixels(false));
-                        image._format.Reference.objectName = image._format.Reference.objectName.Replace("tile_ps4", "dx11");
+                        byte[] pixels = image.GetPixels(false);
+                        string format = image._format.Reference.objectName;
+
+                        if (format == "b8g8r8a8_tile_ps4")
+                        {
+                            for (int i = 0; i < pixels.Length; i += 4)
+                            {
+                                (pixels[i], pixels[i+2]) = (pixels[i+2], pixels[i]);
+                            }
+                            format = "r8g8b8a8_dx11";
+                        }
+
+                        image._data.Set(pixels);
+                        image._format.Reference.objectName = format.Replace("tile_ps4", "dx11");
                         image._levelCount = 1;
                     }
                 }

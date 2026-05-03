@@ -7,7 +7,7 @@ namespace NST
     public static class LevelBuilder
     {
         public static readonly string[] CrashModes = [ "Crash 1", "Crash 2", "Crash 3" ];
-        public static readonly string[] CrashCharacters = [ "Crash", "Coco" , "CrashBandicoot", "BlasterTech", "BruiserUndead", "TemplateLegacy" ];
+        public static readonly string[] CrashCharacters = [ "Crash", "Coco" , "CrashBandicoot", "WranglerFire", "BlasterTech", "BruiserUndead", "TemplateLegacy" ];
         private static int _currentMode = 0;
         public static bool _newLevelOpen = false;
 

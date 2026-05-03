@@ -64,7 +64,7 @@ namespace NST
 
             if (newSelection && _selection.Count > 0)
             {
-                ClearSelection();
+                ClearSelection(refreshTreeView: false);
             }
 
             bool instanced = objects.Count > 1;
@@ -162,7 +162,7 @@ namespace NST
             _selection.Remove(obj);
         }
 
-        public void ClearSelection(bool refreshInstances = false)
+        public void ClearSelection(bool refreshInstances = false, bool refreshTreeView = true)
         {
             RemoveObjectsFromScene(_selection);
 
@@ -175,6 +175,11 @@ namespace NST
 
             _selection.Clear();
             _outlinePass.selectedObjects.Clear();
+
+            if (refreshTreeView)
+            {
+                _explorer.TreeView.SetSelectedNode(null);
+            }
         }
 
         private static void RemoveObjectsFromScene(List<NSTObject> objects)
@@ -343,19 +348,23 @@ namespace NST
 
                 archiveRenderer.SetEntityUpdated(entity3D);
 
+                List<NSTObject> templatesToRefresh = [];
+
                 if (entity3D.IsPrefabInstance)
                 {
-                    List<NSTObject> prefabChildren = entity3D.Children.Where(e => e is NSTEntity entity && entity.ParentPrefabInstance == entity3D).ToList();
+                    var prefabChildren = entity3D.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == entity3D);
 
-                    foreach (NSTObject child in prefabChildren)
+                    foreach (NSTEntity child in prefabChildren)
                     {
-                        if (child is NSTEntity childEntity && childEntity.CollisionShapeIndex != -1)
+                        if (child.IsTemplate)
                         {
-                            archiveRenderer.SetEntityUpdated(childEntity);
+                            templatesToRefresh.Add(child);
+                        }
+                        if (child.CollisionShapeIndex != -1)
+                        {
+                            archiveRenderer.SetEntityUpdated(child);
                         }
                     }
-
-                    // _explorer.InstanceManager.RefreshInstances(prefabChildren);
                 }
 
                 THREE.Matrix4 deltaMatrix = new THREE.Matrix4().Copy(entity3D.ObjectToWorld()).Multiply(previousMatrix.Inverted());
@@ -371,10 +380,11 @@ namespace NST
                     THREE.Vector3 p = new THREE.Vector3();
                     newChildMatrix.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
                     child.Object._parentSpacePosition = p.ToVec3MetaField();
+                    templatesToRefresh.Add(child);
                 }
-                if (childTemplates.Any())
+                if (templatesToRefresh.Count > 0)
                 {
-                    // _explorer.InstanceManager.RefreshInstances(childTemplates.Cast<NSTObject>().ToList());
+                    _explorer.InstanceManager.RefreshInstances(templatesToRefresh);
                 }
                 // Update child waypoints position
                 if (_explorer.FileManager.GetIgz(entity3D.ArchiveFile) is IgzFile igz)
@@ -524,6 +534,7 @@ namespace NST
             ClearSelection(true);
 
             ModalRenderer.ShowLoadingModal("Pasting selection...");
+            int counter = 0;
 
             Task.Run(() =>
             {
@@ -549,6 +560,11 @@ namespace NST
 
                     foreach (NSTObject obj in objects)
                     {
+                        if (toCopyPaste.Count > 40)
+                        {
+                            ModalRenderer.ShowLoadingModal($"Pasting selection... {++counter}/{toCopyPaste.Count}", counter / (float)toCopyPaste.Count);
+                        }
+
                         if (obj is not NSTEntity entity)
                         {
                             if (copyToSameFile)
@@ -801,7 +817,7 @@ namespace NST
                     {
                         List<NSTEntity> originalPrefabChildren = original.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == original).ToList();
 
-                        for (int i = 0; i < prefabChildren.Count; i++)
+                        for (int i = 0; i < Math.Min(originalPrefabChildren.Count, prefabChildren.Count); i++)
                         {
                             if (originalPrefabChildren[i].CollisionShapeIndex != -1)
                             {
@@ -829,7 +845,7 @@ namespace NST
                     {
                         if (clone.Object.TryGetComponent(out CModelComponentData? model))
                         {
-                            model._distanceCullImportance = EDistanceCullImportance.kMedium;
+                            model._distanceCullImportance = EDistanceCullImportance.kCritical;
                         }
                     }
                 }

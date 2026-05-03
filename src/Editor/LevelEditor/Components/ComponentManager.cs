@@ -549,7 +549,14 @@ namespace NST
 
             var exists = Entity.Object3D?.Children.Contains(obj3D);
 
-            obj3D.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn));
+            obj3D.Traverse(e => 
+            {
+                if ((e.Layers.Mask & (int)LevelExplorer.CameraLayer.TriggersOn) == 0)
+                {
+                    e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn);
+                    Explorer.RenderNextFrame = true;
+                }
+            });
 
             if (exists == false && Entity.Object3D != null)
             {

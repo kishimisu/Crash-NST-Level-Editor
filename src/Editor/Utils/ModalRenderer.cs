@@ -36,8 +36,8 @@ namespace NST
         {
             _text = text;
             _callback = callback;
+            _requestOpen = !_isOpen;
             _isOpen = true;
-            _requestOpen = true;
         }
 
         /// <summary>
@@ -89,6 +89,7 @@ namespace NST
             {
                 ImGui.CloseCurrentPopup();
                 _requestClose = false;
+                _isOpen = false;
             }
 
             return open;
@@ -235,11 +236,26 @@ namespace NST
 
     public class LoadingModal() : ModalBase<Action>("In Progress...")
     {
+        private float? _progress = null;
+
+        public void Open(string message, float? progress = null)
+        {
+            _progress = progress;
+            base.Open(message);
+        }
+
+        public new void Close()
+        {
+            _progress = null;
+            base.Close();
+        }
+        
         public override bool Render()
         {
             if (!base.Render()) return false;
 
-            ImGui.ProgressBar(-1.0f * (float)ImGui.GetTime(), new Vector2(400, 15), _text);
+            float p = _progress ?? (-1.0f * (float)ImGui.GetTime());
+            ImGui.ProgressBar(p, new Vector2(400, 15), _text);
 
             ImGui.EndPopup();
             return true;
@@ -303,9 +319,9 @@ namespace NST
             _renameModal.Open(fileName, action);
         }
 
-        public static void ShowLoadingModal(string message)
+        public static void ShowLoadingModal(string message, float? progress = null)
         {
-            _loadingModal.Open(message);
+            _loadingModal.Open(message, progress);
         }
 
         public static void CloseLoadingModal()

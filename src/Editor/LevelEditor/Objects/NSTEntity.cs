@@ -609,11 +609,6 @@ namespace NST
         {
             base.Render(explorer);
 
-            if (Model != null && ArchiveFile.GameVersion == GameVersion.CTR)
-            {
-                ImGui.Text("Material count: " + Model.Meshes.Count);
-            }
-
             // Render transform header
 
             ImGui.PushStyleColor(ImGuiCol.Text, 0xff20dfff);

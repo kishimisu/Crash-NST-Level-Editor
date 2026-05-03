@@ -298,7 +298,7 @@ namespace NST
                 material.PolygonOffsetUnits = 1.0f;
             }
 
-            bool waterDecal = materialHandle?.objectName == "waterDecal";
+            bool waterDecal = materialHandle?.objectName == "waterDecal" || effectHandle?.namespaceName.Contains("Water") == true;
 
             if (waterDecal)
             {
