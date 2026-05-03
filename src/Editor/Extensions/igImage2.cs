@@ -44,21 +44,12 @@ namespace Alchemy
             int width = (int)(image._width * scale);
             int height = (int)(image._height * scale);
 
-            var resizedInfo = new SKImageInfo(width, height, info.ColorType, info.AlphaType);
+            var resizedInfo = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
             var resizedBitmap = new SKBitmap(resizedInfo);
 
-            using (var canvas = new SKCanvas(resizedBitmap))
-            {
-                canvas.Clear(SKColors.Transparent);
-
-                var destRect = new SKRect(0, 0, width, height);
-                canvas.DrawBitmap(bitmap, destRect, new SKPaint
-                {
-                    FilterQuality = SKFilterQuality.High
-                });
-            }
-
+            bitmap.ScalePixels(resizedBitmap, SKFilterQuality.High);
             bitmap.Dispose();
+
             return resizedBitmap;
         }
 
