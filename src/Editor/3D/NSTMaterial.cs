@@ -295,7 +295,7 @@ namespace NST
             {
                 material.PolygonOffset = true;
                 material.PolygonOffsetFactor = -1.0f * (drawCallIndex+1);
-                material.PolygonOffsetUnits = 1.0f;
+                material.PolygonOffsetUnits = .1f;
             }
 
             bool waterDecal = materialHandle?.objectName == "waterDecal" || effectHandle?.namespaceName.Contains("Water") == true;

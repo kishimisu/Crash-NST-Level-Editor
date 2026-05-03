@@ -734,15 +734,22 @@ namespace NST
             if (shape == null) return;
 
             THREE.Material mat = new THREE.MeshBasicMaterial() 
-            { 
+            {
                 Color = new THREE.Color(1, 0, 0),
                 Side = THREE.Constants.DoubleSide,
+                PolygonOffset = true,
+                PolygonOffsetFactor = -10,
+                PolygonOffsetUnits = 0.1f,
                 Transparent = true,
                 Opacity = 0.25f,
             };
             THREE.Material matWire = new THREE.MeshBasicMaterial()
             {
                 Color = new THREE.Color(1, 0, 0),
+                Side = THREE.Constants.DoubleSide,
+                PolygonOffset = true,
+                PolygonOffsetFactor = -10,
+                PolygonOffsetUnits = 0.1f,
                 Wireframe = true,
             };
             const float havokScale = 39.37f;
@@ -827,27 +834,28 @@ namespace NST
 
                     for (int i = 0; i < primitiveCount; i++)
                     {
-                        var primitive = tree._primitives[primitiveStart + i];
-                        var a = GetVertex(primitive._indices_0);
-                        var b = GetVertex(primitive._indices_1);
-                        var c = GetVertex(primitive._indices_2);
-                        var d = GetVertex(primitive._indices_3);
+                        try
+                        {
+                            var primitive = tree._primitives[primitiveStart + i];
+                            int startId = positions.Count;
 
-                        const float extrude = 2.0f;
-                        THREE.Vector3 normal = ComputeNormal(a, b, c) * extrude;
-                        int startId = positions.Count;
+                            var a = GetVertex(primitive._indices_0);
+                            var b = GetVertex(primitive._indices_1);
+                            var c = GetVertex(primitive._indices_2);
+                            var d = GetVertex(primitive._indices_3);
 
-                        positions.AddRange([
-                            a + normal, 
-                            b + normal, 
-                            c + normal, 
-                            d + normal
-                        ]);
-
-                        indices.AddRange([
-                            startId, startId + 1, startId + 2, 
-                            startId, startId + 2, startId + 3
-                        ]);
+                            positions.AddRange([
+                                a, b, c, d 
+                            ]);
+                            indices.AddRange([
+                                startId, startId + 1, startId + 2, 
+                                startId, startId + 2, startId + 3
+                            ]);
+                        }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e);
+                        }
                     }
 
                     primitiveStart += primitiveCount;
@@ -880,7 +888,7 @@ namespace NST
                 group.UserData["BorderCollision"] = true;
             }
 
-            group.UserData["entity"] = entity;
+            group.Traverse(e => e.UserData["entity"] = entity);
 
             RootObject.Add(group);
         }
@@ -896,13 +904,6 @@ namespace NST
             uint z = (uint)((packed >> (xBits + yBits)) & zMask);
 
             return (x, y, z);
-        }
-
-        private static THREE.Vector3 ComputeNormal(THREE.Vector3 v0, THREE.Vector3 v1, THREE.Vector3 v2)
-        {
-            THREE.Vector3 edge1 = v1 - v0;
-            THREE.Vector3 edge2 = v2 - v0;
-            return edge1.Cross(edge2).Normalize();
         }
     }
 }

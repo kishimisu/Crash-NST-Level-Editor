@@ -155,8 +155,8 @@ namespace NST
 
             if (obj.Object3D != null)
             {
-                _selectionContainer.Remove(obj.Object3D!);
-                _outlinePass.selectedObjects.Remove(obj.Object3D!);
+                _selectionContainer.Remove(obj.Object3D);
+                _outlinePass.selectedObjects.Remove(obj.Object3D);
             }
 
             _selection.Remove(obj);
