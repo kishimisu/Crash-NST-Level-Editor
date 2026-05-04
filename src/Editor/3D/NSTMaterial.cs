@@ -291,11 +291,11 @@ namespace NST
             material.Shininess = DefaultShininess;
             material.Color = new THREE.Color(color.X, color.Y, color.Z);
 
-            if (type.IsAssignableTo(typeof(CBlendedDecalMaterial))) 
+            if (type.IsAssignableTo(typeof(CBlendedDecalMaterial)) || effectHandle?.namespaceName == "GBufferDecal") 
             {
                 material.PolygonOffset = true;
                 material.PolygonOffsetFactor = -1.0f * (drawCallIndex+1);
-                material.PolygonOffsetUnits = .1f;
+                material.PolygonOffsetUnits = 0.1f;
             }
 
             bool waterDecal = materialHandle?.objectName == "waterDecal" || effectHandle?.namespaceName.Contains("Water") == true;

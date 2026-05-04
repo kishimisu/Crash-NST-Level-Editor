@@ -92,7 +92,7 @@ namespace NST
 
         public static THREE.Vector4 FindColor(this igGraphicsMaterial igMaterial)
         {
-            if (igMaterial._commonState == null || igMaterial._commonState._memory.Count < 28 * 4) 
+            if (igMaterial._commonState == null || igMaterial._commonState._memory.Count < 28 * 4 || igMaterial._commonState._memory[16 * 4] != 30) 
                 return new THREE.Vector4(1, 1, 1, 1);
 
             byte[] data = igMaterial._commonState._memory.ToArray();
