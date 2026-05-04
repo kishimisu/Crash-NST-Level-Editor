@@ -333,7 +333,7 @@ namespace NST
         public void InitChildren(LevelExplorer explorer, List<NSTObject> objects)
         {
             var components = Object.GetComponents();
-            var handles = components.SelectMany(c => c.GetHandles()).ToList();
+            var handles = components.SelectMany(c => c.GetHandles(ArchiveFile.GameVersion)).ToList();
 
             if (Object is CPlayerStartEntity playerStart && playerStart._camera?.Reference is NamedReference camReference)
             {
@@ -347,7 +347,7 @@ namespace NST
 
             if (Object.TryGetComponent(out CMovementControllerComponentData? movementController) && movementController._controllerList?._data.Count > 0)
             {
-                handles.AddRange(movementController._controllerList._data.SelectMany(c => c.GetHandles()));
+                handles.AddRange(movementController._controllerList._data.SelectMany(c => c.GetHandles(ArchiveFile.GameVersion)));
             }
 
             foreach (NamedReference reference in handles)
@@ -454,7 +454,7 @@ namespace NST
             {
                 List<CWaypoint> waypoints = [];
 
-                foreach (var handle in c.GetHandles())
+                foreach (var handle in c.GetHandles(ArchiveFile.GameVersion))
                 {
                     igObject? obj = parentIgz.FindObject(handle);
                     if (obj == null) continue;

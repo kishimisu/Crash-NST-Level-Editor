@@ -29,17 +29,19 @@ namespace Alchemy
         public IgzFile? src = null;
         public IgzFile? dst = null;
         public CloneMode mode = CloneMode.Deep;
+        public GameVersion version = GameVersion.NST;
         public Dictionary<igObject, igObject> clones = [];
         public Dictionary<igObject, igObject> newClones = [];
         public HashSet<igObject>? forceClone = null;
 
-        public CloneProperties(IgzFile? src = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null, HashSet<igObject>? forceClone = null)
+        public CloneProperties(IgzFile? src = null, IgzFile? dst = null, CloneMode mode = CloneMode.Deep, Dictionary<igObject, igObject>? clones = null, HashSet<igObject>? forceClone = null, GameVersion version = GameVersion.NST)
         {
             this.src = src;
             this.dst = dst;
             this.mode = mode;
             this.clones = clones ?? [];
             this.forceClone = forceClone;
+            this.version = version;
         }
     }
     
@@ -98,9 +100,9 @@ namespace Alchemy
         /// Get all objects referenced by this object.
         /// Does not include handles.
         /// </summary>
-        public virtual List<igObject> GetChildren(ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
+        public virtual List<igObject> GetChildren(GameVersion version, ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
         {
-            IReadOnlyList<CachedFieldAttr> fields = GetFields(GameVersion.None);
+            IReadOnlyList<CachedFieldAttr> fields = GetFields(version);
             List<igObject> children = [];
 
             if (searchParams.HasFlag(ChildrenSearchParams.OnlyRefCounted))
@@ -112,7 +114,7 @@ namespace Alchemy
             {
                 object? value = field.GetValue(this);
 
-                children.AddRange(GetFieldChildren(value, searchParams));
+                children.AddRange(GetFieldChildren(value, version, searchParams));
             }
 
             return children;
@@ -121,15 +123,15 @@ namespace Alchemy
         /// <summary>
         /// Recursively find all children of this object
         /// </summary>
-        public List<igObject> GetChildrenRecursive(ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
+        public List<igObject> GetChildrenRecursive(GameVersion version, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
         {
             visited ??= new HashSet<igObject>();
 
-            foreach (igObject child in GetChildren(searchParams))
+            foreach (igObject child in GetChildren(version, searchParams))
             {
                 if (visited.Add(child))
                 {
-                    child.GetChildrenRecursive(searchParams, visited);
+                    child.GetChildrenRecursive(version, searchParams, visited);
                 }
             }
 
@@ -139,19 +141,19 @@ namespace Alchemy
         /// <summary>
         /// Recursively find all children of this object, including handles
         /// </summary>
-        public List<igObject> GetChildrenRecursive(IgzFile igz, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
+        public List<igObject> GetChildrenRecursive(IgzFile igz, GameVersion version, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject>? visited = null)
         {
             if (visited == null) visited = new HashSet<igObject>();
 
             List<igObject> children = [];
 
-            foreach (igObject child in GetChildren(igz, searchParams))
+            foreach (igObject child in GetChildren(igz, version, searchParams))
             {
                 if (visited.Contains(child)) continue;
                 visited.Add(child);
 
                 children.Add(child);
-                children.AddRange(child.GetChildrenRecursive(igz, searchParams, visited));
+                children.AddRange(child.GetChildrenRecursive(igz, version, searchParams, visited));
             }
 
             return children;
@@ -162,20 +164,20 @@ namespace Alchemy
         /// Can also include objects that are referenced through handles in the same IGZ file
         /// </summary>
         /// <param name="igz">The IGZ file containing this object</param>
-        public virtual List<igObject> GetChildren(IgzFile igz, ChildrenSearchParams searchParams)
+        public virtual List<igObject> GetChildren(IgzFile igz, GameVersion version, ChildrenSearchParams searchParams)
         {
-            List<igObject> handles = GetHandles()
+            List<igObject> handles = GetHandles(version)
                 .Select(handle => igz.FindObject(handle))
                 .OfType<igObject>()
                 .ToList();
 
-            return GetChildren(searchParams).Concat(handles).ToList();
+            return GetChildren(version, searchParams).Concat(handles).ToList();
         }
 
         /// <summary>
         /// Get all objects referenced by a field
         /// </summary>
-        protected static List<igObject> GetFieldChildren(object? element, ChildrenSearchParams searchParams)
+        protected static List<igObject> GetFieldChildren(object? element, GameVersion version, ChildrenSearchParams searchParams)
         {
             if (element == null) return [];
             
@@ -190,7 +192,7 @@ namespace Alchemy
             // Other igMetaFields
             else if (element is igMetaField metaField)
             {
-                return metaField.GetChildren(searchParams);
+                return metaField.GetChildren(version, searchParams);
             }
             // Arrays
             else if (element.GetType().IsArray)
@@ -205,7 +207,7 @@ namespace Alchemy
                 for (int i = 0; i < array.Length; i++)
                 {
                     object? value = array.GetValue(i);
-                    children.AddRange(GetFieldChildren(value, searchParams));
+                    children.AddRange(GetFieldChildren(value, version, searchParams));
                 }
 
                 return children;
@@ -218,18 +220,18 @@ namespace Alchemy
         /// Get all handles defined in this object
         /// </summary>
         /// <returns>List of NamedReference handles</returns>
-        public virtual List<NamedReference> GetHandles()
+        public virtual List<NamedReference> GetHandles(GameVersion version)
         {
             List<NamedReference> references = [];
 
-            foreach (CachedFieldAttr field in GetFields(GameVersion.None))
+            foreach (CachedFieldAttr field in GetFields(version))
             {
                 object? value = field.GetValue(this);
                 if (value == null) continue;
 
                 if (value is igMetaField metaField)
                 {
-                    references.AddRange(metaField.GetHandles());
+                    references.AddRange(metaField.GetHandles(version));
                 }
                 else if (value is igObject metaObject && metaObject.Reference != null)
                 {
@@ -246,7 +248,7 @@ namespace Alchemy
                     {
                         if (array.GetValue(i) is igMetaField metaFieldElm)
                         {
-                            references.AddRange(metaFieldElm.GetHandles());
+                            references.AddRange(metaFieldElm.GetHandles(version));
                         }
                     }
                 }
@@ -283,7 +285,7 @@ namespace Alchemy
         {            
             igObjectBase clone = (igObjectBase)MemberwiseClone();
 
-            foreach (CachedFieldAttr field in GetFields(GameVersion.None))
+            foreach (CachedFieldAttr field in GetFields(props.version))
             {
                 object? value = field.GetValue(this);
 
@@ -299,11 +301,11 @@ namespace Alchemy
         /// <summary>
         /// Get all strings defined in this object (todo: include memories & lists)
         /// </summary>
-        public List<string> GetStrings()
+        public List<string> GetStrings(GameVersion version)
         {
             List<string> strings = [];
 
-            foreach (CachedFieldAttr field in GetFields(GameVersion.None))
+            foreach (CachedFieldAttr field in GetFields(version))
             {
                 object? value = field.GetValue(this);
                 if (value == null) continue;
@@ -312,7 +314,7 @@ namespace Alchemy
                 else if (value is igObject obj && obj.Reference != null) strings.Add(obj.Reference.namespaceName);
             }
 
-            strings.AddRange(GetHandles().Select(h => h.namespaceName));
+            strings.AddRange(GetHandles(version).Select(h => h.namespaceName));
 
             return strings;
         }

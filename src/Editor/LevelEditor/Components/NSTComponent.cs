@@ -36,7 +36,7 @@ namespace NST
 
             if (!isUnique)
             {
-                _componentCopy = (igComponentData)component.Clone(new());
+                _componentCopy = (igComponentData)component.Clone(new(version: manager.Explorer.Archive.GameVersion));
             }
 
             DisplayName = GetDisplayName();

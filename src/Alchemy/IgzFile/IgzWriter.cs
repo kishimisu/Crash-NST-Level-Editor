@@ -234,7 +234,7 @@ namespace Alchemy
 
                 visited.Add(obj);
 
-                FindAllObjectsRecursive(obj.GetChildren(), visited);
+                FindAllObjectsRecursive(obj.GetChildren(GameVersion), visited);
             }
 
             return visited.ToList();
@@ -252,7 +252,7 @@ namespace Alchemy
 
             foreach (igObject obj in objects)
             {
-                foreach (igObject child in obj.GetChildren(ChildrenSearchParams.OnlyRefCounted))
+                foreach (igObject child in obj.GetChildren(GameVersion, ChildrenSearchParams.OnlyRefCounted))
                 {
                     child.__referenceCount++;
                 }

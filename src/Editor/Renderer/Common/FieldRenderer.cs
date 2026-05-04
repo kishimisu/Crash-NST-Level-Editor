@@ -874,7 +874,7 @@ namespace NST
             {
                 if (isMetaField && value is igMetaField metaField)
                 {
-                    _copyObject = metaField.Clone(new());
+                    _copyObject = metaField.Clone(new(version: renderer.ArchiveFile.GameVersion));
                 }
                 else if (isIgObject && renderer is IgzRenderer igzRenderer)
                 {

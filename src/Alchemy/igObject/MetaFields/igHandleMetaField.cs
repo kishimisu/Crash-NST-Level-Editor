@@ -7,7 +7,7 @@ namespace Alchemy
 
         public NamedReference? Reference { get; set; }
 
-        public override List<NamedReference> GetHandles() => Reference != null ? [ Reference ] : [];
+        public override List<NamedReference> GetHandles(GameVersion version) => Reference != null ? [ Reference ] : [];
 
         public override void Parse(IgzReader reader)
         {

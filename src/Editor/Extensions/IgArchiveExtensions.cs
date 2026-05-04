@@ -146,7 +146,7 @@ namespace NST
         /// <summary>
         /// Find all dependencies of a file in a source archive that are not already in the destination archive
         /// </summary>
-        public static List<IgArchiveFile> FindDependencies(IgArchive sourceArchive, IgArchive destinationArchive, HashSet<string> dependencies, bool excludeMapFiles)
+        public static List<IgArchiveFile> FindDependencies(IgArchive sourceArchive, IgArchive destinationArchive, HashSet<string> dependencies, bool excludeMapFiles, bool ctrToNst = false)
         {
             Dictionary<string, List<IgArchiveFile>> fileNamespaces = [];
             Queue<IgArchiveFile> files = [];
@@ -227,16 +227,21 @@ namespace NST
                 IgArchiveFile current = files.Dequeue();
                 string path = current.GetPath();
 
-                if (visited.Contains(path)) continue;
-                
-                visited.Add(path);
+                if (!visited.Add(path)) continue;
+
+                if (ctrToNst && (path.StartsWith("vsc/") || Path.GetExtension(current.GetName()).StartsWith(".hk")))
+                {
+                    Console.WriteLine("Exclude incompatible CTR file: " + current.GetPath());
+                    continue;
+                }
+
                 added.Add(current);
 
                 if (!current.IsIGZ()) continue;
 
                 IgzFile igz = current.ToIgzFile();
 
-                foreach (string name in igz.GetDependencies())
+                foreach (string name in igz.GetDependencies(destinationArchive.GameVersion))
                 {
                     if (!fileNamespaces.ContainsKey(name)) continue;
 
@@ -280,7 +285,7 @@ namespace NST
                 {
                     // Console.WriteLine($"igVertexFormat: {vertexFormat}, Vertex size: {vertexFormat._vertexSize}, Elements: {vertexFormat._elements.Count}");
                     var list = data[vertexFormat._vertexSize];
-                    var platformData = list.Find(e => e.elementCount == vertexFormat._elements.Count)!.platformData;
+                    var platformData = list.Find(e => e.elementCount == vertexFormat._elements.Count)?.platformData ?? list[0].platformData;
                     vertexFormat._platformData.Set(platformData);
                     vertexFormat._platformFormat = new igVertexFormatPlatform() { Reference = new NamedReference("vertexformat", "igVertexFormatDX11", true) };
                 }
@@ -323,6 +328,25 @@ namespace NST
                         image._data.Set(pixels);
                         image._format.Reference.objectName = format.Replace("tile_ps4", "dx11");
                         image._levelCount = 1;
+                    }
+                }
+                else if (obj is igGraphicsTexture texture)
+                {
+                    string? name = texture._imageHandle?.Reference?.namespaceName;
+
+                    if (name != null && !name.Contains("@!default_") &&!name.Contains("@!Common!") && archive.FindFile(name, FileSearchType.Name) == null)
+                    {
+                        IgArchiveFile? textureFile = AlchemyUtils.FindFileInArchives(NamespaceUtils.GetFileName(name, false), out _);
+
+                        if (textureFile != null)
+                        {
+                            IgzFile textureIgz = textureFile.ToIgzFile();
+                            renderer.AddFile(textureFile);
+                            renderer.FixVersionDifferences(textureIgz);
+                            textureFile.SetGameVersion(archive.GameVersion);
+                            textureFile.SetData(textureIgz.Save());
+                            Console.WriteLine("Found external texture: " + textureFile.GetPath());
+                        }
                     }
                 }
             }

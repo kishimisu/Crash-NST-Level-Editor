@@ -329,7 +329,7 @@ namespace NST
             // CPlayerStartEntity
 
             CPlayerStartEntity playerStart = ObjectFactory.CreatePlayerStart();
-            var children = playerStart.GetChildrenRecursive();
+            var children = playerStart.GetChildrenRecursive(GameVersion.NST);
             children.Insert(0, playerStart);
             children.ForEach(c => 
             {
@@ -512,7 +512,7 @@ namespace NST
                     CEntity startMusic = modelArchive.FindObject<CEntity>(new NamedReference("L332_EggipusRex_Music", "Music_Entity"))!;
                     startMusic.ObjectName = "MainMusic";
                     startMusic._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
-                    startMusic.GetChildrenRecursive().ForEach(c =>
+                    startMusic.GetChildrenRecursive(GameVersion.NST).ForEach(c =>
                     {
                         c.MemoryPool = musicSettings.MemoryPool;
                         c.GetFields(GameVersion.NST).ToList().ForEach(f =>

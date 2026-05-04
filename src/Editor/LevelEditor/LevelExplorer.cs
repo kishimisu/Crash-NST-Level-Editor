@@ -210,7 +210,7 @@ namespace NST
                     }
                     else
                     {
-                        _shouldOpenContextMenu = Archive.GameVersion == GameVersion.NST;
+                        _shouldOpenContextMenu = true;
                         _fpsControls?.ResetMousePos();
                     }
                 }
@@ -685,19 +685,6 @@ namespace NST
                     }
                 }
             }
-        }
-
-        public hknpShapeInstance? FindHavokShape(NSTEntity entity)
-        {
-            if (entity.CollisionShapeIndex == -1) return null;
-
-            IgArchiveFile file = Archive.FindCollisionFile(".hkx")!;
-
-            HavokFile hkx = file.ToHavokFile();
-
-            hknpStaticCompoundShape compoundShape = (hknpStaticCompoundShape)hkx.GetRootObjects().First(x => x is hknpStaticCompoundShape);
-
-            return compoundShape._elements[entity.CollisionShapeIndex];
         }
 
         private void PasteObjects(bool keepOriginalPosition = false, bool moveSelection = false)

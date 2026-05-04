@@ -71,7 +71,7 @@ namespace Alchemy
         {
             foreach (igObject obj in Objects)
             {
-                foreach (NamedReference handle in obj.GetHandles())
+                foreach (NamedReference handle in obj.GetHandles(GameVersion))
                 {
                     if (handle.namespaceName == currentNamespace)
                     {
@@ -143,13 +143,14 @@ namespace Alchemy
             out List<IgArchiveFile> dependencies, 
             Dictionary<igObject, igObject>? clones = null, 
             bool excludeMapFiles = false, 
-            bool preventDuplicateNames = true) where T : igObject
+            bool preventDuplicateNames = true,
+            bool ctrToNst = false) where T : igObject
         {
-            igObject clone = destIgz.AddClone(sourceObject, sourceIgz, clones, preventDuplicateNames: preventDuplicateNames);
+            igObject clone = destIgz.AddClone(sourceObject, sourceIgz, clones, CloneMode.Deep, null, preventDuplicateNames, ctrToNst);
 
-            HashSet<string> objectStrings = sourceIgz.GetObjectDependencies(sourceObject);
+            HashSet<string> objectStrings = sourceIgz.GetObjectDependencies(sourceObject, destIgz.GameVersion);
 
-            dependencies = IgArchiveExtensions.FindDependencies(sourceArchive, destArchive, objectStrings, excludeMapFiles);
+            dependencies = IgArchiveExtensions.FindDependencies(sourceArchive, destArchive, objectStrings, excludeMapFiles, ctrToNst);
 
             return (T)clone;
         }
@@ -161,13 +162,20 @@ namespace Alchemy
         /// <param name="source">The source igz file</param>
         /// <param name="clones">The list of cloned objects</param>
         /// <returns>The cloned object</returns>
-        public T AddClone<T>(T obj, IgzFile? source = null, Dictionary<igObject, igObject>? clones = null, CloneMode mode = CloneMode.Deep, HashSet<igObject>? forceClone = null, bool preventDuplicateNames = true) where T : igObject
+        public T AddClone<T>(
+            T obj, 
+            IgzFile? source = null, 
+            Dictionary<igObject, igObject>? clones = null, 
+            CloneMode mode = CloneMode.Deep, 
+            HashSet<igObject>? forceClone = null, 
+            bool preventDuplicateNames = true,
+            bool ctrToNst = false) where T : igObject
         {
             source ??= this;
             clones ??= new Dictionary<igObject, igObject>();
             
             // Clone child objects
-            var props = new CloneProperties(source, this, mode, clones, forceClone);
+            var props = new CloneProperties(source, this, mode, clones, forceClone, GameVersion);
             T clone = (T)obj.Clone(props);
 
             string srcNamespace = source.GetName(false).ToLower();
@@ -183,6 +191,7 @@ namespace Alchemy
                     continue;
                 }
 
+                // Check that no object name is the same
                 if (preventDuplicateNames && dst.ObjectName != null)
                 {
                     string newName = FindSuitableName(dst.ObjectName);
@@ -193,7 +202,7 @@ namespace Alchemy
                 if (this != source && !mode.HasFlag(CloneMode.SkipEntities))
                 {
                     // Update handles
-                    foreach (var handle in dst.GetHandles())
+                    foreach (var handle in dst.GetHandles(GameVersion))
                     {
                         if (handle.namespaceName.ToLower() != srcNamespace) continue;
 
@@ -209,8 +218,8 @@ namespace Alchemy
             // Clone child handles
             foreach ((igObject src, igObject dst) in newClones)
             {
-                List<NamedReference> srcHandles = src.GetHandles();
-                List<NamedReference> dstHandles = dst.GetHandles();
+                List<NamedReference> srcHandles = src.GetHandles(GameVersion);
+                List<NamedReference> dstHandles = dst.GetHandles(GameVersion);
 
                 foreach ((NamedReference srcHandle, NamedReference dstHandle) in srcHandles.Zip(dstHandles))
                 {
@@ -250,15 +259,15 @@ namespace Alchemy
         /// <summary>
         /// Find all strings referenced by an object and its children
         /// </summary>
-        public HashSet<string> GetObjectDependencies(igObject obj)
+        public HashSet<string> GetObjectDependencies(igObject obj, GameVersion version)
         {
             List<string> deps = [];
             List<igObject> children = [ obj ];
-            children.AddRange(obj.GetChildrenRecursive(this, ChildrenSearchParams.IncludeHandles));
+            children.AddRange(obj.GetChildrenRecursive(this, version, ChildrenSearchParams.IncludeHandles));
 
             foreach (igObject child in children)
             {
-                var strings = child.GetStrings();
+                var strings = child.GetStrings(version);
                 if (strings.Count == 0) continue;
                 deps.AddRange(strings);
             }
@@ -278,13 +287,13 @@ namespace Alchemy
         /// <summary>
         /// Find all strings referenced by this file
         /// </summary>
-        public HashSet<string> GetDependencies()
+        public HashSet<string> GetDependencies(GameVersion version)
         {
             List<string> deps = Dependencies.Select(d => d.path).ToList();
 
             foreach (igObject obj in Objects)
             {
-                deps.AddRange(obj.GetStrings());
+                deps.AddRange(obj.GetStrings(version));
             }
 
             return deps
@@ -304,7 +313,7 @@ namespace Alchemy
             igObject? objectList = Objects.Count > 0 ? (Objects[0] as igObjectList) : null;
             var objects = objectList == null ? Objects : Objects.Skip(1);
 
-            HashSet<igObject> allChildren = toRemove.GetChildrenRecursive(this, ChildrenSearchParams.IncludeHandles).ToHashSet();
+            HashSet<igObject> allChildren = toRemove.GetChildrenRecursive(this, GameVersion, ChildrenSearchParams.IncludeHandles).ToHashSet();
             
             bool hasLoop = allChildren.Contains(toRemove);
             
@@ -314,7 +323,7 @@ namespace Alchemy
             {
                 bool inHierarchy = allChildren.Contains(parent);
 
-                foreach (igObject child in parent.GetChildren(this, ChildrenSearchParams.IncludeHandles))
+                foreach (igObject child in parent.GetChildren(this, GameVersion, ChildrenSearchParams.IncludeHandles))
                 {
                     if (!references.ContainsKey(parent))
                     {

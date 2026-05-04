@@ -447,7 +447,8 @@ namespace NST
         {
             if (_copyPaste.Count == 0 || _copyExplorer == null) return;
 
-            bool copyToSameFile = (_explorer == _copyExplorer);
+            bool copyToSameFile = _explorer == _copyExplorer;
+            bool copyFromCtrToNst = _copyExplorer.Archive.GameVersion == GameVersion.CTR && _explorer.Archive.GameVersion == GameVersion.NST;
 
             HashSet<NSTObject> toCopyPaste = _copyPaste.ToHashSet();
 
@@ -573,7 +574,7 @@ namespace NST
                             }
                             else
                             {
-                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile);
+                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
                             }
                             continue;
                         }
@@ -643,7 +644,7 @@ namespace NST
                         // Paste to external archive
                         else
                         {
-                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile);
+                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
                         }
 
                         if (triggerHandleList != null && triggerData != null)
@@ -657,7 +658,7 @@ namespace NST
                         newClones.Add(dst);
                         renderer.SetObjectUpdated(dstFile, dst);
 
-                        foreach (NamedReference handle in dst.GetHandles())
+                        foreach (NamedReference handle in dst.GetHandles(_explorer.Archive.GameVersion))
                         {
                             if (handle.namespaceName.EndsWith("_Camera"))
                             {
@@ -691,7 +692,7 @@ namespace NST
 
                         if (original.CollisionShapeIndex != -1 && !original.IsPrefabChild)
                         {
-                            Console.WriteLine("Add collision: " + clone.Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + clone.IsPrefabTemplate);
+                            // Console.WriteLine("Add collision: " + clone.Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + clone.IsPrefabTemplate);
                             newCollisionEntities.Add(original, clone);
                         }
 
@@ -703,7 +704,7 @@ namespace NST
                 // Refresh handles pointing to original entities
                 foreach (igObject clone in newClones)
                 {
-                    foreach (var handle in clone.GetHandles())
+                    foreach (var handle in clone.GetHandles(_explorer.Archive.GameVersion))
                     {
                         NSTEntity? cloneObject = newEntities.FirstOrDefault(e => e.Key.FileNamespace == handle.namespaceName && e.Key.Object.ObjectName == handle.objectName).Value;
                         if (cloneObject == null) continue;
@@ -821,7 +822,7 @@ namespace NST
                         {
                             if (originalPrefabChildren[i].CollisionShapeIndex != -1)
                             {
-                                Console.WriteLine("Add prefab child collision: " + prefabChildren[i].Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + prefabChildren[i].IsPrefabTemplate);
+                                // Console.WriteLine("Add prefab child collision: " + prefabChildren[i].Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + prefabChildren[i].IsPrefabTemplate);
                                 newCollisionEntities.Add(originalPrefabChildren[i], prefabChildren[i]);
                             }
 
@@ -841,14 +842,25 @@ namespace NST
                         clone.Object._bitfield._isArchetype = false;
                     }
 
-                    if (_copyExplorer.Archive.GameVersion == GameVersion.CTR && _explorer.Archive.GameVersion == GameVersion.NST)
+                    if (copyFromCtrToNst && clone.Object.TryGetComponent(out CModelComponentData? model))
                     {
-                        if (clone.Object.TryGetComponent(out CModelComponentData? model))
-                        {
-                            model._distanceCullImportance = EDistanceCullImportance.kCritical;
-                        }
+                        model._distanceCullImportance = EDistanceCullImportance.kCritical;
                     }
                 }
+
+                hknpStaticCompoundShape? sourceCompoundShape = null;
+
+                if (newCollisionEntities.Count > 0)
+                {
+                    HavokFile? hkx = _copyExplorer.Archive.FindCollisionFile(".hkx")?.ToHavokFile();
+                    sourceCompoundShape = (hknpStaticCompoundShape?)hkx?.GetRootObjects().Find(x => x is hknpStaticCompoundShape);
+                }
+
+                var FindHavokShape = (int index) =>
+                {
+                    if (sourceCompoundShape == null || index < 0 || index >= sourceCompoundShape._elements.Count) return null;
+                    return sourceCompoundShape._elements[index];
+                };
 
                 // Register new collisions
                 foreach ((NSTEntity original, NSTEntity clone) in newCollisionEntities)
@@ -914,7 +926,7 @@ namespace NST
                         else
                         {
                             // Console.WriteLine($"Paste prefab collision shape to another level ({clone.ParentPrefabInstance?.Object.ObjectName} -> {clone.Object.ObjectName}), hash: {original.CollisionPrefabHash}");
-                            hknpShapeInstance? shape = _copyExplorer.FindHavokShape(original);
+                            hknpShapeInstance? shape = FindHavokShape(original.CollisionShapeIndex);
                             renderer.SetEntityUpdated(newPrefabChild, shape);
                         }
                     }
@@ -922,22 +934,19 @@ namespace NST
                     {
                         if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
                         {
-                            Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
+                            // Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
                             renderer.SetEntityUpdated(clone, infos.shapeInstance);
                         }
                         else
                         {
-                            Console.WriteLine("Paste collision index to same file: " + clone.Object.ObjectName);
+                            // Console.WriteLine("Paste collision index to same file: " + clone.Object.ObjectName);
                             renderer.SetEntityUpdated(clone);
                         }
                     }
                     else
                     {
-                        hknpShapeInstance? shape = _copyExplorer.FindHavokShape(original);
-                        
-                        // Console.WriteLine($"IsPrefabInstance: {clone.IsPrefabInstance}, IsPrefabTemplate: {clone.IsPrefabTemplate}, IsPrefabChild: {clone.IsPrefabChild}, CollisionPrefabHash: {clone.CollisionPrefabHash}, CollisionShapeIndex: {clone.CollisionShapeIndex}");
-                        
-                        Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
+                        // Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
+                        hknpShapeInstance? shape = FindHavokShape(original.CollisionShapeIndex);
                         renderer.SetEntityUpdated(clone, shape);
                     }
                 }

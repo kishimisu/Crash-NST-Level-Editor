@@ -126,9 +126,42 @@ namespace NST
         private static bool _bonusCrate = false;
         private static string _deathTriggerType = "Fall_Fast";
         private static string _deathTriggerVFX = "None";
+        
+        private static float _scaleDownCTR = 0.75f;
 
         public static void RenderContextMenu(LevelExplorer explorer)
         {
+            if (explorer.Archive.GameVersion == GameVersion.CTR)
+            {
+                if (ImGui.BeginPopup("ObjectFactoryContextMenu"))
+                {
+                    ImGui.TextDisabled("CTR -> NST");
+                    
+                    if (explorer.SelectionManager._selection.Count == 0) ImGui.BeginDisabled();
+                    ImGuiUtils.Prefix("Scale");
+                    if (ImGui.InputFloat("##scaleDown", ref _scaleDownCTR, 0.05f, 0.1f, "%.2f"))
+                    {
+                        _scaleDownCTR = MathF.Max(0.05f, MathF.Min(1.0f, _scaleDownCTR));
+                    }
+                    if (ImGui.MenuItem("Scale down selection"))
+                    {
+                        explorer.SelectionManager._selectionContainer.Scale *= _scaleDownCTR;
+                        explorer.SelectionManager.ApplyChanges(explorer.ArchiveRenderer);
+                    }
+                    if (explorer.SelectionManager._selection.Count == 0) ImGui.EndDisabled();
+                    
+                    ImGui.Separator();
+                    
+                    if (ImGui.MenuItem("Select all NST-compatible objects"))
+                    {
+                        var selection = explorer.InstanceManager.AllEntities.Where(e => e.Object.GetType() == typeof(igEntity) && !e.ArchiveFile.GetName().Contains("Switch_Only"));
+                        explorer.SelectionManager.UpdateSelection(selection.Cast<NSTObject>().ToList());
+                    }
+                    ImGui.EndPopup();
+                }
+                return;
+            }
+
             if (ImGui.BeginPopup("ObjectFactoryContextMenu"))
             {
                 if (ImGui.BeginMenu("New crate..."))
@@ -1145,7 +1178,7 @@ namespace NST
                 // Update handles
                 foreach ((igObject src, igObject dst) in clones)
                 {
-                    foreach (var handle in dst.GetHandles())
+                    foreach (var handle in dst.GetHandles(GameVersion.NST))
                     {
                         if (handle.namespaceName.StartsWith(archiveName))
                         {

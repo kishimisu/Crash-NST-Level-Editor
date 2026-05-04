@@ -157,7 +157,7 @@ namespace Alchemy
             base.Write(writer);
         }
 
-        public override List<igObject> GetChildren(ChildrenSearchParams searchParams)
+        public override List<igObject> GetChildren(GameVersion version, ChildrenSearchParams searchParams)
         {
             if (!typeof(T).IsSubclassOf(typeof(igObjectBase))) return [];
 
@@ -165,13 +165,13 @@ namespace Alchemy
 
             foreach (T element in _elements)
             {
-                children.AddRange(GetFieldChildren(element, searchParams));
+                children.AddRange(GetFieldChildren(element, version, searchParams));
             }
 
             return children;
         }
 
-        public override List<NamedReference> GetHandles()
+        public override List<NamedReference> GetHandles(GameVersion version)
         {
             if (typeof(T) != typeof(igHandleMetaField)) return [];
 
@@ -179,7 +179,7 @@ namespace Alchemy
 
             foreach (T element in _elements)
             {
-                references.AddRange((element as igHandleMetaField)!.GetHandles());
+                references.AddRange((element as igHandleMetaField)!.GetHandles(version));
             }
 
             return references;

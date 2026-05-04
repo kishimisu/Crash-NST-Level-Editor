@@ -742,6 +742,7 @@ namespace NST
             }
 
             ModalRenderer.ShowLoadingModal($"Saving{(compress ? " compressed " : " ")}archive...");
+            int counter = 0;
 
             Task.Run(() =>
             {
@@ -750,8 +751,14 @@ namespace NST
                 preSaveCallback?.Invoke();
 
                 // Loop through all updated files
-                foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in FileManager.GetUpdatedFiles())
+                var updated = FileManager.GetUpdatedFiles();
+                foreach ((IgArchiveFile archiveFile, FileUpdateInfos infos) in updated)
                 {
+                    if (updated.Count > 100)
+                    {
+                        ModalRenderer.ShowLoadingModal($"Saving{(compress ? " compressed " : " ")}archive... ({++counter}/{updated.Count})", counter / (float)updated.Count);
+                    }
+
                     // Add updated collisions
                     updatedCollisions.AddRange(infos.updatedCollisions.Values);
 
@@ -994,9 +1001,10 @@ namespace NST
             IgzFile destIgz, 
             Dictionary<igObject, igObject>? clones = null, 
             bool excludeMapFiles = false, 
-            bool preventDuplicateNames = true) where T : igObject
+            bool preventDuplicateNames = true,
+            bool ctrToNst = false) where T : igObject
         {
-            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out var newFiles, clones, excludeMapFiles, preventDuplicateNames);
+            T clone = IgzFile.Clone(sourceObject, sourceArchive, Archive, sourceIgz, destIgz, out var newFiles, clones, excludeMapFiles, preventDuplicateNames, ctrToNst);
 
             foreach (IgArchiveFile file in newFiles)
             {
@@ -1046,7 +1054,7 @@ namespace NST
                 return;
             }
 
-            HashSet<string> dependencies = file.ToIgzFile().GetDependencies().ToHashSet();
+            HashSet<string> dependencies = file.ToIgzFile().GetDependencies(Archive.GameVersion).ToHashSet();
 
             List<IgArchiveFile> added = IgArchiveExtensions.FindDependencies(sourceArchive, Archive, dependencies, false);
 

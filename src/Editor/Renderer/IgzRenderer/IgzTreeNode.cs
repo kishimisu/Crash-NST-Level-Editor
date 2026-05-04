@@ -450,7 +450,7 @@ namespace NST
             }
             if (ImGui.Selectable("Copy object"))
             {
-                IgzRenderer.CopyObject = (igObject)Object.Clone(new(mode: CloneMode.Deep));
+                IgzRenderer.CopyObject = (igObject)Object.Clone(new(mode: CloneMode.Deep, version: tree.Renderer.Igz.GameVersion));
                 IgzRenderer.CopyRenderer = tree.Renderer;
             }
 

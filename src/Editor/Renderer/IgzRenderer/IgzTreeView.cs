@@ -85,7 +85,7 @@ namespace NST
 
                 IgzTreeNode node = AddNode(obj);
 
-                foreach (igObject child in obj.GetChildren(igz, ChildrenSearchParams.IncludeHandles))
+                foreach (igObject child in obj.GetChildren(igz, igz.GameVersion, ChildrenSearchParams.IncludeHandles))
                 {
                     IgzTreeNode? childNode = AddNode(child);
                     node.Children.Add(childNode);
@@ -249,7 +249,7 @@ namespace NST
             node.Children.Clear();
 
             // Add new children
-            foreach (igObject child in node.Object.GetChildren(Renderer.Igz, ChildrenSearchParams.IncludeHandles))
+            foreach (igObject child in node.Object.GetChildren(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles))
             {
                 IgzTreeNode? childNode = ObjectNodes.Find(e => e.Object == child);
 
@@ -325,7 +325,7 @@ namespace NST
             List<igObject> objects = [ obj ];
             List<IgzTreeNode> newNodes = [];
 
-            objects.AddRange(obj.GetChildrenRecursive(Renderer.Igz, ChildrenSearchParams.IncludeHandles));
+            objects.AddRange(obj.GetChildrenRecursive(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles));
 
             foreach (igObject child in objects)
             {
@@ -350,12 +350,12 @@ namespace NST
                 return;
             }
 
-            List<igObject> children = newNode.Object.GetChildren(Renderer.Igz, ChildrenSearchParams.IncludeHandles);
+            List<igObject> children = newNode.Object.GetChildren(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles);
 
             // Update parents and children
             foreach (IgzTreeNode node in ObjectNodes)
             {
-                if (node.Object!.GetChildren(Renderer.Igz, ChildrenSearchParams.IncludeHandles).Contains(newNode.Object) && !node.Children.Contains(newNode))
+                if (node.Object!.GetChildren(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles).Contains(newNode.Object) && !node.Children.Contains(newNode))
                 {
                     node.Children.Add(newNode);
                     newNode.Parents.Add(node);
