@@ -971,17 +971,21 @@ namespace NST
 
                     // ImGui.Text($"IsWindowFocused: {IsWindowFocused} IsSceneFocused: {IsSceneFocused} IsDragging: {_isDragging} ClickInsideScene: {_clickInsideScene}");
 
-                    RenderSettingsPanel();
-
-                    if (ImGui.Button("Collapse all"))
+                    if (ImGui.BeginChild("LeftPanel" + GetHashCode()))
                     {
-                        _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
-                        if (SelectionManager._selection.Count > 0) _treeView.SelectObject(SelectionManager._selection[0]);
-                    }
+                        RenderSettingsPanel();
 
-                    if (ImGui.BeginChild("ObjectTree" + GetHashCode()))
-                    {
-                        _treeView.Render();
+                        if (ImGui.Button("Collapse all"))
+                        {
+                            _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
+                            if (SelectionManager._selection.Count > 0) _treeView.SelectObject(SelectionManager._selection[0]);
+                        }
+
+                        if (ImGui.BeginChild("ObjectTree" + GetHashCode()))
+                        {
+                            _treeView.Render();
+                        }
+                        ImGui.EndChild();
                     }
                     ImGui.EndChild();
 
@@ -1023,6 +1027,8 @@ namespace NST
                     }
 
                     _controls.SetFocus(IsSceneFocused || _clickedInsideScene);
+
+                    RenderCameraLayers();
 
                     if (_shouldOpenContextMenu)
                     {
@@ -1136,7 +1142,7 @@ namespace NST
             const uint editorColor = 0x88ff22;
             const uint controlsColor = 0x00bbff;
 
-            if (_zoneInfo != null && _zoneInfoFile != null && ImGui.CollapsingHeader("Level infos"))
+            if (_zoneInfo != null && _zoneInfoFile != null && ImGui.CollapsingHeader("Level settings"))
             {
                 ImGui.PushItemWidth(-1);
                 ImGuiUtils.ColoredSeparator("Level name", levelColor);
@@ -1221,6 +1227,8 @@ namespace NST
 
                 ImGui.PushItemWidth(-1);
 
+                ImGuiUtils.ColoredSeparator("Render settings", editorColor);
+
                 int logMaxTexSize = (int)Math.Log2(_maxTextureSize) - 4;
                 ImGuiUtils.Prefix("Max texture res.");
                 ImGui.TextDisabled("(?)");
@@ -1254,44 +1262,9 @@ namespace NST
                     InstanceManager.RefreshInstances(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
                     RenderNextFrame = true;
                 }
+                
+                ImGuiUtils.ColoredSeparator("Controls", editorColor);
 
-                ImGui.PopItemWidth();
-
-                ImGuiUtils.ColoredSeparator("Visible camera layers", editorColor);
-
-                foreach (KeyValuePair<string, bool> layer in _layers)
-                {
-                    if (layer.Key == "Dynamic Clips" || layer.Key == "Templates" || layer.Key == "Static Collisions")
-                    {
-                        ImGui.Separator();
-                    }
-
-                    bool enabled = layer.Value;
-                    if (ImGui.Checkbox(layer.Key, ref enabled)) 
-                    {
-                        _layers[layer.Key] = enabled;
-                        UpdateActiveLayers(_camera.Layers);
-                        LocalStorage.Set("layer_" + layer.Key, enabled);
-                        
-                        RenderNextFrame = true;
-
-                        if (layer.Key == "Static Collisions")
-                        {
-                            InstanceManager.ShowCollisions(enabled, true, false);
-                        }
-                        else if (layer.Key == "Border Collisions")
-                        {
-                            InstanceManager.ShowCollisions(enabled, false, true);
-                        }
-                    }
-                }
-                ImGui.Spacing();
-            }
-
-            if (ImGui.CollapsingHeader("Controls"))
-            {
-                ImGui.PushItemWidth(-1);
-                ImGui.Spacing();
                 ImGuiUtils.Prefix("Mouse sensitivity:");
                 if (ImGui.SliderFloat("##mouseSpeed", ref _fpsControls.MouseSpeed, 1f, 100f, $"%.1f"))
                 {
@@ -1314,8 +1287,13 @@ namespace NST
                     _gizmos._gizmo.UpdateVisibility("XYZ", _gizmos.EnableTranslateXYZ);
                     RenderNextFrame = true;
                 }
-                ImGui.PopItemWidth();
 
+                ImGui.PopItemWidth();
+                ImGui.Spacing();
+            }
+
+            if (ImGui.CollapsingHeader("Controls"))
+            {
                 ImGuiUtils.ColoredSeparator("Camera", controlsColor);
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
@@ -1346,6 +1324,56 @@ namespace NST
                 ImGui.BulletText("Ctrl+Shift + R: reload level");
                 ImGui.Spacing();
             }
+        }
+
+        bool _cameraLayersOpen = false;
+
+        private void RenderCameraLayers()
+        {
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, 0x99000000);
+            ImGui.SetCursorPos(new System.Numerics.Vector2(_renderBounds.X, _renderBounds.Y));
+
+            var flags = ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY;
+            if (_cameraLayersOpen) flags |= ImGuiChildFlags.AlwaysUseWindowPadding;
+
+            if (ImGui.BeginChild("CameraLayers" + GetHashCode(), new System.Numerics.Vector2(0, 0), flags))
+            {
+                _cameraLayersOpen = ImGui.CollapsingHeader("Camera layers  ");
+                
+                if (_cameraLayersOpen)
+                {
+                    ImGui.Separator();
+
+                    foreach (KeyValuePair<string, bool> layer in _layers)
+                    {
+                        if (layer.Key == "Dynamic Clips" || layer.Key == "Templates" || layer.Key == "Static Collisions")
+                        {
+                            ImGui.Separator();
+                        }
+
+                        bool enabled = layer.Value;
+                        if (ImGui.Checkbox(layer.Key, ref enabled)) 
+                        {
+                            _layers[layer.Key] = enabled;
+                            UpdateActiveLayers(_camera.Layers);
+                            LocalStorage.Set("layer_" + layer.Key, enabled);
+                            
+                            RenderNextFrame = true;
+
+                            if (layer.Key == "Static Collisions")
+                            {
+                                InstanceManager.ShowCollisions(enabled, true, false);
+                            }
+                            else if (layer.Key == "Border Collisions")
+                            {
+                                InstanceManager.ShowCollisions(enabled, false, true);
+                            }
+                        }
+                    }
+                }
+            }
+            ImGui.EndChild();
+            ImGui.PopStyleColor();
         }
 
         private void UpdateActiveLayers(THREE.Layers layers)

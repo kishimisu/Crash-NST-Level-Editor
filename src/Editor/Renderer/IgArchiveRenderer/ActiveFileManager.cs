@@ -403,7 +403,7 @@ namespace NST
         {
             try
             {
-                foreach (FileUpdateInfos file in _files.Values)
+                foreach (FileUpdateInfos file in _files.Values.ToList())
                 {
                     if (file.renderer?.IsOpenAsWindow == true)
                     {

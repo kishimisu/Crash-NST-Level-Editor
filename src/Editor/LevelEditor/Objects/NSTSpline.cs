@@ -243,6 +243,11 @@ namespace NST
             foreach (NSTSplineRotationKeyFrame keyFrame in _rotationKeyFrames)
             {
                 float totalDistance = 0;
+
+                if (_controlPoints.Count == 1)
+                {
+                    keyFrame.Position = _controlPoints[0].Object._position.ToVector3();
+                }
                 
                 for (int i = 0; i < _controlPoints.Count - 1; i++)
                 {
