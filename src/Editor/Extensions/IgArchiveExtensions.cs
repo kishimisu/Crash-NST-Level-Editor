@@ -334,7 +334,7 @@ namespace NST
                 {
                     string? name = texture._imageHandle?.Reference?.namespaceName;
 
-                    if (name != null && !name.Contains("@!default_") &&!name.Contains("@!Common!") && archive.FindFile(name, FileSearchType.Name) == null)
+                    if (name != null && !name.Contains("default_") &&!name.Contains("@!Common!") && archive.FindFile(name, FileSearchType.Name) == null)
                     {
                         IgArchiveFile? textureFile = AlchemyUtils.FindFileInArchives(NamespaceUtils.GetFileName(name, false), out _);
 

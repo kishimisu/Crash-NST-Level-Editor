@@ -130,6 +130,20 @@ namespace Alchemy
             return Objects.Find(o => o.ObjectName?.ToLowerInvariant() == objectName) as T;
         }
 
+        private static readonly HashSet<Type> _ctrToNstCompatible = 
+        [
+            typeof(igPrefabComponentData),
+            typeof(CModelComponentData),
+            typeof(CStaticComponentData),
+            typeof(CStaticCollisionComponentData),
+            typeof(CTintSphereComponentData),
+            typeof(CPointLightComponentData),
+            typeof(CBoxLightComponentData),
+            typeof(CVisualDataBoxComponentData),
+            typeof(CStaticVfxComponentData),
+            typeof(CLoopingVfxComponentData),
+        ];
+
         /// <summary>
         /// Clone an object from one archive to another
         /// </summary>
@@ -190,6 +204,27 @@ namespace Alchemy
                 {
                     continue;
                 }
+                
+                // Make CTR objects work with NST (remove incompatible components)
+                if (ctrToNst)
+                {
+                    if (dst is igEntity entity)
+                    {
+                        foreach (var (key, component) in entity.GetComponentsDictionary())
+                        {
+                            if (!_ctrToNstCompatible.Contains(component.GetType()))
+                            {
+                                Console.WriteLine($"Removed incompatible component {component.GetType().Name} (from parent)");
+                                entity.RemoveComponent(key);
+                            }
+                        }
+                    }
+                    else if (dst is igComponentData component && !_ctrToNstCompatible.Contains(component.GetType()))
+                    {
+                        Console.WriteLine($"Removed incompatible component {component.GetType().Name}");
+                        continue;
+                    }
+                }
 
                 // Check that no object name is the same
                 if (preventDuplicateNames && dst.ObjectName != null)
@@ -241,7 +276,7 @@ namespace Alchemy
 
                     if (!clones.ContainsKey(srcObject))
                     {
-                        igObject handleClone = AddClone(srcObject, source, clones, mode, forceClone);
+                        igObject handleClone = AddClone(srcObject, source, clones, mode, forceClone, preventDuplicateNames, ctrToNst);
 
                         dstHandle.objectName = handleClone.ObjectName!;
                     }

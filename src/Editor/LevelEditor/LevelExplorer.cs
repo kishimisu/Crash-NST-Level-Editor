@@ -992,6 +992,7 @@ namespace NST
                     ImGui.TableNextColumn();
 
                     var canvasSize = ImGui.GetContentRegionAvail();
+                    var startPos = ImGui.GetCursorPos();
 
                     if (_width != (int)canvasSize.X || _height != (int)canvasSize.Y)
                     {
@@ -1028,6 +1029,7 @@ namespace NST
 
                     _controls.SetFocus(IsSceneFocused || _clickedInsideScene);
 
+                    ImGui.SetCursorPos(startPos);
                     RenderCameraLayers();
 
                     if (_shouldOpenContextMenu)
@@ -1331,7 +1333,6 @@ namespace NST
         private void RenderCameraLayers()
         {
             ImGui.PushStyleColor(ImGuiCol.ChildBg, 0x99000000);
-            ImGui.SetCursorPos(new System.Numerics.Vector2(_renderBounds.X, _renderBounds.Y));
 
             var flags = ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY;
             if (_cameraLayersOpen) flags |= ImGuiChildFlags.AlwaysUseWindowPadding;
