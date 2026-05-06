@@ -231,7 +231,7 @@ namespace NST
 
                 if (ctrToNst && (path.StartsWith("vsc/") || Path.GetExtension(current.GetName()).StartsWith(".hk")))
                 {
-                    Console.WriteLine("Exclude incompatible CTR file: " + current.GetPath());
+                    // Console.WriteLine("Exclude incompatible CTR file: " + current.GetPath());
                     continue;
                 }
 
@@ -278,6 +278,8 @@ namespace NST
             using Stream platformDataNST = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.platform_data.json")!;
 
             var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint, List<VertexData>>>(platformDataNST)!;
+
+            List<igObject> toRemove = [];
 
             foreach (igObject obj in igz.Objects)
             {
@@ -349,6 +351,17 @@ namespace NST
                         }
                     }
                 }
+                else if (!AttributeUtils.GetAttributes(obj.GetType()).IsCompatibleNST())
+                {
+                    toRemove.Add(obj);
+                    break;
+                }
+            }
+
+            if (toRemove.Count > 0)
+            {
+                // Console.WriteLine("Cleared file with incompatible objects: " + igz._path);
+                igz.Objects.Clear();
             }
         }
 

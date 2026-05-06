@@ -214,14 +214,14 @@ namespace Alchemy
                         {
                             if (!_ctrToNstCompatible.Contains(component.GetType()))
                             {
-                                Console.WriteLine($"Removed incompatible component {component.GetType().Name} (from parent)");
+                                // Console.WriteLine($"Removed incompatible component {component.GetType().Name} (from parent)");
                                 entity.RemoveComponent(key);
                             }
                         }
                     }
                     else if (dst is igComponentData component && !_ctrToNstCompatible.Contains(component.GetType()))
                     {
-                        Console.WriteLine($"Removed incompatible component {component.GetType().Name}");
+                        // Console.WriteLine($"Removed incompatible component {component.GetType().Name}");
                         continue;
                     }
                 }

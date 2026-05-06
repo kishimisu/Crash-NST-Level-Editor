@@ -136,6 +136,11 @@ namespace Alchemy
 
             if (_groupMemoryPools)
             {
+                if (allObjects.Any(e => e is igEntityTransform))
+                {
+                    defaultMemoryPool.alignment = 16;
+                }
+
                 foreach (igObject obj in allObjects)
                 {
                     obj.MemoryPool = defaultMemoryPool;

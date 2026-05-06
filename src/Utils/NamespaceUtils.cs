@@ -49,6 +49,18 @@ namespace Alchemy
             return includeExtension ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
         }
 
+        public static void AddInfos(string name)
+        {
+            uint hash = ComputeHash(name);
+
+            _namespaceInfos ??= InitializeNamespaceInfos();
+
+            if (!_namespaceInfos.ContainsKey(hash))
+            {
+                _namespaceInfos[hash] = new NamespaceInfos(name, null);
+            }
+        }
+
         /// <summary>
         /// Get the namespace infos associated with a name
         /// </summary>
@@ -72,10 +84,7 @@ namespace Alchemy
         /// </summary>
         public static NamespaceInfos? GetInfos(uint hash)
         {
-            if (_namespaceInfos == null)
-            {
-                _namespaceInfos = InitializeNamespaceInfos();
-            }
+            _namespaceInfos ??= InitializeNamespaceInfos();
 
             if (_namespaceInfos.TryGetValue(hash, out NamespaceInfos? namespaceInfos))
             {

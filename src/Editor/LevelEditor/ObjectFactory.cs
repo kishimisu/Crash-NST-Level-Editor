@@ -154,7 +154,9 @@ namespace NST
                     
                     if (ImGui.MenuItem("Select all NST-compatible objects"))
                     {
-                        var selection = explorer.InstanceManager.AllEntities.Where(e => e.Object.GetType() == typeof(igEntity) && !e.ArchiveFile.GetName().Contains("Switch_Only"));
+                        var selection = explorer.InstanceManager.AllEntities.Where(e => 
+                            e.Object.GetType() != typeof(CPlayerStartEntity) && e.Object.GetType() != typeof(CWorldEntity)
+                        );
                         explorer.SelectionManager.UpdateSelection(selection.Cast<NSTObject>().ToList());
                     }
                     ImGui.EndPopup();

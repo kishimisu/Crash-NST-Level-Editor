@@ -43,6 +43,11 @@ namespace NST
 
         private void Setup()
         {
+            foreach (var file in Archive.GetFiles())
+            {
+                NamespaceUtils.AddInfos(file.GetName(false));
+            }
+
             FileManager = new ActiveFileManager();
 
             _treeView = new IgArchiveTreeView(this);

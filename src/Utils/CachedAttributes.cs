@@ -103,6 +103,8 @@ namespace Alchemy
         public bool HashTableKeysRefCounted() => _attr.hashTableKeysRefCounted;
         public bool HashTableValuesRefCounted() => _attr.hashTableValuesRefCounted;
 
+        public bool IsCompatibleNST() => _attr.size_nst != null;
+        
         public CachedObjectAttr(Type type, List<CachedFieldAttr> fields)
         {
             _type = type;

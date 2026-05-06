@@ -118,6 +118,17 @@ namespace NST
 
                     u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
+                    if (shape._shape is hknpCompressedMeshShape meshShape && meshShape._data?._meshTree != null)
+                    {
+                        foreach (var dataRun in meshShape._data._meshTree._primitiveDataRuns.GetElements())
+                        {
+                            if (dataRun?._value?._data > 32) // Remove missing CollisionMaterial IDs when importing from CTR
+                            {
+                                dataRun._value._data = 0;
+                            }
+                        }
+                    }
+
                     shapes.Add(shape, key);
                     rebuildHashMap = true;
 
