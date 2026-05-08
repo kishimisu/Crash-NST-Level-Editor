@@ -1,21 +1,21 @@
 namespace Alchemy
 {
-    [ObjectAttr(nst: 152, align: 4, metaType: typeof(CVscComponentData))]
+    [ObjectAttr(nst: 152, ctr: 144, align: 4, metaType: typeof(CVscComponentData))]
     public class L300_Hub_C3_Hub_ElectricGateData : CVscComponentData
     {
-        [FieldAttr(nst: 40)] public int _Int;
-        [FieldAttr(nst: 48)] public igHandleMetaField _Vfx_Effect_0x30 = new();
-        [FieldAttr(nst: 56)] public igHandleMetaField _Bolt_Point_0x38 = new();
-        [FieldAttr(nst: 64)] public igHandleMetaField _Bolt_Point_0x40 = new();
-        [FieldAttr(nst: 72)] public igHandleMetaField _Bolt_Point_0x48 = new();
-        [FieldAttr(nst: 80)] public igHandleMetaField _Bolt_Point_0x50 = new();
-        [FieldAttr(nst: 88)] public igHandleMetaField _Bolt_Point_0x58 = new();
-        [FieldAttr(nst: 96)] public igHandleMetaField _Bolt_Point_0x60 = new();
-        [FieldAttr(nst: 104)] public float _Float_0x68;
-        [FieldAttr(nst: 112)] public igHandleMetaField _Vfx_Effect_0x70 = new();
-        [FieldAttr(nst: 120)] public float _Float_0x78;
-        [FieldAttr(nst: 128)] public string? _String = null;
-        [FieldAttr(nst: 136)] public igHandleMetaField _Bolt_Point_0x88 = new();
-        [FieldAttr(nst: 144)] public igHandleMetaField _Zone_Info = new();
+        [FieldAttr(nst: 40, ctr: 32)] public int _Int;
+        [FieldAttr(nst: 48, ctr: 40)] public igHandleMetaField _Vfx_Effect_0x30 = new();
+        [FieldAttr(nst: 56, ctr: 48)] public igHandleMetaField _Bolt_Point_0x38 = new();
+        [FieldAttr(nst: 64, ctr: 56)] public igHandleMetaField _Bolt_Point_0x40 = new();
+        [FieldAttr(nst: 72, ctr: 64)] public igHandleMetaField _Bolt_Point_0x48 = new();
+        [FieldAttr(nst: 80, ctr: 72)] public igHandleMetaField _Bolt_Point_0x50 = new();
+        [FieldAttr(nst: 88, ctr: 80)] public igHandleMetaField _Bolt_Point_0x58 = new();
+        [FieldAttr(nst: 96, ctr: 88)] public igHandleMetaField _Bolt_Point_0x60 = new();
+        [FieldAttr(nst: 104, ctr: 96)] public float _Float_0x68;
+        [FieldAttr(nst: 112, ctr: 104)] public igHandleMetaField _Vfx_Effect_0x70 = new();
+        [FieldAttr(nst: 120, ctr: 112)] public float _Float_0x78;
+        [FieldAttr(nst: 128, ctr: 120)] public string? _String = null;
+        [FieldAttr(nst: 136, ctr: 128)] public igHandleMetaField _Bolt_Point_0x88 = new();
+        [FieldAttr(nst: 144, ctr: 136)] public igHandleMetaField _Zone_Info = new();
     }
 }

@@ -1,11 +1,11 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 112, align: 8)]
+    [ObjectAttr(nst: 96, ctr: 112, align: 8)]
     public class CRigidModelInstance : CModelInstance
     {
-        [FieldAttr(ctr: 72)] public CModelAsset? _modelAsset;
-        [FieldAttr(ctr: 80)] public CRigidAnimCtrl? mRigidAnimCtrl;
-        [FieldAttr(ctr: 88)] public CScopedScheduledFunction? _cycleComplete;
+        [FieldAttr(nst: 72, ctr: 72, refCount: false)] public CModelAsset? _modelAsset;
+        [FieldAttr(nst: 80, ctr: 80)] public CRigidAnimCtrl? mRigidAnimCtrl;
+        [FieldAttr(nst: 88, ctr: 88)] public CScopedScheduledFunction? _cycleComplete;
         [FieldAttr(ctr: 96)] public string? _modelClass;
         [FieldAttr(ctr: 104)] public string? _modelClassForFading;
     }

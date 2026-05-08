@@ -1,6 +1,6 @@
 namespace Alchemy
 {
-    [ObjectAttr(nst: 48, align: 4, metaType: typeof(CVscComponentData))]
+    [ObjectAttr(nst: 48, ctr: 40, align: 4, metaType: typeof(CVscComponentData))]
     public class common_Collectible_Bonus_SpawnedData : CVscComponentData
     {
         public enum EBonusRoundType
@@ -11,6 +11,6 @@ namespace Alchemy
             Cortex = 3,
         }
 
-        [FieldAttr(nst: 40)] public EBonusRoundType _BonusRoundType;
+        [FieldAttr(nst: 40, ctr: 32)] public EBonusRoundType _BonusRoundType;
     }
 }

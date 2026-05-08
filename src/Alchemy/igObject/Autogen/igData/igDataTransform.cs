@@ -1,9 +1,9 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 32, align: 8)]
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)]
     public class igDataTransform : igObject
     {
-        [FieldAttr(ctr: 16)] public igMetaFieldInstance? _destinationType;
-        [FieldAttr(ctr: 24)] public igMetaFieldInstance? _sourceType;
+        [FieldAttr(nst: 16, ctr: 16, refCount: false)] public igMetaFieldInstance? _destinationType;
+        [FieldAttr(nst: 24, ctr: 24, refCount: false)] public igMetaFieldInstance? _sourceType;
     }
 }

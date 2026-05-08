@@ -1,10 +1,10 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 40, align: 8)]
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)]
     public class igDataBinding : igObject
     {
-        [FieldAttr(ctr: 16)] public igDataBindingEntity? _destination;
-        [FieldAttr(ctr: 24)] public igDataBindingEntity? _source;
-        [FieldAttr(ctr: 32)] public igDataTransformList? _transformList;
+        [FieldAttr(nst: 16, ctr: 16)] public igDataBindingEntity? _destination;
+        [FieldAttr(nst: 24, ctr: 24)] public igDataBindingEntity? _source;
+        [FieldAttr(nst: 32, ctr: 32)] public igDataTransformList? _transformList;
     }
 }

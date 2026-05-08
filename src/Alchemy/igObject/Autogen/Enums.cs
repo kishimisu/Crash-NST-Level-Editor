@@ -1,5 +1,22 @@
 namespace Alchemy
 {
+    public enum CGuiManager_EPriority
+    {
+        eP_DisableUnderPriority = -2,
+        eP_DisableUnderNone = -1,
+        eP_Screenspace = 0,
+        eP_HUD = 1,
+        eP_TargetArrow = 2,
+        eP_Alert = 3,
+        eP_ObjectiveCounter = 4,
+        eP_VirtualController = 5,
+        eP_NetworkUnderMenu = 6,
+        eP_MenuAllowSound = 7,
+        eP_Menu = 8,
+        eP_Urgent = 9,
+        eP_AutoSaveIcon = 10,
+    }
+
     public enum EAccoladeGroup
     {
         eAG_Invalid = -1,
@@ -58,8 +75,8 @@ namespace Alchemy
         eAS_None = -1,
         eAS_Left = 0,
         eAS_Right = 1,
-        eAS_CTRNF_Max = 2,
         eAS_Mouse = 2,
+        eAS_CTRNF_Max = 2,
         eAS_Max = 3,
     }
 
@@ -197,8 +214,8 @@ namespace Alchemy
         eBLB_LeftStick = 9,
         eBLB_RightStick = 10,
         eBLB_Dpad = 11,
-        eBLB_CTRNF_Menu = 12,
         eBLB_Option3 = 12,
+        eBLB_CTRNF_Menu = 12,
     }
 
     public enum EBuyButtonStatusIconState
@@ -229,13 +246,6 @@ namespace Alchemy
         eCS_No = 0,
         eCS_Yes = 1,
         eCS_Only = 2,
-    }
-
-    public enum ECastsShadows
-    {
-        ECS_Archetype = 0,
-        ECS_CastsShadows = 1,
-        ECS_DoesNotCastShadows = 2,
     }
 
     public enum ECGuiLobbyTimerState
@@ -368,17 +378,27 @@ namespace Alchemy
 
     public enum EController
     {
-        kControllerNone = 0,
-        kController1 = 1,
-        kController2 = 2,
-        kController3 = 4,
-        kController4 = 8,
-        kControllerMax = 8,
-        kController5 = 16,
-        kController6 = 32,
-        kController7 = 64,
-        kController8 = 128,
-        kControllerAll = 255,
+        ECONTROLLER_NONE = -1,
+        ECONTROLLER_ONE = 0,
+        CTRNF_kControllerNone = 0,
+        ECONTROLLER_TWO = 1,
+        CTRNF_kController1 = 1,
+        ECONTROLLER_THREE = 2,
+        CTRNF_kController2 = 2,
+        ECONTROLLER_FOUR = 3,
+        ECONTROLLER_FIVE = 4,
+        CTRNF_kController3 = 4,
+        ECONTROLLER_SIX = 5,
+        ECONTROLLER_SEVEN = 6,
+        ECONTROLLER_EIGHT = 7,
+        ECONTROLLER_MAX = 8,
+        CTRNF_kController4 = 8,
+        CTRNF_kControllerMax = 8,
+        CTRNF_kController5 = 16,
+        CTRNF_kController6 = 32,
+        CTRNF_kController7 = 64,
+        CTRNF_kController8 = 128,
+        CTRNF_kControllerAll = 255,
     }
 
     public enum EControllerPriorityCategory
@@ -401,8 +421,8 @@ namespace Alchemy
         ECONTROLLERTYPE_ASPEN = 5,
         ECONTROLLERTYPE_ASPEN_VIRTUAL = 6,
         ECONTROLLERTYPE_APPLE_TV = 7,
-        ECONTROLLERTYPE_CTRNF_NX_LEFT = 8,
         ECONTROLLERTYPE_NX = 8,
+        ECONTROLLERTYPE_CTRNF_NX_LEFT = 8,
         ECONTROLLERTYPE_CTRNF_NX_RIGHT = 9,
         ECONTROLLERTYPE_CTRNF_NX_DUAL = 10,
         ECONTROLLERTYPE_CTRNF_NX_PRO = 11,
@@ -550,10 +570,11 @@ namespace Alchemy
         eDC_HighTablet = 4,
         eDC_MediumTablet = 8,
         eDC_LowTablet = 16,
+        eDC_All = 31,
         eDC_Special_NoSplitGen7 = 32,
         eDC_Special_SplitGen7Only = 64,
-        eDC_XBONEConsole = 128,
-        eDC_All = 159,
+        eDC_CTRNF_XBONEConsole = 128,
+        eDC_CTRNF_All = 159,
     }
 
     public enum EDifficultyLevel
@@ -579,11 +600,11 @@ namespace Alchemy
         kLow = 1,
         kMedium = 2,
         kHigh = 3,
-        CTRNF_kLighting = 4,
         kCritical = 4,
         kImportanceCount = 4,
-        CTRNF_kCritical = 5,
+        CTRNF_kLighting = 4,
         CTRNF_kImportanceCount = 5,
+        CTRNF_kCritical = 5,
     }
 
     public enum EDrawForceCoordinateSystem
@@ -624,12 +645,6 @@ namespace Alchemy
         eDF_Sparx = 5,
     }
 
-    public enum EDropOnDamageScale
-    {
-        kDropOnDamageAbsolute = 0,
-        kDropOnDamagePercentOfMax = 1,
-    }
-
     public enum EeDialogCloseSource
     {
         eDCS_UserAccept = 0,
@@ -663,14 +678,6 @@ namespace Alchemy
     {
         kSoftKill = 0,
         kHardKill = 1,
-    }
-
-    public enum EFinalAlphaModes
-    {
-        kFinalAlphaLayer1 = 0,
-        kFinalAlphaLayer2 = 1,
-        kFinalAlphaMultiplyLayer1Layer2 = 2,
-        kFinalAlphaScreenLayer1Layer2 = 3,
     }
 
     public enum EFlags
@@ -769,14 +776,14 @@ namespace Alchemy
         eGSK_Map_RaceModeStoppedDuration = 16,
         eGSK_Map_PreparingToLoadAnotherMap = 17,
         eGSK_Map_InMinigame = 18,
-        eGSK_CTRNF_Map_MirrorMode = 19,
         eGSK_Map_End = 19,
         eGSK_Persistent_Begin = 19,
         eGSK_Persistent_GameMode = 19,
+        eGSK_CTRNF_Map_MirrorMode = 19,
+        eGSK_Persistent_MirrorMode = 20,
         eGSK_CTRNF_Map_End = 20,
         eGSK_CTRNF_Persistent_Begin = 20,
         eGSK_CTRNF_Persistent_GameMode = 20,
-        eGSK_Persistent_MirrorMode = 20,
         eGSK_Persistent_LastCompletedMap = 21,
         eGSK_Persistent_SaveBegin = 22,
         eGSK_Persistent_TrilogyFirstDayPlayed = 22,
@@ -1327,13 +1334,6 @@ namespace Alchemy
         GMS_Count = 13,
     }
 
-    public enum EGroundClampFailReason
-    {
-        eGCFR_FirstFail = 0,
-        eGCFR_Fail = 1,
-        eGCFR_FailEnded = 2,
-    }
-
     public enum EGuiColorStyle
     {
         eGCS_Invalid = 0,
@@ -1417,13 +1417,6 @@ namespace Alchemy
         eHSGAS_Finish = 2,
     }
 
-    public enum EHighlightState
-    {
-        eHS_None = 0,
-        eHS_IsWorld = 1,
-        eHS_DistanceCullImportance = 2,
-    }
-
     public enum EHorizontalAlignment
     {
         kHorizontalAlignmentLeft = 0,
@@ -1475,8 +1468,11 @@ namespace Alchemy
         WIN64 = 6,
         ASPEN64 = 7,
         PS4 = 8,
-        LINUX = 9,
-        MAX = 10,
+        NXWIN = 9,
+        CTRNF_LINUX = 9,
+        LINUX = 10,
+        CTRNF_MAX = 10,
+        MAX = 11,
     }
 
     public enum EIG_GFX_ALPHA_FUNCTION
@@ -1844,12 +1840,6 @@ namespace Alchemy
         kAspectChain = 4,
     }
 
-    public enum EInstanceColorModes
-    {
-        kInstanceColorMultiplyFinalColor = 0,
-        kInstanceColorMultiplyLayer2Color = 1,
-    }
-
     public enum EInterleavedMusicState
     {
         eIMS_Combat = 0,
@@ -1891,197 +1881,183 @@ namespace Alchemy
         eKSFG_Portraits = 4,
     }
 
-    public enum ELayerBlendModes
-    {
-        kBlendModeNormal = 0,
-        kBlendModeScreenLayer1Layer2 = 1,
-        kBlendModeAddLayer1Layer2 = 2,
-        kLBlendModeMultiplyLayer1Layer2 = 3,
-    }
-
-    public enum ELayerColorAlphaModes
-    {
-        kLayerUseAlphaMask = 0,
-        kLayerNoAlphaMask = 1,
-    }
-
     public enum ELeaderBoardID
     {
         eLBID_INVALID = 0,
-        eLBID_CTRNF_T111_TIMETRIAL = 1,
         eLBID_GAMEANALYTICS = 1,
-        eLBID_CTRNF_T111_RELICRACE = 2,
+        eLBID_CTRNF_T111_TIMETRIAL = 1,
         eLBID_L101_TIMETRIAL = 2,
-        eLBID_CTRNF_T112_TIMETRIAL = 3,
+        eLBID_CTRNF_T111_RELICRACE = 2,
         eLBID_L102_TIMETRIAL = 3,
-        eLBID_CTRNF_T112_RELICRACE = 4,
+        eLBID_CTRNF_T112_TIMETRIAL = 3,
         eLBID_L103_TIMETRIAL = 4,
-        eLBID_CTRNF_T113_TIMETRIAL = 5,
+        eLBID_CTRNF_T112_RELICRACE = 4,
         eLBID_L104_TIMETRIAL = 5,
-        eLBID_CTRNF_T113_RELICRACE = 6,
+        eLBID_CTRNF_T113_TIMETRIAL = 5,
         eLBID_L105_TIMETRIAL = 6,
-        eLBID_CTRNF_T114_TIMETRIAL = 7,
+        eLBID_CTRNF_T113_RELICRACE = 6,
         eLBID_L106_TIMETRIAL = 7,
-        eLBID_CTRNF_T114_RELICRACE = 8,
+        eLBID_CTRNF_T114_TIMETRIAL = 7,
         eLBID_L107_TIMETRIAL = 8,
-        eLBID_CTRNF_T121_TIMETRIAL = 9,
+        eLBID_CTRNF_T114_RELICRACE = 8,
         eLBID_L108_TIMETRIAL = 9,
-        eLBID_CTRNF_T121_RELICRACE = 10,
+        eLBID_CTRNF_T121_TIMETRIAL = 9,
         eLBID_L109_TIMETRIAL = 10,
-        eLBID_CTRNF_T122_TIMETRIAL = 11,
+        eLBID_CTRNF_T121_RELICRACE = 10,
         eLBID_L110_TIMETRIAL = 11,
-        eLBID_CTRNF_T122_RELICRACE = 12,
+        eLBID_CTRNF_T122_TIMETRIAL = 11,
         eLBID_L111_TIMETRIAL = 12,
-        eLBID_CTRNF_T131_TIMETRIAL = 13,
+        eLBID_CTRNF_T122_RELICRACE = 12,
         eLBID_L112_TIMETRIAL = 13,
-        eLBID_CTRNF_T131_RELICRACE = 14,
+        eLBID_CTRNF_T131_TIMETRIAL = 13,
         eLBID_L113_TIMETRIAL = 14,
-        eLBID_CTRNF_T132_TIMETRIAL = 15,
+        eLBID_CTRNF_T131_RELICRACE = 14,
         eLBID_L114_TIMETRIAL = 15,
-        eLBID_CTRNF_T132_RELICRACE = 16,
+        eLBID_CTRNF_T132_TIMETRIAL = 15,
         eLBID_L115_TIMETRIAL = 16,
-        eLBID_CTRNF_T133_TIMETRIAL = 17,
+        eLBID_CTRNF_T132_RELICRACE = 16,
         eLBID_L116_TIMETRIAL = 17,
-        eLBID_CTRNF_T133_RELICRACE = 18,
+        eLBID_CTRNF_T133_TIMETRIAL = 17,
         eLBID_L117_TIMETRIAL = 18,
-        eLBID_CTRNF_T134_TIMETRIAL = 19,
+        eLBID_CTRNF_T133_RELICRACE = 18,
         eLBID_L118_TIMETRIAL = 19,
-        eLBID_CTRNF_T134_RELICRACE = 20,
+        eLBID_CTRNF_T134_TIMETRIAL = 19,
         eLBID_L119_TIMETRIAL = 20,
-        eLBID_CTRNF_T141_TIMETRIAL = 21,
+        eLBID_CTRNF_T134_RELICRACE = 20,
         eLBID_L120_TIMETRIAL = 21,
-        eLBID_CTRNF_T141_RELICRACE = 22,
+        eLBID_CTRNF_T141_TIMETRIAL = 21,
         eLBID_L121_TIMETRIAL = 22,
-        eLBID_CTRNF_T142_TIMETRIAL = 23,
+        eLBID_CTRNF_T141_RELICRACE = 22,
         eLBID_L122_TIMETRIAL = 23,
-        eLBID_CTRNF_T142_RELICRACE = 24,
+        eLBID_CTRNF_T142_TIMETRIAL = 23,
         eLBID_L123_TIMETRIAL = 24,
-        eLBID_CTRNF_T143_TIMETRIAL = 25,
+        eLBID_CTRNF_T142_RELICRACE = 24,
         eLBID_L124_TIMETRIAL = 25,
-        eLBID_CTRNF_T143_RELICRACE = 26,
+        eLBID_CTRNF_T143_TIMETRIAL = 25,
         eLBID_L125_TIMETRIAL = 26,
-        eLBID_CTRNF_T144_TIMETRIAL = 27,
+        eLBID_CTRNF_T143_RELICRACE = 26,
         eLBID_L126_TIMETRIAL = 27,
-        eLBID_CTRNF_T144_RELICRACE = 28,
+        eLBID_CTRNF_T144_TIMETRIAL = 27,
         eLBID_L128_TIMETRIAL = 28,
-        eLBID_CTRNF_T151_TIMETRIAL = 29,
+        eLBID_CTRNF_T144_RELICRACE = 28,
         eLBID_L201_TIMETRIAL = 29,
-        eLBID_CTRNF_T151_RELICRACE = 30,
+        eLBID_CTRNF_T151_TIMETRIAL = 29,
         eLBID_L202_TIMETRIAL = 30,
-        eLBID_CTRNF_T152_TIMETRIAL = 31,
+        eLBID_CTRNF_T151_RELICRACE = 30,
         eLBID_L203_TIMETRIAL = 31,
-        eLBID_CTRNF_T152_RELICRACE = 32,
+        eLBID_CTRNF_T152_TIMETRIAL = 31,
         eLBID_L204_TIMETRIAL = 32,
-        eLBID_CTRNF_T153_TIMETRIAL = 33,
+        eLBID_CTRNF_T152_RELICRACE = 32,
         eLBID_L205_TIMETRIAL = 33,
-        eLBID_CTRNF_T153_RELICRACE = 34,
+        eLBID_CTRNF_T153_TIMETRIAL = 33,
         eLBID_L206_TIMETRIAL = 34,
-        eLBID_CTRNF_T154_TIMETRIAL = 35,
+        eLBID_CTRNF_T153_RELICRACE = 34,
         eLBID_L207_TIMETRIAL = 35,
-        eLBID_CTRNF_T154_RELICRACE = 36,
+        eLBID_CTRNF_T154_TIMETRIAL = 35,
         eLBID_L208_TIMETRIAL = 36,
-        eLBID_CTRNF_T155_TIMETRIAL = 37,
+        eLBID_CTRNF_T154_RELICRACE = 36,
         eLBID_L209_TIMETRIAL = 37,
-        eLBID_CTRNF_T155_RELICRACE = 38,
+        eLBID_CTRNF_T155_TIMETRIAL = 37,
         eLBID_L210_TIMETRIAL = 38,
-        eLBID_CTRNF_T211_TIMETRIAL = 39,
+        eLBID_CTRNF_T155_RELICRACE = 38,
         eLBID_L211_TIMETRIAL = 39,
-        eLBID_CTRNF_T211_RELICRACE = 40,
+        eLBID_CTRNF_T211_TIMETRIAL = 39,
         eLBID_L212_TIMETRIAL = 40,
-        eLBID_CTRNF_T212_TIMETRIAL = 41,
+        eLBID_CTRNF_T211_RELICRACE = 40,
         eLBID_L213_TIMETRIAL = 41,
-        eLBID_CTRNF_T212_RELICRACE = 42,
+        eLBID_CTRNF_T212_TIMETRIAL = 41,
         eLBID_L214_TIMETRIAL = 42,
-        eLBID_CTRNF_T213_TIMETRIAL = 43,
+        eLBID_CTRNF_T212_RELICRACE = 42,
         eLBID_L215_TIMETRIAL = 43,
-        eLBID_CTRNF_T213_RELICRACE = 44,
+        eLBID_CTRNF_T213_TIMETRIAL = 43,
         eLBID_L216_TIMETRIAL = 44,
-        eLBID_CTRNF_T221_TIMETRIAL = 45,
+        eLBID_CTRNF_T213_RELICRACE = 44,
         eLBID_L217_TIMETRIAL = 45,
-        eLBID_CTRNF_T221_RELICRACE = 46,
+        eLBID_CTRNF_T221_TIMETRIAL = 45,
         eLBID_L218_TIMETRIAL = 46,
-        eLBID_CTRNF_T222_TIMETRIAL = 47,
+        eLBID_CTRNF_T221_RELICRACE = 46,
         eLBID_L219_TIMETRIAL = 47,
-        eLBID_CTRNF_T222_RELICRACE = 48,
+        eLBID_CTRNF_T222_TIMETRIAL = 47,
         eLBID_L220_TIMETRIAL = 48,
-        eLBID_CTRNF_T223_TIMETRIAL = 49,
+        eLBID_CTRNF_T222_RELICRACE = 48,
         eLBID_L221_TIMETRIAL = 49,
-        eLBID_CTRNF_T223_RELICRACE = 50,
+        eLBID_CTRNF_T223_TIMETRIAL = 49,
         eLBID_L222_TIMETRIAL = 50,
-        eLBID_CTRNF_T231_TIMETRIAL = 51,
+        eLBID_CTRNF_T223_RELICRACE = 50,
         eLBID_L223_TIMETRIAL = 51,
-        eLBID_CTRNF_T231_RELICRACE = 52,
+        eLBID_CTRNF_T231_TIMETRIAL = 51,
         eLBID_L224_TIMETRIAL = 52,
-        eLBID_CTRNF_T232_TIMETRIAL = 53,
+        eLBID_CTRNF_T231_RELICRACE = 52,
         eLBID_L225_TIMETRIAL = 53,
-        eLBID_CTRNF_T232_RELICRACE = 54,
+        eLBID_CTRNF_T232_TIMETRIAL = 53,
         eLBID_L226_TIMETRIAL = 54,
-        eLBID_CTRNF_T233_TIMETRIAL = 55,
+        eLBID_CTRNF_T232_RELICRACE = 54,
         eLBID_L227_TIMETRIAL = 55,
-        eLBID_CTRNF_T233_RELICRACE = 56,
+        eLBID_CTRNF_T233_TIMETRIAL = 55,
         eLBID_L301_TIMETRIAL = 56,
-        eLBID_CTRNF_T241_TIMETRIAL = 57,
+        eLBID_CTRNF_T233_RELICRACE = 56,
         eLBID_L302_TIMETRIAL = 57,
-        eLBID_CTRNF_T241_RELICRACE = 58,
+        eLBID_CTRNF_T241_TIMETRIAL = 57,
         eLBID_L303_TIMETRIAL = 58,
-        eLBID_CTRNF_T242_TIMETRIAL = 59,
+        eLBID_CTRNF_T241_RELICRACE = 58,
         eLBID_L304_TIMETRIAL = 59,
-        eLBID_CTRNF_T242_RELICRACE = 60,
+        eLBID_CTRNF_T242_TIMETRIAL = 59,
         eLBID_L305_TIMETRIAL = 60,
-        eLBID_CTRNF_T243_TIMETRIAL = 61,
+        eLBID_CTRNF_T242_RELICRACE = 60,
         eLBID_L306_TIMETRIAL = 61,
-        eLBID_CTRNF_T243_RELICRACE = 62,
+        eLBID_CTRNF_T243_TIMETRIAL = 61,
         eLBID_L307_TIMETRIAL = 62,
-        eLBID_CTRNF_T255_TIMETRIAL = 63,
+        eLBID_CTRNF_T243_RELICRACE = 62,
         eLBID_L308_TIMETRIAL = 63,
-        eLBID_CTRNF_T255_RELICRACE = 64,
+        eLBID_CTRNF_T255_TIMETRIAL = 63,
         eLBID_L309_TIMETRIAL = 64,
-        eLBID_CTRNF_GP001_WIN = 65,
+        eLBID_CTRNF_T255_RELICRACE = 64,
         eLBID_L310_TIMETRIAL = 65,
-        eLBID_CTRNF_GP001_NITRO = 66,
+        eLBID_CTRNF_GP001_WIN = 65,
         eLBID_L311_TIMETRIAL = 66,
-        eLBID_CTRNF_GP002_WIN = 67,
+        eLBID_CTRNF_GP001_NITRO = 66,
         eLBID_L312_TIMETRIAL = 67,
-        eLBID_CTRNF_GP002_NITRO = 68,
+        eLBID_CTRNF_GP002_WIN = 67,
         eLBID_L313_TIMETRIAL = 68,
-        eLBID_CTRNF_GP003_WIN = 69,
+        eLBID_CTRNF_GP002_NITRO = 68,
         eLBID_L314_TIMETRIAL = 69,
-        eLBID_CTRNF_GP003_NITRO = 70,
+        eLBID_CTRNF_GP003_WIN = 69,
         eLBID_L315_TIMETRIAL = 70,
-        eLBID_CTRNF_GP004_WIN = 71,
+        eLBID_CTRNF_GP003_NITRO = 70,
         eLBID_L316_TIMETRIAL = 71,
-        eLBID_CTRNF_GP004_NITRO = 72,
+        eLBID_CTRNF_GP004_WIN = 71,
         eLBID_L317_TIMETRIAL = 72,
-        eLBID_CTRNF_GP005_WIN = 73,
+        eLBID_CTRNF_GP004_NITRO = 72,
         eLBID_L318_TIMETRIAL = 73,
-        eLBID_CTRNF_GP005_NITRO = 74,
+        eLBID_CTRNF_GP005_WIN = 73,
         eLBID_L319_TIMETRIAL = 74,
-        eLBID_CTRNF_GP006_WIN = 75,
+        eLBID_CTRNF_GP005_NITRO = 74,
         eLBID_L320_TIMETRIAL = 75,
-        eLBID_CTRNF_GP006_NITRO = 76,
+        eLBID_CTRNF_GP006_WIN = 75,
         eLBID_L321_TIMETRIAL = 76,
-        eLBID_CTRNF_T501_TIMETRIAL = 77,
+        eLBID_CTRNF_GP006_NITRO = 76,
         eLBID_L322_TIMETRIAL = 77,
-        eLBID_CTRNF_T501_RELICRACE = 78,
+        eLBID_CTRNF_T501_TIMETRIAL = 77,
         eLBID_L323_TIMETRIAL = 78,
-        eLBID_CTRNF_T502_TIMETRIAL = 79,
+        eLBID_CTRNF_T501_RELICRACE = 78,
         eLBID_L324_TIMETRIAL = 79,
-        eLBID_CTRNF_T502_RELICRACE = 80,
+        eLBID_CTRNF_T502_TIMETRIAL = 79,
         eLBID_L325_TIMETRIAL = 80,
-        eLBID_CTRNF_T503_TIMETRIAL = 81,
+        eLBID_CTRNF_T502_RELICRACE = 80,
         eLBID_L326_TIMETRIAL = 81,
-        eLBID_CTRNF_T503_RELICRACE = 82,
+        eLBID_CTRNF_T503_TIMETRIAL = 81,
         eLBID_L328_TIMETRIAL = 82,
-        eLBID_CTRNF_T504_TIMETRIAL = 83,
+        eLBID_CTRNF_T503_RELICRACE = 82,
         eLBID_L330_TIMETRIAL = 83,
-        eLBID_CTRNF_T504_RELICRACE = 84,
+        eLBID_CTRNF_T504_TIMETRIAL = 83,
         eLBID_L331_TIMETRIAL = 84,
-        eLBID_CTRNF_T505_TIMETRIAL = 85,
+        eLBID_CTRNF_T504_RELICRACE = 84,
         eLBID_L332_TIMETRIAL = 85,
-        eLBID_CTRNF_T505_RELICRACE = 86,
+        eLBID_CTRNF_T505_TIMETRIAL = 85,
         eLBID_L333_TIMETRIAL = 86,
-        eLBID_CTRNF_T506_TIMETRIAL = 87,
+        eLBID_CTRNF_T505_RELICRACE = 86,
         eLBID_DEVMAPUSAGE = 87,
+        eLBID_CTRNF_T506_TIMETRIAL = 87,
         eLBID_CTRNF_T506_RELICRACE = 88,
         eLBID_CTRNF_COUNT = 89,
         eLBID_CTRNF_MKT_DELUXE_EDITION = 1000,
@@ -2157,12 +2133,12 @@ namespace Alchemy
         MP_MOVIE_BUFFERS = 62,
         MP_NETWORK = 63,
         MP_DOTNET = 64,
-        MP_CTRNF_WINDOWS_VRAM = 65,
         MP_DOTNET_GENERICS = 65,
-        MP_CTRNF_MESSAGING = 66,
+        MP_CTRNF_WINDOWS_VRAM = 65,
         MP_WINDOWS_VRAM = 66,
-        MP_CTRNF_HERO_BEGIN = 67,
+        MP_CTRNF_MESSAGING = 66,
         MP_MESSAGING = 67,
+        MP_CTRNF_HERO_BEGIN = 67,
         MP_HERO_BEGIN = 68,
         MP_POOL_COUNT = 976,
         MP_MAX_POOL = 1024,
@@ -2189,14 +2165,6 @@ namespace Alchemy
         eMSS_CastsShadows = 1,
         eMSS_RecievesShadows = 2,
         eMSS_DoesNotCastOrReceiveShadows = 3,
-    }
-
-    public enum EMobileShadowStateOverride
-    {
-        eMSSO_Archetype = 0,
-        eMSSO_CastsShadows = 1,
-        eMSSO_ReceivesShadows = 2,
-        eMSSO_DoesNotCastOrReceiveShadows = 3,
     }
 
     public enum EMode
@@ -2249,12 +2217,6 @@ namespace Alchemy
         eEMSP_Switch = 2,
     }
 
-    public enum EMultiplayerFlagType
-    {
-        eMFT_FreeForAll = 0,
-        eMFT_Team = 1,
-    }
-
     public enum ENetworkSendPriority
     {
         eNSP_Low = 0,
@@ -2287,14 +2249,6 @@ namespace Alchemy
         eOBT_IGENTITY = 7,
         eOBT_MANIPULATOR = 8,
         eOBT_COUNT = 9,
-    }
-
-    public enum EObjectiveType
-    {
-        eOT_Quest = 0,
-        eOT_LevelGoal = 1,
-        eOT_Collectible = 2,
-        eOT_Hint = 3,
     }
 
     public enum EOctaneAdventureArea
@@ -2615,17 +2569,6 @@ namespace Alchemy
         eOT_CutsceneLose = 2,
     }
 
-    public enum EPanNoSelectionOptions
-    {
-        kPanNoSelMouseLocation = 2,
-    }
-
-    public enum EPanSelectionOptions
-    {
-        kPanSelObjectCenter = 1,
-        kPanSelMouseLocation = 2,
-    }
-
     public enum EPathDifficulty
     {
         ePD_None = 0,
@@ -2679,9 +2622,9 @@ namespace Alchemy
         EPLAYERID_SIX = 5,
         EPLAYERID_SEVEN = 6,
         EPLAYERID_EIGHT = 7,
-        EPLAYERID_CTRNF_COUNT = 8,
-        EPLAYERID_CTRNF_MAX = 8,
         EPLAYERID_NINE = 8,
+        EPLAYERID_CTRNF_MAX = 8,
+        EPLAYERID_CTRNF_COUNT = 8,
         EPLAYERID_TEN = 9,
         EPLAYERID_ELEVEN = 10,
         EPLAYERID_TWELVE = 11,
@@ -2772,13 +2715,6 @@ namespace Alchemy
         eQSM_SortByRightToLeft = 5,
     }
 
-    public enum EQuestPriority
-    {
-        eQP_Other = 1,
-        eQP_Seasonal = 2,
-        eQP_Story = 3,
-    }
-
     public enum EQueueType
     {
         kQueueNone = 0,
@@ -2862,19 +2798,6 @@ namespace Alchemy
         kRotation180 = 2,
         kRotation270 = 3,
         kRotationRandom = 4,
-    }
-
-    public enum ERotateNoSelectionOptions
-    {
-        kRotateNoSelMouseLocation = 2,
-        kRotateNoSelWorldOrigin = 4,
-    }
-
-    public enum ERotateSelectionOptions
-    {
-        kRotateSelObjectCenter = 1,
-        kRotateSelMouseLocation = 2,
-        kRotateSelWorldOrigin = 4,
     }
 
     public enum ESaveLoad
@@ -2992,12 +2915,6 @@ namespace Alchemy
         kMaxSpawnGroupCount = 8,
     }
 
-    public enum ESpawnOrderMethod
-    {
-        kShuffled = 0,
-        kRandom = 1,
-    }
-
     public enum ESplineEndBehavior
     {
         eSEB_None = 0,
@@ -3077,18 +2994,6 @@ namespace Alchemy
         eSDD_VerticalDirection = 3,
     }
 
-    public enum EState
-    {
-        eS_Unaware = 0,
-        eS_AcquireTarget = 1,
-        eS_ApproachTarget = 2,
-        eS_Attack = 3,
-        eS_AttackWait = 4,
-        eS_Immobilized = 5,
-        eS_Jumping = 6,
-        eS_Wander = 7,
-    }
-
     public enum EStreamBufferUnits
     {
         kUnitsBytes = 0,
@@ -3165,12 +3070,6 @@ namespace Alchemy
     {
         eTT_Game = 0,
         eTT_Absolute = 1,
-    }
-
-    public enum ETrackRepell
-    {
-        eTP_Attract = 0,
-        eTP_Repell = 1,
     }
 
     public enum ETransformSpace
@@ -3292,13 +3191,13 @@ namespace Alchemy
         EVEHICLEID_TWO = 1,
         EVEHICLEID_THREE = 2,
         EVEHICLEID_FOUR = 3,
-        EVEHICLEID_CTRNF_FIVE = 4,
         EVEHICLEID_MAX = 4,
+        EVEHICLEID_CTRNF_FIVE = 4,
         EVEHICLEID_CTRNF_SIX = 5,
         EVEHICLEID_CTRNF_SEVEN = 6,
         EVEHICLEID_CTRNF_EIGHT = 7,
-        EVEHICLEID_CTRNF_COUNT = 8,
         EVEHICLEID_CTRNF_MAX = 8,
+        EVEHICLEID_CTRNF_COUNT = 8,
     }
 
     public enum EVehiclePersonalizationBoost
@@ -3467,14 +3366,14 @@ namespace Alchemy
         TOUCH5_X = 45,
         TOUCH5_Y = 46,
         BRAKE = 47,
-        PLACE_CTRNF_TREASURE = 48,
         REMOVE_TOYS = 48,
+        PLACE_CTRNF_TREASURE = 48,
         MENU_SAVE_LOAD = 49,
         REMOVE_CTRNF_TREASURE = 49,
-        REMOVE_CTRNF_TOYS = 50,
         SPEED_SHOES = 50,
-        CTRNF_MAX = 51,
+        REMOVE_CTRNF_TOYS = 50,
         EQUIP_BAZOOKA = 51,
+        CTRNF_MAX = 51,
         TOUCH1_AIM_X = 52,
         TOUCH1_AIM_Y = 53,
         MENU_TAB_LEFT = 54,
@@ -3504,33 +3403,33 @@ namespace Alchemy
     public enum EZoneCollectibleType
     {
         eZCT_None = 0,
-        eZCT_CTRNF_Trophy = 2,
         eZCT_Gem_Clear = 2,
-        eZCT_CTRNF_Key = 4,
+        eZCT_CTRNF_Trophy = 2,
         eZCT_Gem_Blue = 4,
-        eZCT_CTRNF_RelicPlatinum = 8,
+        eZCT_CTRNF_Key = 4,
         eZCT_Gem_Green = 8,
-        eZCT_CTRNF_RelicSapphire = 16,
+        eZCT_CTRNF_RelicPlatinum = 8,
         eZCT_Gem_Purple = 16,
-        eZCT_CTRNF_RelicGold = 32,
+        eZCT_CTRNF_RelicSapphire = 16,
         eZCT_Gem_Red = 32,
-        eZCT_CTRNF_TokenRed = 64,
+        eZCT_CTRNF_RelicGold = 32,
         eZCT_Gem_Yellow = 64,
-        eZCT_CTRNF_TokenBlue = 128,
+        eZCT_CTRNF_TokenRed = 64,
         eZCT_Gem_Orange = 128,
-        eZCT_CTRNF_TokenPurple = 256,
+        eZCT_CTRNF_TokenBlue = 128,
         eZCT_Gem_Clear2 = 256,
-        eZCT_CTRNF_TokenGreen = 512,
+        eZCT_CTRNF_TokenPurple = 256,
         eZCT_PowerCrystal = 512,
-        eZCT_CTRNF_TokenYellow = 1024,
+        eZCT_CTRNF_TokenGreen = 512,
         eZCT_Key = 1024,
+        eZCT_CTRNF_TokenYellow = 1024,
         eZCT_BossFight = 2048,
-        eZCT_CTRNF_GemRed = 4096,
         eZCT_RelicPlatinum = 4096,
-        eZCT_CTRNF_GemBlue = 8192,
+        eZCT_CTRNF_GemRed = 4096,
         eZCT_RelicSapphire = 8192,
-        eZCT_CTRNF_GemPurple = 16384,
+        eZCT_CTRNF_GemBlue = 8192,
         eZCT_RelicGold = 16384,
+        eZCT_CTRNF_GemPurple = 16384,
         eZCT_CTRNF_GemGreen = 32768,
         eZCT_CTRNF_GemYellow = 65536,
         eZCT_CTRNF_GemsAll = 131072,
@@ -3548,18 +3447,5 @@ namespace Alchemy
         eZIPG_Final = 6,
         eZIPG_DarkBoss = 7,
         eZIPG_Hub = 8,
-    }
-
-    public enum EZoomNoSelectionOptions
-    {
-        kZoomNoSelMouseLocation = 2,
-        kZoomNoSelViewCenter = 3,
-    }
-
-    public enum EZoomSelectionOptions
-    {
-        kZoomSelObjectCenter = 1,
-        kZoomSelMouseLocation = 2,
-        kZoomSelViewCenter = 3,
     }
 }

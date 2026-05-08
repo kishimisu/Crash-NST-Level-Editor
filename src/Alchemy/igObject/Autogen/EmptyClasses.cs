@@ -6,9 +6,9 @@ namespace Alchemy
     [ObjectAttr(nst: 32, align: 8)] public class CAccoladeGraphGoalData : CAccoladeGoalData { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CAccoladeRequirement : igObject { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CAccoladeRequirementList : igObjectList<CAccoladeRequirement> { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CAchievementEvent : igObject { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CAchievementEvent : igObject { }
     [ObjectAttr(nst: 56, align: 8)] public class CActivateMessage : CEntityMessage { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CActorHandleList : igSmartHandleList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CActorHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, align: 8)] public class CActorInputListenerList : igObjectList<CActorInputListener> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CActorInputMapList : igObjectList<CActorInputMap> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CActorTimeScaleNonRefcountedList : igNonRefCountedObjectList { }
@@ -72,9 +72,9 @@ namespace Alchemy
     [ObjectAttr(nst: 48, ctr: 48, align: 8)] public class CBehaviorState : CBehaviorActivatorNode { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CBehaviorStateList : igObjectList<CBehaviorState> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CBehaviorStateMachineList : igObjectList<CBehaviorStateMachine> { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CBlackboardInfo : igObject { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CBlackboardInfo : igObject { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8, refCountKeys: false)] public class CBlackboardInfoTable : igHashTable<igObject, CBlackboardInfo> { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CBlackboardInfoUpdater : igObject { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CBlackboardInfoUpdater : igObject { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CBlackboardInfoUpdaterList : igObjectList<CBlackboardInfoUpdater> { }
     [ObjectAttr(nst: 120, align: 8)] public class CBloomApplyMaterial : igFxMaterial { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CBoltPointHandleList : igSmartHandleList { }
@@ -89,6 +89,7 @@ namespace Alchemy
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CButtonToAnalogStickDirectionTable : igHashTable<igEnumMetaField, CAnalogStickDirectionToVfxAnalogStickTable> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCameraBaseHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, align: 8)] public class CCameraBoxHandleList : igSmartHandleList { }
+    [ObjectAttr(nst: 40, align: 8)] public class CCameraList : igObjectList<CCamera> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CCarriedEntitiesComponentData : CEntityComponentData { }
     [ObjectAttr(nst: 80, ctr: 64, align: 8)] public class CCEBeginJumpInputWindow : CCombatNodeEvent { }
     [ObjectAttr(nst: 80, ctr: 64, align: 8)] public class CCEBeginRunTransitionWindow : CCombatNodeEvent { }
@@ -115,15 +116,15 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCinematicBuildingTimelineTrackList : igObjectList<CCinematicBuildingTimelineTrack> { }
     [ObjectAttr(nst: 120, align: 8)] public class CCinematicTiledLightMaterial : igFxMaterial { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCollectibleFilterList : igObjectList<CCollectibleFilter> { }
-    [ObjectAttr(ctr: 56, align: 8)] public class CCollectibleTrackerEventDelegate : MulticastDelegate { }
-    [ObjectAttr(ctr: 32, align: 8)] public class CCollectibleTrackerEventList : igEventLinkedList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CCollectibleTrackerList : igObjectList<CCollectibleTracker> { }
+    [ObjectAttr(nst: 56, ctr: 56, align: 8)] public class CCollectibleTrackerEventDelegate : MulticastDelegate { }
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class CCollectibleTrackerEventList : igEventLinkedList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCollectibleTrackerList : igObjectList<CCollectibleTracker> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCollectibleTrackerListList : igObjectList<CCollectibleTrackerList> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCollisionMaterialHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 120, align: 8)] public class CColorGeneratorMaterial : igFxMaterial { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCombatNodeEventList : igObjectList<CCombatNodeEvent> { }
     [ObjectAttr(nst: 88, ctr: 72, align: 8)] public class CCombatNodeExecuteIntervalEvent : CCombatNodeIntervalEvent { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CCombatTargetDataList : igObjectList<CCombatTargetData> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCombatTargetDataList : igObjectList<CCombatTargetData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CCombatTargetDataListList : igObjectList<CCombatTargetDataList> { }
     [ObjectAttr(nst: 120, align: 8)] public class CComposeSceneMaterial : igFxMaterial { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CControllerButtonCharacterMapList : igObjectList<CControllerButtonCharacterMap> { }
@@ -161,7 +162,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, align: 8)] public class CDestructibleStageList : igObjectList<CDestructibleStage> { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CDifficultySpecificValue : igObject { }
     [ObjectAttr(nst: 80, ctr: 64, align: 8)] public class CDisableJumpHandler : CBehaviorLogic { }
-    [ObjectAttr(ctr: 48, align: 8)] public class CDisableRequestManager : CChangeRequestManager { }
+    [ObjectAttr(nst: 56, ctr: 48, align: 8)] public class CDisableRequestManager : CChangeRequestManager { }
     [ObjectAttr(nst: 80, ctr: 64, align: 8)] public class CDisableTimeScalingHandler : CBehaviorLogic { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CDistantGeometryModelNameList : igStringRefList { }
     [ObjectAttr(nst: 48, ctr: 48, align: 8)] public class CDriftVehicleSettingList : CBaseVehicleSettingList { }
@@ -183,7 +184,7 @@ namespace Alchemy
     [ObjectAttr(ctr: 64, align: 8)] public class CEntityFlagsColorTable : igHashTable<igEnumMetaField, igVec4ucMetaField> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CEntityHandleGuiMaterialHashTable : igHashTable<igHandleMetaField, igHandleMetaField> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CEntityHandleList : igSmartHandleList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CEntityList : igObjectList<CEntity> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CEntityList : igObjectList<CEntity> { }
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class CEntityTag : igNamedObject { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CEntityTagSet : igHashTable<CEntityTag, bool> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CEntityTargetList : igObjectList<CEntityTarget> { }
@@ -207,7 +208,7 @@ namespace Alchemy
     [ObjectAttr(nst: 120, align: 8)] public class CFxaaLowMaterial : igFxMaterial { }
     [ObjectAttr(nst: 120, align: 8)] public class CFxaaMaterial : igFxMaterial { }
     [ObjectAttr(nst: 120, align: 8)] public class CFxaaMediumMaterial : igFxMaterial { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CGameEntityDataList : igObjectList<CGameEntityData> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CGameEntityDataList : igObjectList<CGameEntityData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CGameEntityHandleList : igSmartHandleList { }
     [ObjectAttr(ctr: 64, align: 8)] public class CGameModeTTRTable : igHashTable<igEnumMetaField, CDifficultySpecificTTRData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CGameSoundClassList : igObjectList<CGameSoundClass> { }
@@ -233,7 +234,7 @@ namespace Alchemy
     [ObjectAttr(ctr: 448, align: 8)] public class CGuiBehaviorPlaylistMapSelector : CGuiBehaviorBaseSettingSelector { }
     [ObjectAttr(ctr: 16, align: 4)] public class CGuiBehaviorSetWumpaPlaceableEffectForTheme : igGuiBehavior { }
     [ObjectAttr(ctr: 16, align: 4)] public class CGuiBehaviorStartRaceButton : igGuiBehavior { }
-    [ObjectAttr(ctr: 224, align: 8)] public class CGuiBehaviorSubtitleToggleOption : CGuiBehaviorBaseToggleOption { }
+    [ObjectAttr(nst: 216, ctr: 224, align: 8)] public class CGuiBehaviorSubtitleToggleOption : CGuiBehaviorBaseToggleOption { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CGuiButtonLegendTable : igHashTable<igEnumMetaField, string?> { }
     [ObjectAttr(ctr: 64, align: 8)] public class CGuiColorStyleColorTable : igHashTable<igEnumMetaField, igVec4ucMetaField> { }
     [ObjectAttr(nst: 24, align: 8)] public class CGuiEventBossHealthBarShake : igGuiEvent { }
@@ -246,7 +247,7 @@ namespace Alchemy
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CGuiListItemConverter : igGuiListItemConverter { }
     [ObjectAttr(ctr: 16, align: 4)] public class CGuiListItemConverterAdhocGameList : igGuiListItemConverter { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CGuiListItemConverterButtonLegend : igGuiListItemConverter { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CGuiListItemConverterFriendList : CGuiListItemConverter { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CGuiListItemConverterFriendList : CGuiListItemConverter { }
     [ObjectAttr(nst: 16, align: 4)] public class CGuiListItemConverterGraphicsMenu : igGuiListItemConverter { }
     [ObjectAttr(nst: 16, align: 4)] public class CGuiListItemConverterInitialsCharacter : igGuiListItemConverter { }
     [ObjectAttr(nst: 16, align: 4)] public class CGuiListItemConverterKeyboardMenu : igGuiListItemConverter { }
@@ -318,31 +319,34 @@ namespace Alchemy
     [ObjectAttr(ctr: 64, align: 8)] public class CLanguageStringHashTable : igHashTable<igEnumMetaField, string?> { }
     [ObjectAttr(ctr: 40, align: 8)] public class CLensFlareList : igObjectList<CLensFlare> { }
     [ObjectAttr(ctr: 64, align: 8)] public class CLevelAdditionalPackagesHastTable : igHashTable<igEnumMetaField, string?> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CLevelBorderWaypointList : igObjectList<CLevelBorderWaypoint> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CLevelBorderWaypointList : igObjectList<CLevelBorderWaypoint> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CLevelBorderWaypointListList : igObjectList<CLevelBorderWaypointList> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CLevelChunkInfoHandleList : igSmartHandleList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CLevelChunkInfoHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CLevelGoalList : igObjectList<CLevelGoal> { }
     [ObjectAttr(nst: 120, align: 8)] public class CLinearConvertMaterial : igFxMaterial { }
     [ObjectAttr(nst: 48, ctr: 48, align: 8)] public class CLinearDriftVehicleSettingList : CDriftVehicleSettingList { }
     [ObjectAttr(nst: 120, align: 8)] public class CLinearizeDepthMaterial : igFxMaterial { }
     [ObjectAttr(nst: 120, align: 8)] public class CLinearizeWaterDepthMaterial : igFxMaterial { }
     [ObjectAttr(nst: 32, align: 4)] public class CLinearVehicleXOffsetKeyframe : igSplineFloatKeyframe { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CLocalizedLineList : igObjectList<CLocalizedLine> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CLocalizedLineList : igObjectList<CLocalizedLine> { }
     [ObjectAttr(ctr: 64, align: 8)] public class CLODModeRacerLODSettingsTable : igHashTable<igEnumMetaField, CRacerLODSettings> { }
     [ObjectAttr(nst: 120, align: 8)] public class CLutGeneratorMaterial : igFxMaterial { }
     [ObjectAttr(nst: 16, align: 4)] public class CManager : igObject { }
     [ObjectAttr(nst: 48, ctr: 48, align: 8)] public class CManeuverVehicleSettingList : CBaseVehicleSettingList { }
     [ObjectAttr(nst: 64, align: 8)] public class CMapToEnemyTable : igHashTable<string, igObject> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceCurrencyList : igObjectList<CMarketplaceCurrency> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceExchangeSkuDataList : igObjectList<CMarketplaceExchangeSkuData> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceItemHandleList : igSmartHandleList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceCurrencyList : igObjectList<CMarketplaceCurrency> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceExchangeSkuDataList : igObjectList<CMarketplaceExchangeSkuData> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceItemHandleList : igSmartHandleList { }
     [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceItemHandleListList : igObjectList<CMarketplaceItemHandleList> { }
+    [ObjectAttr(nst: 40, align: 8)] public class CMarketplaceLootBoxDataList : igObjectList { }
+    [ObjectAttr(nst: 40, align: 8)] public class CMarketplaceLootBoxRarityDataList : igObjectList { }
     [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceProductCurrencyList : igObjectList<CMarketplaceProductCurrency> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceProductItemList : igObjectList<CMarketplaceProductItem> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceProductList : igObjectList<CMarketplaceProduct> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceProductItemList : igObjectList<CMarketplaceProductItem> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceProductList : igObjectList<CMarketplaceProduct> { }
     [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceSkuHandleList : igSmartHandleList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceSkuList : igObjectList<CMarketplaceSku> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMarketplaceSkuList : igObjectList<CMarketplaceSku> { }
     [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceSkuListList : igObjectList<CMarketplaceSkuHandleList> { }
+    [ObjectAttr(nst: 40, align: 8)] public class CMarketplaceSkuPriceList : igObjectList { }
     [ObjectAttr(ctr: 64, align: 8)] public class CMarketplaceTierWeightTable : igHashTable<igEnumMetaField, float> { }
     [ObjectAttr(ctr: 40, align: 8)] public class CMarketplaceTimeWeightList : igObjectList<CMarketplaceTimeWeight> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CMaterialOverrideCombinerComponentData : CEntityComponentData { }
@@ -362,20 +366,19 @@ namespace Alchemy
     [ObjectAttr(nst: 56, align: 8)] public class CMotorcycleLeftGroundEntityMessage : CEntityMessage { }
     [ObjectAttr(nst: 56, align: 8)] public class CMountControllerLanded : CEntityMessage { }
     [ObjectAttr(nst: 56, align: 8)] public class CMountControllerLeftGround : CEntityMessage { }
-    [ObjectAttr(ctr: 16, align: 8)] public class CMultiplayerAssignTeamsComponentData : CEntityComponentData { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CMusicMixList : igObjectList<CMusicMix> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CMusicSyncComponentData : CEntityComponentData { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CNavMeshBuildDataList : igObjectList<CNavMeshBuildData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CNavPowerSettingsList : igObjectList<CNavPowerSettings> { }
     [ObjectAttr(nst: 120, align: 8)] public class CNeighborMaxVelocityMaterial : igFxMaterial { }
     [ObjectAttr(ctr: 40, align: 8)] public class CNetworkAutenticationLicenceList : igObjectList<CNetworkAuthenticationLicence> { }
-    [ObjectAttr(ctr: 64, align: 8)] public class CNetworkDisableDefaultReplicationTable : igHashTable<string, igEnumMetaField> { }
+    [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CNetworkDisableDefaultReplicationTable : igHashTable<string, igEnumMetaField> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CNetworkDisablePreTeleportActorReplicationComponentData : CEntityComponentData { }
     [ObjectAttr(ctr: 40, align: 8)] public class CNitroBarTierList : igObjectList<CNitroBarTier> { }
     [ObjectAttr(nst: 40, align: 8)] public class CNovaCollisionInfoList : igObjectList<CNovaCollisionInfo> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CNullPhysicsComponentData : CBasePhysicsComponentData { }
-    [ObjectAttr(ctr: 56, align: 8)] public class CObjectiveEventDelegate : MulticastDelegate { }
-    [ObjectAttr(ctr: 32, align: 8)] public class CObjectiveEventList : igEventLinkedList { }
+    [ObjectAttr(nst: 56, ctr: 56, align: 8)] public class CObjectiveEventDelegate : MulticastDelegate { }
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class CObjectiveEventList : igEventLinkedList { }
     [ObjectAttr(ctr: 64, align: 8)] public class COctaneAudioDriverThematicHastTable : igHashTable<igEnumMetaField, string?> { }
     [ObjectAttr(ctr: 40, align: 8)] public class COctaneBattleModeDataList : igObjectList<COctaneBattleModeData> { }
     [ObjectAttr(ctr: 32, align: 8)] public class COctaneBeatNefariousTimesUnlockable : COctaneUnlockable { }
@@ -480,12 +483,12 @@ namespace Alchemy
     [ObjectAttr(ctr: 40, align: 8)] public class CProgressionRewardList : igObjectList<CProgressionReward> { }
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class CProxyComponentData : CEntityComponentData { }
     [ObjectAttr(nst: 40, align: 8)] public class CQuestConversationPresetDataList : igObjectList<CQuestConversationPresetData> { }
-    [ObjectAttr(ctr: 56, align: 8)] public class CQuestEventDelegate : MulticastDelegate { }
-    [ObjectAttr(ctr: 32, align: 8)] public class CQuestEventList : igEventLinkedList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CQuestList : igObjectList<CQuest> { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CQuestRequirement : igObject { }
-    [ObjectAttr(ctr: 32, align: 8)] public class CQuestStartEventList : igEventLinkedList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CQuestStepList : igObjectList<CQuestStep> { }
+    [ObjectAttr(nst: 56, ctr: 56, align: 8)] public class CQuestEventDelegate : MulticastDelegate { }
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class CQuestEventList : igEventLinkedList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CQuestList : igObjectList<CQuest> { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CQuestRequirement : igObject { }
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class CQuestStartEventList : igEventLinkedList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CQuestStepList : igObjectList<CQuestStep> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CQuestTrackList : igObjectList<CQuestTrack> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CQueuedGameSoundList : igObjectList<CQueuedGameSound> { }
     [ObjectAttr(ctr: 16, align: 8)] public class CRaceIntroHudComponentData : CEntityComponentData { }
@@ -527,7 +530,7 @@ namespace Alchemy
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CSortEntities : igObject { }
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class CSoundDotNetHandle : igDotNetHandle { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CSoundHandleList : igSmartHandleList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CSoundHandleListList : igObjectList<CSoundHandleList> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CSoundHandleListList : igObjectList<CSoundHandleList> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CSoundHandleOrNameList : igSmartHandleList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CSoundInstanceHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CSoundList : igObjectList<CSound> { }
@@ -544,7 +547,7 @@ namespace Alchemy
     [ObjectAttr(nst: 56, ctr: 48, align: 8)] public class CSplineRotationKeyframe : igSplineRotationKeyframe { }
     [ObjectAttr(nst: 24, ctr: 16, align: 4)] public class CSplineSnapAttachBehavior : CSplineAttachBehavior { }
     [ObjectAttr(nst: 144, ctr: 128, align: 16)] public class CSplineTangentConvergeMover : CSplineTangentRotationMover { }
-    [ObjectAttr(ctr: 128, align: 16)] public class CSplineTrackBankKeyframedRotationMover : CSplineTangentRotationMover { }
+    [ObjectAttr(nst: 144, ctr: 128, align: 16)] public class CSplineTrackBankKeyframedRotationMover : CSplineTangentRotationMover { }
     [ObjectAttr(nst: 32, ctr: 24, align: 4)] public class CSplineVelocityKeyframe : igSplineFloatKeyframe { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CStackCameraControllerList : igObjectList<CStackCameraControllerBase> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CStaticCollisionHashInstanceIdHashTable : igHashTable<u64, i16> { }
@@ -614,7 +617,7 @@ namespace Alchemy
     [ObjectAttr(nst: 120, align: 8)] public class CVfxCostMaterial : igFxMaterial { }
     [ObjectAttr(nst: 440, ctr: 432, align: 8)] public class CVfxDrawPointForceOperator : CVfxDrawForceOperator { }
     [ObjectAttr(nst: 24, align: 8)] public class CVfxEffectDotNetHandle : igDotNetHandle { }
-    [ObjectAttr(ctr: 16, align: 4)] public class CVfxPhysicsBoxShape : CVfxPhysicsShape { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CVfxPhysicsBoxShape : CVfxPhysicsShape { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CVfxPhysicsCapsuleShape : CVfxPhysicsShape { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CVfxPhysicsShape : igObject { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class CVfxPhysicsSphereShape : CVfxPhysicsShape { }
@@ -631,7 +634,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CWaypointList : igObjectList<CWaypoint> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CWeightedSoundList : igObjectList<CWeightedSound> { }
     [ObjectAttr(nst: 48, ctr: 48, align: 8)] public class CWeightVehicleSettingList : CBaseVehicleSettingList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CWorldCollectibleModifierItemList : igObjectList<CWorldCollectibleModifierItem> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CWorldCollectibleModifierItemList : igObjectList<CWorldCollectibleModifierItem> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class CWorldCollectibleModifierTable : igHashTable<igEnumMetaField, CWorldCollectibleModifier> { }
     [ObjectAttr(ctr: 16, align: 8)] public class CWorldEndRaceLapComponentData : CEntityComponentData { }
     [ObjectAttr(nst: 1280, ctr: 1328, align: 16)] public class CWorldVisualDataGroup : CVisualDataGroup { }
@@ -639,7 +642,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CZoneInfoDynamicDifficultyDataList : igObjectList<CZoneInfoDynamicDifficultyData> { }
     [ObjectAttr(ctr: 40, align: 8)] public class CZoneInfoGrandPrixDataList : igObjectList<CZoneInfoGrandPrixData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CZoneInfoHandleList : igSmartHandleList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class CZoneInfoList : igObjectList<CZoneInfo> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class CZoneInfoList : igObjectList<CZoneInfo> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class EFlagsWrapperList : igObjectList<EFlagsWrapper> { }
     [ObjectAttr(ctr: 40, align: 8)] public class EOctaneMarketplaceItemCategoryListList : igObjectList<EOctaneMarketplaceItemCategoryList> { }
     [ObjectAttr(ctr: 64, align: 8)] public class EOctaneMarketplaceItemCategoryNamesTable : igHashTable<igEnumMetaField, string?> { }
@@ -647,6 +650,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igAnimation2List : igObjectList<igAnimation2> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igAnimationBinding2List : igObjectList<igAnimationBinding2> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igAnimationTransitionList : igObjectList<igAnimationTransition> { }
+    [ObjectAttr(nst: 40, align: 8)] public class igArchiveList : igObjectList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igAttrList : igObjectList<igAttr> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igBaseMetaList : igObjectList<igBaseMeta> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igCachedAttrListList : igObjectList<igCachedAttrList> { }
@@ -659,7 +663,7 @@ namespace Alchemy
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igContainer : igObject { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igCustomMaterialAnimationList : igObjectList<igCustomMaterialAnimation> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igDataBindingList : igObjectList<igDataBinding> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igDataTransformList : igObjectList<igDataTransform> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igDataTransformList : igObjectList<igDataTransform> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igDebugPrimitiveList : igObjectList<igDebugPrimitive> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igDirectoryList : igObjectList<igDirectory> { }
     [ObjectAttr(nst: 64, align: 8)] public class igDotNetDataDataHashTable : igHashTable<DotNetDataMetaField, DotNetDataMetaField> { }
@@ -669,6 +673,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igEntityHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igEntityList : igObjectList<igEntity> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8, refCountValues: false)] public class igEnumVscActionNodeHashTable : igHashTable<int, igObject> { }
+    [ObjectAttr(nst: 40, align: 8)] public class igFileWorkItemList : igObjectList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igFloatListList : igObjectList<igFloatList> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igFxMaterialHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGfxShaderConstantList : igObjectList<igGfxShaderConstant> { }
@@ -684,18 +689,18 @@ namespace Alchemy
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class igGuiAnimationCategory : igNamedObject { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igGuiAnimationTable : igHashTable<igGuiAnimationTag, igGuiAnimation> { }
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class igGuiAnimationTag : igNamedObject { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igGuiAnimationTagList : igObjectList<igGuiAnimationTag> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiAnimationTagList : igObjectList<igGuiAnimationTag> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiAssetList : igObjectList<igGuiAsset> { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igGuiBehavior : igObject { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiBehaviorList : igObjectList<igGuiBehavior> { }
     [ObjectAttr(nst: 32, ctr: 32, align: 16)] public class igGuiControl : igGuiAsset { }
-    [ObjectAttr(ctr: 32, align: 8)] public class igGuiDelegateList : igEventLinkedList { }
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class igGuiDelegateList : igEventLinkedList { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8, refCountKeys: false)] public class igGuiDelegateTable : igHashTable<igObject, igGuiDelegateList> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igGuiEventActionTable : igHashTable<igGuiEvent, igGuiActionTable> { }
-    [ObjectAttr(ctr: 56, align: 8)] public class igGuiEventDelegate : MulticastDelegate { }
+    [ObjectAttr(nst: 56, ctr: 56, align: 8, metaType: typeof(Delegate))] public class igGuiEventDelegate : MulticastDelegate { }
     [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class igGuiEventFocusInputReleased : igGuiEventInput { }
     [ObjectAttr(nst: 32, ctr: 32, align: 8)] public class igGuiEventFocusInputRepeated : igGuiEventInput { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igGuiEventList : igObjectList<igGuiEvent> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiEventList : igObjectList<igGuiEvent> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiEventPlaceableGainHover : igGuiEventHover { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igGuiEventPlaceableLoseHover : igGuiEventHover { }
     [ObjectAttr(nst: 24, align: 8)] public class igGuiEventProjectGainFocus : igGuiEvent { }
@@ -730,7 +735,7 @@ namespace Alchemy
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igIntIntHashTable : igHashTable<int, int> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igIntListList : igObjectList<igIntList> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igKerningPairHashTable : igHashTable<igKerningPairMetaField, float> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igListenerRelativeAbsoluteVelocityFrameReference : igListenerRelativeVelocityFrameReference { }
+    [ObjectAttr(nst: 48, ctr: 40, align: 8)] public class igListenerRelativeAbsoluteVelocityFrameReference : igListenerRelativeVelocityFrameReference { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igLocalizedHashTableList : igObjectList<igLocalizedHashTable> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igLocalizedInfo : igInfo { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igLocalizedListList : igObjectList<igLocalizedList> { }
@@ -747,7 +752,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igNetTaskList : igObjectList<igNetTask> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igNodeList : igObjectList<igNode> { }
     [ObjectAttr(nst: 40, align: 8)] public class igNonRefCountedGuiAnimationTagList : igNonRefCountedObjectList { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igNonRefCountedGuiPlaceableList : igNonRefCountedObjectList { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igNonRefCountedGuiPlaceableList : igNonRefCountedObjectList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igNonRefCountedMetaImageList : igNonRefCountedObjectList { }
     [ObjectAttr(nst: 64, align: 8, refCountKeys: false)] public class igNonRefCountedMetaObjectSpawnGroupPassDataHashTable : igHashTable<igObject, igObject> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igNonRefCountedNodeList : igNonRefCountedObjectList { }
@@ -787,7 +792,7 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igSplineVec3fKeyframeList : igObjectList<igSplineVec3fKeyframe> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8, refCountKeys: false)] public class igSplineVec3fKeyframeTrackTable : igHashTable<igObject, igSplineVec3fKeyframeTrack> { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igSpriteDrawCallModifier : igObject { }
-    [ObjectAttr(ctr: 40, align: 8)] public class igStreamingChunkList : igObjectList<igObject> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igStreamingChunkList : igObjectList<igObject> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igStreamList : igObjectList<igStream> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igStringFloatHashTable : igHashTable<string, float> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igStringInsensitiveStringHashTable : igHashTable<string, string?> { }
@@ -796,22 +801,23 @@ namespace Alchemy
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igStringRefListList : igObjectList<igStringRefList> { }
     [ObjectAttr(ctr: 64, align: 8)] public class igStringSpawnGroupPassDataHashTable : igHashTable<string, igVfxSpawnGroupPassInfo> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igStringStringHashTable : igHashTable<string, string?> { }
-    [ObjectAttr(ctr: 64, align: 8)] public class igStringUnsignedIntHashTable : igHashTable<string, u32> { }
+    [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igStringUnsignedIntHashTable : igHashTable<string, u32> { }
     [ObjectAttr(nst: 40, align: 8)] public class igTechniqueList : igObjectList<igTechnique> { }
     [ObjectAttr(nst: 40, align: 8)] public class igTechniqueParameterList : igObjectList<igTechniqueParameter> { }
     [ObjectAttr(nst: 40, align: 8)] public class igTechniqueSamplerList : igObjectList<igTechniqueSampler> { }
     [ObjectAttr(nst: 40, align: 8)] public class igTechniqueVertexComponentList : igObjectList<igTechniqueVertexComponent> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igTextureSamplerSourceList : igObjectList<igTextureSamplerSource> { }
+    [ObjectAttr(nst: 40, align: 8)] public class igThreadList : igObjectList<igThread> { }
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class igTransformSource2 : igNamedObject { }
     [ObjectAttr(nst: 24, ctr: 24, align: 8)] public class igTransformSource2Keyframed : igTransformSource2 { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igTransformSource2List : igObjectList<igTransformSource2> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igUnsignedIntIntHashTable : igHashTable<u32, int> { }
     [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igUnsignedIntStringHashTable : igHashTable<u32, string?> { }
-    [ObjectAttr(ctr: 64, align: 8)] public class igUnsignedIntUnsignedIntHashTable : igHashTable<u32, u32> { }
+    [ObjectAttr(nst: 64, ctr: 64, align: 8)] public class igUnsignedIntUnsignedIntHashTable : igHashTable<u32, u32> { }
     [ObjectAttr(nst: 32, ctr: 32, align: 8, meta: true)] public class igUpdateable : Object { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igUpdateableList : igObjectList<igUpdateable> { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igVertexBlender : igObject { }
-    [ObjectAttr(ctr: 16, align: 4)] public class igVertexBlenderCustom_P32N32 : igVertexBlender { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igVertexBlenderCustom_P32N32 : igVertexBlender { }
     [ObjectAttr(nst: 16, ctr: 16, align: 8)] public class igVertexBlenderDefault : igVertexBlender { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVertexDataList : igObjectList<igVertexData> { }
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxAccelerateBaseOperator : igVfxFrameOperator { }
@@ -821,13 +827,13 @@ namespace Alchemy
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class igVfxCommitOperator : igVfxOperator { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVfxEffectHandleList : igSmartHandleList { }
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxLoadOperator : igVfxFrameOperator { }
-    [ObjectAttr(ctr: 24, align: 8)] public class igVfxMotionLoadOperator : igVfxLoadOperator { }
+    [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxMotionLoadOperator : igVfxLoadOperator { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVfxNonRefCountedPrimitiveInfoList : igNonRefCountedObjectList { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVfxNonRefCountedSpawnedEffectList : igNonRefCountedObjectList { }
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxOrientationInvertOperator : igVfxFrameOperator { }
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxOrientationLoadOperator : igVfxLoadOperator { }
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxPoseLoadOperator : igVfxLoadOperator { }
-    [ObjectAttr(ctr: 88, align: 8)] public class igVfxPosePlacedPrimitiveRotateFixedRotationsOperator : igVfxPosePlacedPrimitiveRotateOperatorBase { }
+    [ObjectAttr(nst: 104, ctr: 88, align: 8)] public class igVfxPosePlacedPrimitiveRotateFixedRotationsOperator : igVfxPosePlacedPrimitiveRotateOperatorBase { }
     [ObjectAttr(nst: 32, align: 4)] public class igVfxPositionLoadOperator : igVfxLoadOperator { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVfxPrimitiveDataList : igObjectList<igVfxPrimitiveData> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVfxPrimitiveList : igNonRefCountedObjectList { }
@@ -840,7 +846,7 @@ namespace Alchemy
     [ObjectAttr(nst: 32, ctr: 24, align: 8)] public class igVfxVelocityLoadBaseOperator : igVfxLoadOperator { }
     [ObjectAttr(nst: 24, ctr: 24, align: 4)] public class igVisualAttribute : igAttr { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igVolume : igObject { }
-    [ObjectAttr(ctr: 16, align: 4)] public class igVolumeApplicator : igObject { }
+    [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igVolumeApplicator : igObject { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVscAccessorList : igObjectList<igVscAccessor> { }
     [ObjectAttr(nst: 16, ctr: 16, align: 4)] public class igVscActionNode : igVscPlaceable { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class igVscActionNodeList : igObjectList<igVscActionNode> { }
@@ -862,7 +868,7 @@ namespace Alchemy
     [ObjectAttr(nst: 24, ctr: 16, align: 8)] public class igVscThisObjectAccessor : igVscObjectAccessor { }
     [ObjectAttr(nst: 24, ctr: 16, align: 4)] public class igVscVec2fAccessor : igVscAccessor { }
     [ObjectAttr(nst: 24, ctr: 16, align: 4)] public class igVscVec3fAccessor : igVscAccessor { }
-    [ObjectAttr(ctr: 16, align: 4)] public class igVscVec4fAccessor : igVscAccessor { }
+    [ObjectAttr(nst: 24, ctr: 16, align: 4)] public class igVscVec4fAccessor : igVscAccessor { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class JuiceAnimationList : igObjectList<JuiceAnimation> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class JuiceFieldValueList : igObjectList<JuiceFieldValue> { }
     [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class JuiceFloatKeyframeList : igObjectList<JuiceFloatKeyframe> { }
@@ -902,7 +908,7 @@ namespace Alchemy
     [ObjectAttr(nst: 32, align: 8, metaType: typeof(Object))] public class Scripts_SpawnCollectiblesComponentData_CollectibleSelectionMethod : Object { }
     [ObjectAttr(nst: 40, align: 8)] public class SpeedVfxSpecList : igObjectList<SpeedVfxSpec> { }
     [ObjectAttr(ctr: 64, align: 8)] public class StringUShortHashTable : igHashTable<string, u16> { }
-    [ObjectAttr(ctr: 40, align: 8)] public class SurfaceVfxSpecList : igObjectList<SurfaceVfxSpec> { }
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)] public class SurfaceVfxSpecList : igObjectList<SurfaceVfxSpec> { }
     [ObjectAttr(nst: 56, align: 8, metaType: typeof(List_1))] public class System_Collections_Generic_List_1_Scripts_BoltOnData_ : List_1 { }
     [ObjectAttr(nst: 40, align: 8)] public class VfxIntensityLayersList : igObjectList { }
 }

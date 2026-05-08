@@ -1,11 +1,12 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 136, align: 8)]
+    [ObjectAttr(nst: 40, ctr: 136, align: 8)]
     public class CMarketplaceSku : igObject
     {
-        [FieldAttr(ctr: 12)] public uint _id;
+        [FieldAttr(nst: 16, ctr: 12)] public uint _id;
         [FieldAttr(ctr: 16)] public EOctaneMarketplaceItemCategory _itemCategory;
-        [FieldAttr(ctr: 24)] public igHandleMetaField _product = new();
+        [FieldAttr(nst: 24, ctr: 24)] public igHandleMetaField _product = new();
+        [FieldAttr(nst: 32)] public CMarketplaceSkuPriceList? _priceList;
         [FieldAttr(ctr: 32)] public igHandleMetaField _currency = new();
         [FieldAttr(ctr: 40)] public uint _price;
         [FieldAttr(ctr: 44)] public bool _couponEnabled;

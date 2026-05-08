@@ -1,8 +1,8 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 48, align: 4, metaType: typeof(igGuiVscBehavior))]
+    [ObjectAttr(nst: 56, ctr: 48, align: 4, metaType: typeof(igGuiVscBehavior))]
     public class Octane_MainMenu_GhostSelection_Start : igGuiVscBehavior
     {
-        [FieldAttr(ctr: 40)] public bool _Bool;
+        [FieldAttr(nst: 48, ctr: 40)] public bool _Bool;
     }
 }

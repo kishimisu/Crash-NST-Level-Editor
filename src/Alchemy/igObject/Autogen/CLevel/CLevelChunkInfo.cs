@@ -1,8 +1,8 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 40, align: 8)]
+    [ObjectAttr(nst: 40, ctr: 40, align: 8)]
     public class CLevelChunkInfo : CChunkInfo
     {
-        [FieldAttr(ctr: 32)] public string? _levelName;
+        [FieldAttr(nst: 32, ctr: 32)] public string? _levelName = null;
     }
 }

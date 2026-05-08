@@ -1,10 +1,10 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 24, align: 4)]
+    [ObjectAttr(nst: 32, ctr: 24, align: 4)]
     public class CPlatformAudioSettingsOverride : igObject
     {
-        [FieldAttr(ctr: 12)] public EIG_CORE_PLATFORM _platform;
-        [FieldAttr(ctr: 16)] public int _sampleRate;
-        [FieldAttr(ctr: 20)] public int _quality;
+        [FieldAttr(nst: 16, ctr: 12)] public EIG_CORE_PLATFORM _platform;
+        [FieldAttr(nst: 20, ctr: 16)] public int _sampleRate = 48000;
+        [FieldAttr(nst: 24, ctr: 20)] public int _quality = 40;
     }
 }

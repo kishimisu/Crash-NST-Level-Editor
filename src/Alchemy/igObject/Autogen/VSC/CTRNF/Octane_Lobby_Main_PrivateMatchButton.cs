@@ -1,11 +1,11 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 72, align: 4, metaType: typeof(igGuiVscBehavior))]
+    [ObjectAttr(nst: 80, ctr: 72, align: 4, metaType: typeof(igGuiVscBehavior))]
     public class Octane_Lobby_Main_PrivateMatchButton : igGuiVscBehavior
     {
-        [FieldAttr(ctr: 40)] public igHandleMetaField _Gui_Placeable = new();
-        [FieldAttr(ctr: 48)] public igHandleMetaField _Gui_Project = new();
-        [FieldAttr(ctr: 56)] public igHandleMetaField _Gui_Animation_Tag = new();
-        [FieldAttr(ctr: 64)] public igHandleMetaField _Game_Int_Variable = new();
+        [FieldAttr(nst: 48, ctr: 40)] public igHandleMetaField _Gui_Placeable = new();
+        [FieldAttr(nst: 56, ctr: 48)] public igHandleMetaField _Gui_Project = new();
+        [FieldAttr(nst: 64, ctr: 56)] public igHandleMetaField _Gui_Animation_Tag = new();
+        [FieldAttr(nst: 72, ctr: 64)] public igHandleMetaField _Game_Int_Variable = new();
     }
 }

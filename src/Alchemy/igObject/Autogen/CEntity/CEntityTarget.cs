@@ -1,8 +1,8 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 40, align: 8, meta: true)]
+    [ObjectAttr(nst: 40, ctr: 40, align: 8, meta: true)]
     public class CEntityTarget : Object
     {
-        [FieldAttr(ctr: 32)] public igHandleMetaField _targetEntity = new();
+        [FieldAttr(nst: 32, ctr: 32)] public igHandleMetaField _targetEntity = new();
     }
 }

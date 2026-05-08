@@ -1,9 +1,9 @@
 namespace Alchemy
 {
-    [ObjectAttr(nst: 56, align: 4, metaType: typeof(CVscComponentData))]
+    [ObjectAttr(nst: 56, ctr: 48, align: 4, metaType: typeof(CVscComponentData))]
     public class common_C2_Chase_LatticeFenceData : CVscComponentData
     {
-        [FieldAttr(nst: 40)] public igHandleMetaField _Entity_Tag_0x28 = new();
-        [FieldAttr(nst: 48)] public igHandleMetaField _Entity_Tag_0x30 = new();
+        [FieldAttr(nst: 40, ctr: 32)] public igHandleMetaField _Entity_Tag_0x28 = new();
+        [FieldAttr(nst: 48, ctr: 40)] public igHandleMetaField _Entity_Tag_0x30 = new();
     }
 }

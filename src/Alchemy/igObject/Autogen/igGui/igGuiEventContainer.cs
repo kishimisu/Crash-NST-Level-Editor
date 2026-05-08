@@ -1,8 +1,8 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 24, align: 8)]
+    [ObjectAttr(nst: 24, ctr: 24, align: 8)]
     public class igGuiEventContainer : igObject
     {
-        [FieldAttr(ctr: 16)] public igGuiEventDelegate? _received;
+        [FieldAttr(nst: 16, ctr: 16)] public igGuiEventDelegate? _received;
     }
 }

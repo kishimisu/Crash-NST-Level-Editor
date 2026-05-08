@@ -1,15 +1,15 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 48, align: 8)]
+    [ObjectAttr(nst: 56, ctr: 48, align: 8)]
     public class CDynamicCloudComponentData : CEntityComponentData
     {
-        [FieldAttr(ctr: 16)] public igVec2fMetaField _playerFadeRadii = new();
-        [FieldAttr(ctr: 24)] public bool _dissipateOnEnter;
-        [FieldAttr(ctr: 28)] public float _dissipateDuration;
-        [FieldAttr(ctr: 32)] public float _dissipateEaseInDuration;
-        [FieldAttr(ctr: 36)] public float _dissipateEaseOutDuration;
-        [FieldAttr(ctr: 40)] public bool _isMultiFade;
-        [FieldAttr(ctr: 41)] public bool _useFarPlayerOffset;
-        [FieldAttr(ctr: 42)] public bool _wholeFade;
+        [FieldAttr(nst: 24, ctr: 16)] public igVec2fMetaField _playerFadeRadii = new();
+        [FieldAttr(nst: 32, ctr: 24)] public bool _dissipateOnEnter = true;
+        [FieldAttr(nst: 36, ctr: 28)] public float _dissipateDuration = 6.0f;
+        [FieldAttr(nst: 40, ctr: 32)] public float _dissipateEaseInDuration;
+        [FieldAttr(nst: 44, ctr: 36)] public float _dissipateEaseOutDuration;
+        [FieldAttr(nst: 48, ctr: 40)] public bool _isMultiFade;
+        [FieldAttr(nst: 49, ctr: 41)] public bool _useFarPlayerOffset;
+        [FieldAttr(nst: 50, ctr: 42)] public bool _wholeFade = true;
     }
 }

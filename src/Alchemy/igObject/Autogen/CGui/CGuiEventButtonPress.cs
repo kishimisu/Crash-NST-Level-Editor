@@ -1,8 +1,8 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 32, align: 8)]
+    [ObjectAttr(nst: 32, ctr: 32, align: 8)]
     public class CGuiEventButtonPress : igGuiEvent
     {
-        [FieldAttr(ctr: 24)] public CGuiButtonDef? _buttonDef;
+        [FieldAttr(nst: 24, ctr: 24, refCount: false)] public CGuiButtonDef? _buttonDef;
     }
 }

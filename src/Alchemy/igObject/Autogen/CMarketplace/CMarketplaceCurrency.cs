@@ -1,9 +1,9 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 24, align: 8)]
+    [ObjectAttr(nst: 32, ctr: 24, align: 8)]
     public class CMarketplaceCurrency : igObject
     {
-        [FieldAttr(ctr: 12)] public uint _id;
-        [FieldAttr(ctr: 16)] public string? _currencyCode;
+        [FieldAttr(nst: 16, ctr: 12)] public uint _id;
+        [FieldAttr(nst: 24, ctr: 16)] public string? _currencyCode = null;
     }
 }

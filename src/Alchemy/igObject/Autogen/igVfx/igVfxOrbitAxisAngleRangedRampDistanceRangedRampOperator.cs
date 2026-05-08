@@ -1,9 +1,9 @@
 namespace Alchemy
 {
-    [ObjectAttr(ctr: 80, align: 16)]
+    [ObjectAttr(nst: 96, ctr: 80, align: 16)]
     public class igVfxOrbitAxisAngleRangedRampDistanceRangedRampOperator : igVfxOrbitAxisAngleDistanceBaseOperator
     {
-        [FieldAttr(ctr: 48)] public igVfxRangedRampMetaField _angle = new();
-        [FieldAttr(ctr: 64)] public igVfxRangedRampMetaField _radius = new();
+        [FieldAttr(nst: 64, ctr: 48)] public igVfxRangedRampMetaField _angle = new();
+        [FieldAttr(nst: 80, ctr: 64)] public igVfxRangedRampMetaField _radius = new();
     }
 }
