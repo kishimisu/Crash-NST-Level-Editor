@@ -125,15 +125,17 @@ namespace NST
                     if (fieldType == typeof(igHandleMetaField))
                     {
                         igHandleMetaField? handle = (igHandleMetaField?)field.GetValue(c.Object);
-                        if (handle?.Reference == null) continue;
+                        if (handle == null || (handle.Reference == null && !_nullOverrides.Contains(handle))) continue;
 
                         NSTObject? objectRef = RenderObjectReference(field.GetName(), handle.Reference, typeof(igObject), c.Explorer, (value) =>
                         {
-                            field.SetValue(c.Object, value);
+                            _nullOverrides.Add(handle);
+                            handle.Reference = value;
                             c.SetUpdated(true);
                         },
-                        skipIfNotFound: true);
-                        if (objectRef != null) continue;
+                        skipIfNotFound: handle.Reference != null);
+                        
+                        if (objectRef != null || handle.Reference == null) continue;
 
                         igObject? obj = c.Explorer.FileManager.FindObjectInOpenFiles(handle.Reference, out _);
                         if (obj == null) continue;

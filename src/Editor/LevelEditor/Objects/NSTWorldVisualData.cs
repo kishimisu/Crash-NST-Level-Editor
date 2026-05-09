@@ -25,7 +25,7 @@ namespace NST
             ImGui.SeparatorText("Properties");
             ImGui.PopStyleColor();
 
-            if (ImGui.TreeNodeEx("Environment maps..."))
+            if (ImGui.TreeNodeEx("Skybox..."))
             {
                 renderer ??= explorer.FileManager.GetOrCreateRenderer(ArchiveFile, explorer.ArchiveRenderer);
                 renderer.RenderObject(Object, Object.GetFields(explorer.Archive.GameVersion));

@@ -294,19 +294,13 @@ namespace NST
                     }
 
                     var allObjects = objects.SelectMany(e => InstanceManager.Select(e)).ToList();
+                    bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
 
-                    // if (allObjects.Count > 400)
-                    // {
-                    //     ModalRenderer.ShowWarningModal($"Are you sure you want to select {allObjects.Count} objects?", () => SelectionManager.UpdateSelection(allObjects.ToList()));
-                    // }
-                    // else
+                    SelectionManager.UpdateSelection(allObjects, newSelection);
+
+                    if (allObjects.Count > 0)
                     {
-                        bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
-                        SelectionManager.UpdateSelection(allObjects, newSelection);
-                        if (allObjects.FirstOrDefault() is NSTObject obj)
-                        {
-                            _treeView.SelectObject(obj);
-                        }
+                        _treeView.SelectObject(allObjects[0]);
                     }
 				}
             };

@@ -477,6 +477,7 @@ namespace NST
                 if (ImGui.Selectable("Paste object values"))
                 {
                     IgzRenderer.CopyObject.CopyTo(Object);
+                    tree.Renderer.SetUpdated(Object);
                     tree.RebuildNode(this);
                 }
 

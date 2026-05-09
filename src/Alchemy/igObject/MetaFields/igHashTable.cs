@@ -117,7 +117,7 @@ namespace Alchemy
         {
             if (RebuildDict && (typeof(K) == typeof(u64) || typeof(K) == typeof(string) || typeof(K) == typeof(igObject)))
             {
-                Console.WriteLine($"[igHashTable] Rebuilding key type: {typeof(K)} for {this}");
+                // Console.WriteLine($"[igHashTable] Rebuilding key type: {typeof(K)} for {this}");
                 
                 int capacity = int.Max(_keys.Count, Dict.Count * 2);
                 

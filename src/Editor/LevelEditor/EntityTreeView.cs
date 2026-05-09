@@ -146,7 +146,7 @@ namespace NST
                 }
                 else if (obj.GetObject() is CWorldVisualData worldVisual)
                 {
-                    light.Add(obj);
+                    other.Add(obj);
                     added = true;
                 }
                 
