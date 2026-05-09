@@ -846,10 +846,61 @@ namespace NST
                     {
                         clone.Object._bitfield._isArchetype = false;
                     }
+                }
 
-                    if (copyFromCtrToNst && clone.Object.TryGetComponent(out CModelComponentData? model))
+                if (copyFromCtrToNst)
+                {
+                    // Update components for NST compatibility
+                    foreach (NSTEntity clone in newEntities.Values)
                     {
-                        model._distanceCullImportance = EDistanceCullImportance.kCritical;
+                        var components = clone.Object.GetComponentsDictionary();
+                        foreach (var (key, component) in components)
+                        {
+                            // Prevent controller from vibrating non-stop in T503
+                            if (component is CLoopingVfxComponentData vfxLoop && vfxLoop._effect.Reference?.namespaceName == "ctr_t503_wizard_cloud")
+                            {
+                                clone.Object.RemoveComponent(key); 
+                            }
+                            // Fix invisible models
+                            else if (component is CModelComponentData model)
+                            {
+                                model._distanceCullImportance = EDistanceCullImportance.kCritical;
+                            }
+                            // Fix model animations
+                            else if (component is common_Delay_AnimationData prev)
+                            {
+                                clone.Object.RemoveComponent(key);
+
+                                var trigger = new CPlayerTriggerRadiusComponentData()
+                                {
+                                    _radius = 2500
+                                };
+
+                                var animate = new common_Entity_Animate_OnEnterData()
+                                {
+                                    _Bool = true,
+                                    _String_0x40 = prev._String_0x30,
+                                    _String_0x48 = string.IsNullOrEmpty(prev._String_0x40) ? "attack" : prev._String_0x40,
+                                    _Float_0x50 = prev._Float_0x2c,
+                                    _Float_0x54 = prev._Float_0x28,
+                                    _Float_0x58 = 1
+                                };
+                                animate._dynamicFieldMemory._address = 0xFFFFFFFF;
+                                animate._meta = new() { Reference = new("common_Entity_Animate_OnEnter", "common_Entity_Animate_OnEnterData") };
+
+                                clone.Object.AddComponent("instance_CPlayerTriggerRadiusComponentData", trigger);
+                                clone.Object.AddComponent("instance_Scripts.Graph.common_Entity_Animate_OnEnterData", animate);
+
+                                if (_explorer.Archive.FindFile("common_Entity_Animate_OnEnter.igz") == null)
+                                {
+                                    IgArchiveFile? vsc = AlchemyUtils.FindFileInArchives("common_Entity_Animate_OnEnter", out var vscArchive);
+                                    if (vsc != null && vscArchive != null)
+                                    {
+                                        _explorer.ArchiveRenderer.AddFileWithDependencies(vscArchive, vsc);
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 

@@ -130,18 +130,13 @@ namespace Alchemy
             return Objects.Find(o => o.ObjectName?.ToLowerInvariant() == objectName) as T;
         }
 
-        private static readonly HashSet<Type> _ctrToNstCompatible = 
+        private static readonly HashSet<Type> _ctrToNstIncompatible =
         [
-            typeof(igPrefabComponentData),
-            typeof(CModelComponentData),
-            typeof(CStaticComponentData),
-            typeof(CStaticCollisionComponentData),
-            typeof(CTintSphereComponentData),
-            typeof(CPointLightComponentData),
-            typeof(CBoxLightComponentData),
-            typeof(CVisualDataBoxComponentData),
-            typeof(CStaticVfxComponentData),
-            typeof(CLoopingVfxComponentData),
+            typeof(common_TurboJump),
+            typeof(common_EndRaceRandomCameraManagerData),
+            typeof(common_EndRaceRandomCamera_UnsafeAreaData),
+            typeof(common_Race_Start_Event_ChainData),
+            typeof(common_ExplosiveCrateData)
         ];
 
         /// <summary>
@@ -212,14 +207,13 @@ namespace Alchemy
                     {
                         foreach (var (key, component) in entity.GetComponentsDictionary())
                         {
-                            if (!_ctrToNstCompatible.Contains(component.GetType()))
+                            if (!AttributeUtils.GetAttributes(component.GetType()).IsCompatibleNST() || _ctrToNstIncompatible.Contains(component.GetType()))
                             {
-                                // Console.WriteLine($"Removed incompatible component {component.GetType().Name} (from parent)");
                                 entity.RemoveComponent(key);
                             }
                         }
                     }
-                    else if (dst is igComponentData component && !_ctrToNstCompatible.Contains(component.GetType()))
+                    else if (dst is igComponentData component && (!AttributeUtils.GetAttributes(component.GetType()).IsCompatibleNST() || _ctrToNstIncompatible.Contains(component.GetType())))
                     {
                         // Console.WriteLine($"Removed incompatible component {component.GetType().Name}");
                         continue;

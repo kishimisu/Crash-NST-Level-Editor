@@ -12,6 +12,7 @@ namespace Havok
         private HavokHeader _header;
         private Dictionary<int, hkObject> _rootObjects = [];
 
+        public HavokHeader GetHeader() => _header;
         public List<hkObject> GetAllObjects() => GetObjects();
         public List<hkObject> GetRootObjects() => GetObjects(true);
         public hkObject GetObject(int offset) => _rootObjects[offset];

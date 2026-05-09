@@ -229,7 +229,8 @@ namespace NST
 
                 if (!visited.Add(path)) continue;
 
-                if (ctrToNst && (path.StartsWith("vsc/") || Path.GetExtension(current.GetName()).StartsWith(".hk")))
+                string fileName = NamespaceUtils.GetFileName(path);
+                if (ctrToNst && (fileName.StartsWith("common_EndRaceRandomCamera_") || fileName.StartsWith("common_Race_Start_Event_Chain")))
                 {
                     // Console.WriteLine("Exclude incompatible CTR file: " + current.GetPath());
                     continue;
@@ -285,7 +286,6 @@ namespace NST
             {
                 if (obj is igVertexFormat vertexFormat)
                 {
-                    // Console.WriteLine($"igVertexFormat: {vertexFormat}, Vertex size: {vertexFormat._vertexSize}, Elements: {vertexFormat._elements.Count}");
                     var list = data[vertexFormat._vertexSize];
                     var platformData = list.Find(e => e.elementCount == vertexFormat._elements.Count)?.platformData ?? list[0].platformData;
                     vertexFormat._platformData.Set(platformData);
@@ -293,7 +293,6 @@ namespace NST
                 }
                 else if (obj is igIndexBuffer indexBuffer)
                 {
-                    // Console.WriteLine("igIndexBuffer: " + indexBuffer._format?.Reference);
                     indexBuffer._format = new igIndexFormat() { Reference = new NamedReference("indexformats", "i16_dx11", true) };
                 }
                 else if (obj is igMemoryCommandStream commandStream)
@@ -303,33 +302,19 @@ namespace NST
                     for (int i = 0; i <= commandStream._memory.Count - 4; i += 4)
                     {
                         int value = BitConverter.ToInt32(bytes, i);
-                        if (value == 56)
-                        {
-                            // Console.WriteLine($"igMemoryCommandStream: replaced command id {value}");
-                            commandStream._memory[i] = 54;
-                        }
+                        if (value == 56) commandStream._memory[i] = 54;
                     }
                 }
                 else if (obj is igImage2 image)
                 {
-                    // Console.WriteLine("igImage2: " + image._format?.Reference?.objectName);
                     if (image._format?.Reference?.objectName.Contains("tile_ps4") == true)
                     {
-                        byte[] pixels = image.GetPixels(false);
                         string format = image._format.Reference.objectName;
 
-                        if (format == "b8g8r8a8_tile_ps4")
-                        {
-                            for (int i = 0; i < pixels.Length; i += 4)
-                            {
-                                (pixels[i], pixels[i+2]) = (pixels[i+2], pixels[i]);
-                            }
-                            format = "r8g8b8a8_dx11";
-                        }
+                        byte[] pixels = image.ConvertFromCtrToNst(format);
 
                         image._data.Set(pixels);
-                        image._format.Reference.objectName = format.Replace("tile_ps4", "dx11");
-                        image._levelCount = 1;
+                        image._format.Reference.objectName = format.Replace("b8g8r8a8", "r8g8b8a8").Replace("tile_ps4", "dx11");
                     }
                 }
                 else if (obj is igGraphicsTexture texture)
@@ -347,21 +332,9 @@ namespace NST
                             renderer.FixVersionDifferences(textureIgz);
                             textureFile.SetGameVersion(archive.GameVersion);
                             textureFile.SetData(textureIgz.Save());
-                            Console.WriteLine("Found external texture: " + textureFile.GetPath());
                         }
                     }
                 }
-                else if (!AttributeUtils.GetAttributes(obj.GetType()).IsCompatibleNST())
-                {
-                    toRemove.Add(obj);
-                    break;
-                }
-            }
-
-            if (toRemove.Count > 0)
-            {
-                // Console.WriteLine("Cleared file with incompatible objects: " + igz._path);
-                igz.Objects.Clear();
             }
         }
 

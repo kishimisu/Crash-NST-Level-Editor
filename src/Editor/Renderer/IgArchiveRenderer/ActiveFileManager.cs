@@ -112,6 +112,8 @@ namespace NST
                 {
                     havokFile.GameVersion = version;
 
+                    havokFile.GetHeader().reusePaddingOptimization = (byte)(version == GameVersion.NST ? 0 : 1);
+
                     file.SetData(havokFile.Save());
                 }
             }

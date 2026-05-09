@@ -127,7 +127,7 @@ namespace NST
         private static string _deathTriggerType = "Fall_Fast";
         private static string _deathTriggerVFX = "None";
         
-        private static float _scaleDownCTR = 0.75f;
+        private static float _scaleDownCTR = 0.65f;
 
         public static void RenderContextMenu(LevelExplorer explorer)
         {
@@ -137,12 +137,12 @@ namespace NST
                 {
                     ImGui.TextDisabled("CTR -> NST");
                     
-                    if (explorer.SelectionManager._selection.Count == 0) ImGui.BeginDisabled();
                     ImGuiUtils.Prefix("Scale");
                     if (ImGui.InputFloat("##scaleDown", ref _scaleDownCTR, 0.05f, 0.1f, "%.2f"))
                     {
                         _scaleDownCTR = MathF.Max(0.05f, MathF.Min(1.0f, _scaleDownCTR));
                     }
+                    if (explorer.SelectionManager._selection.Count == 0) ImGui.BeginDisabled();
                     if (ImGui.MenuItem("Scale down selection"))
                     {
                         explorer.SelectionManager._selectionContainer.Scale *= _scaleDownCTR;
@@ -154,9 +154,25 @@ namespace NST
                     
                     if (ImGui.MenuItem("Select all NST-compatible objects"))
                     {
-                        var selection = explorer.InstanceManager.AllEntities.Where(e => 
-                            e.Object.GetType() != typeof(CPlayerStartEntity) && e.Object.GetType() != typeof(CWorldEntity)
-                        );
+                        var selection = explorer.InstanceManager.AllObjects.Where(o =>
+                        {
+                            if (o is NSTWorldVisualData) 
+                                return true;
+
+                            if (o is not NSTEntity entity)
+                                return false;
+
+                            if (entity.Object is CPlayerStartEntity || entity.Object is CWorldEntity)
+                                return false;
+
+                            if (entity.Object.GetComponents().Any(c => 
+                                c is CModeRGpiComponentData || c is CThemeModelSwapComponentData || 
+                                c is common_RelicRace_CrateData || c is CRespawnTriggerComponentData))
+                                return false;
+
+                            return true;
+                        });
+
                         explorer.SelectionManager.UpdateSelection(selection.Cast<NSTObject>().ToList());
                     }
                     ImGui.EndPopup();

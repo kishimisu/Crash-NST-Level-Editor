@@ -2,7 +2,7 @@ using Alchemy;
 
 namespace Havok
 {
-    class HavokHeader
+    public class HavokHeader
     {
         public u64 signature = 0x10C0C01057E0E057;
         public u32 userTag = 0;

@@ -535,7 +535,7 @@ namespace NST
 
                 if (image != null)
                 {
-                    SKBitmap bitmap = image.CreateScaledBitmap(_maxTextureSize);
+                    SKBitmap bitmap = image.CreateBitmapLOD(_maxTextureSize);
                     THREE.Texture texture = new THREE.Texture(bitmap) { NeedsUpdate = true };
 
                     foreach (NSTMaterial mat in _textureToMaterials[textureRef])

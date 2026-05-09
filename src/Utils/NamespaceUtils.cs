@@ -139,10 +139,12 @@ namespace Alchemy
                 namespaceInfos.Add(id, new NamespaceInfos(name, pak));
             }
 
-            namespaceInfos.Add(4163974275, new NamespaceInfos("dxt1_tile_ps4", null));
-            namespaceInfos.Add(4038686415, new NamespaceInfos("dxt5_tile_ps4", null));
-            namespaceInfos.Add(2097684074, new NamespaceInfos("bc5_tile_ps4", null));
-            namespaceInfos.Add(2606037832, new NamespaceInfos("b8g8r8a8_tile_ps4", null));
+            namespaceInfos.Add(0xF8313483, new NamespaceInfos("dxt1_tile_ps4", null));
+            namespaceInfos.Add(0x00A15D65, new NamespaceInfos("dxt3_tile_ps4", null));
+            namespaceInfos.Add(0x4EFC8CF7, new NamespaceInfos("dxt3_dx11", null));
+            namespaceInfos.Add(0xF0B976CF, new NamespaceInfos("dxt5_tile_ps4", null));
+            namespaceInfos.Add(0x7D081E6A, new NamespaceInfos("bc5_tile_ps4", null));
+            namespaceInfos.Add(0x9B54FB48, new NamespaceInfos("b8g8r8a8_tile_ps4", null));
 
             return namespaceInfos;
         }
