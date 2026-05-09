@@ -12,14 +12,17 @@
   - [Prefab Instances](#prefab-instances)
   - [Script Triggers](#script-triggers)
   - [Dynamic Clips](#dynamic-clips)
-  - [Invisible borders](#invisible-borders)
+  - [Visual Boxes](#visual-boxes)
 ---
 - [Special components](#special-components)
   - [Splines](#splines)
   - [Trigger Volumes](#trigger-volumes)
+  - [Border Collisions](#border-collisions)
   - [Outline Switch Crate](#outline-switch-crate)
   - [Checkpoint Text](#checkpoint-text)
   - [On Start Music](#on-start-music)
+---
+- [CTR:NF support](#ctrnf-support)
 
 # New Level
 
@@ -98,7 +101,7 @@ Debug settings for the level editor
 
 ![Editor Settings](assets/readme/level_editor/editor_settings.jpg)
 
-- **Free Memory On Close**: The app will automatically clear its memory once all level editors have been closed, but you can enable this option to force clearing the memory each time you close a level editor (if you encounter memory issues). It's disabled by default because it can sometimes crash the editor.
+- **Max texture res.**: Maximum resolution when loading textures, lower values decrease memory usage. Restart the editor for the change to take effect.
 
 - **Render distance**: How far to render into the scene. Decrease this value to increase performances
 
@@ -107,8 +110,9 @@ Debug settings for the level editor
   - **Prefabs**: Highlight prefab instances and entities that are part of a prefab
   - **Game Objects**: Highlight all game objects (enemies, hazards, obstacles...)
 
-- **Visible Camera Layers**:
-Choose which object layers should be visible by default to increase performances and to clean up the scene. Most of these layers will still be visible with an active selection.
+- **Gradual speed increase**: When enabled, you will gradually move faster the longer you are moving
+
+- **Show diamond gizmo**: Whether to hide or show the central gizmo in translation mode.
 
 ## Object Tree
 
@@ -135,7 +139,7 @@ Other Game Objects:
 
 Other:
 
-- **Lighting**: Contains light sources and visual boxes
+- **Lighting**: Contains light sources and visual boxes (see [#visual boxes](#visual-boxes))
 - **VFX**: Contains visual effects
 - **SFX**: Contains sound effects and music
 - **Other**: Contains all other entities without a model, such as the WorldInstance
@@ -143,6 +147,10 @@ Other:
 Hidden:
 - **Templates**: Template objects (see [#spawner templates](#spawner-templates))
 - **Hidden**: Hidden objects
+
+## Visible Camera Layers
+
+Choose which object layers should be visible to increase performances and to clean up the scene. Most of these layers will still be visible with an active selection.
 
 # Scene View
 
@@ -220,6 +228,8 @@ Static models always have 3 components:
 - `CStaticComponent`: can be used to change the object's visibility
 - `CStaticCollisionComponent`: can be used to enable or disable collisions for the object. If the option is greyed out, it means that this object doesn't come with baked-in collisions.
 
+You can view precise collisions for all static models using `Editor settings -> Visible Camera Layers -> Static Collisions`.
+
 ## Spawner Templates
 
 These objects are responsible for spawning most entities in the game (crates, enemies, platforms...)
@@ -283,13 +293,27 @@ Trigger and child copy/paste:
 
 <img src="assets/readme/level_editor/clips.jpg" alt="Clips" width="700"/><br>
 
-## Invisible Borders
+## Visual Boxes
 
-You may encounter invisible walls in many levels that aren't associated with any [Static Model](#static-models) or [Dynamic Clip](#dynamic-clips).
+### CWorldVisualData
 
-You can find them in the "Other" category, they will have a component of type `CLevelBorderComponent` that contains optimized border collisions for the entire level. 
+*Handles the skybox. Can be found in the "Other" category.*
 
-Viewing and editing these collisions isn't currently supported. If you want to get rid of the invisible borders, simply delete these objects.
+You can copy/paste this object to another level to import the skybox and level background. (Note: only one `CWorldVisualData` can be active in a level.)
+
+It also contains the default lighting settings for the level (active when outside any `CVisualDataBoxComponent`), however these are pretty much always overridden by visual data boxes (see below)
+
+### CVisualDataBoxComponent
+
+*Handles visual settings. Can be found in the "Lighting" category.*
+
+<img src="assets/readme/level_editor/visual_box.jpg" alt="Visual Boxes" width="700"/><br>
+
+Objects containing this component are used to define a bounding box in which to apply custom lighting settings, overriding the default ones found in the `CWorldVisualData` object. 
+
+The main lighting for a level is generally handled using a large visual data box spanning the entire level.
+
+They are also used in smaller sections of a level to override the main lighting.
 
 # Special components
 
@@ -331,6 +355,18 @@ However, unlike script triggers which are separate objects, trigger volume compo
 
 <img src="assets/readme/level_editor/c_trigger.jpg" alt="Trigger Volume" width="700"/>
 
+## Border collisions
+
+You may encounter invisible walls in many levels that aren't associated with any [Static Model](#static-models) or [Dynamic Clip](#dynamic-clips).
+
+You can find them in the "Other" category, they will have a component of type `CLevelBorderComponent` that contains optimized border collisions for the entire level. 
+
+You can view them using `Editor settings -> Visible Camera Layers -> Border Collisions`. 
+
+Editing these collisions isn't currently supported, but removing the parent object will remove the collisions.
+
+<img src="assets/readme/level_editor/border.jpg" alt="Border Collisions" width="700"/>
+
 ## Outline Switch Crate
 
 Outline switch crates have a custom GUI where you can add, remove or change children outlined crates.
@@ -348,3 +384,30 @@ It's possible to change the text that is displayed when breaking checkpoints, al
 You can listen to the default music, and import your own audio files (.mp3) using this component.
 
 <img src="assets/readme/level_editor/c_music.jpg" alt="On Start Music" width="300"/>
+
+# CTR:NF support
+
+You can use this editor to open levels from CTR:NF (PS4) and import their content to NST
+
+<img src="assets/readme/level_editor/ctr.jpg" alt="CTR Editor" width="1000"/>
+
+Important notes:
+
+- The tool has been tested on the debug build of CTR:NF (in which all levels can be loaded without error). Some levels from the official version may not load correctly.
+
+- You can use the right-click menu to automatically select all compatible objects which makes it easier to copy/paste entire levels to NST.
+
+- CTR:NF levels seems to be scaled by ~1.5x compared to NST
+
+- Collisions in CTR:NF are heavily optimized and there's usually a single entity that contains all collisions for the entire level. Most objects won't have individual collisions.
+
+- If you're constantly dying when entering an imported CTR:NF level, try lowering the death plane height in the WorldInstance (`Other -> WorldInstance`)
+
+- Below are the recommended steps to follow to convert a level from CTR:NF to NST:
+  - Create a new empty level (set the base level to "none")
+  - Delete `Lighting -> MainLighting` & `Other -> worldVisualData`
+  - Open a CTR:NF level
+  - Use `Right-click -> Select all NST-compatible objects`
+  - (Optional) Scale the level down using `Right click -> Scale down selection`
+  - Copy/paste the selection to the empty level
+  - Save the archive (can take a while to convert all textures to PC)
