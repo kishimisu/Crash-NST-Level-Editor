@@ -8,6 +8,23 @@ namespace NST
     public static class MathUtils
     {
         /// <summary>
+        /// Get the next power of two greater or equal than n
+        /// </summary>
+        public static int GetNextPowerOfTwo(int n)
+        {
+            if (n <= 0) return 1;
+
+            n--;
+            n |= n >> 1;
+            n |= n >> 2;
+            n |= n >> 4;
+            n |= n >> 8;
+            n |= n >> 16;
+
+            return n + 1;
+        }
+
+        /// <summary>
         /// Converts a uint color to System.Numerics.Vector4
         /// </summary>
         public static System.Numerics.Vector4 UIntToVector4Numerics(uint color)

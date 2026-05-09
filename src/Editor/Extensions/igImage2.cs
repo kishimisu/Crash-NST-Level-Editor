@@ -28,66 +28,43 @@ namespace Alchemy
         /// </summary>
         public static bool HasPixels(this igImage2 image) => image._data.IsActive() && image._data.Count > 0;
 
-        public static SKBitmap CreateScaledBitmap(this igImage2 image, int maxSize)
-        {
-            byte[] rgbaData = image.GetPixels();
-
-            var info = new SKImageInfo(image._width, image._height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
-            var bitmap = new SKBitmap(info);
-
-            Marshal.Copy(rgbaData, 0, bitmap.GetPixels(), rgbaData.Length);
-
-            int longest = Math.Max(image._width, image._height);
-            if (longest <= maxSize) return bitmap; // No resize needed
-
-            float scale = (float)maxSize / longest;
-            int width = (int)(image._width * scale);
-            int height = (int)(image._height * scale);
-
-            var resizedInfo = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
-            var resizedBitmap = new SKBitmap(resizedInfo);
-
-            bitmap.ScalePixels(resizedBitmap, SKFilterQuality.High);
-            bitmap.Dispose();
-
-            return resizedBitmap;
-        }
-
         /// <summary>
         /// Uncompress the image and return the pixel data as a RGBA byte array
         /// </summary>
-        public static byte[] GetPixels(this igImage2 image, bool decode = true)
+        public static byte[] GetPixels(this igImage2 image, bool decode = true, int level = 0, int index = 0)
         {
             if (!image.HasPixels())
                 throw new Exception($"{image} has no texture data!");
 
-            string format = image._format?.Reference?.objectName 
-                            ?? throw new Exception($"_format property is not set for {image}!");
-
-            if (format == "r8g8b8a8_dx11")
-            {
-                return image._data.ToArray();
-            }
+            string format = image._format?.Reference?.objectName ??
+                throw new Exception($"_format property is not set for {image}!");
 
             CompressionFormat compressionFormat = StringToCompressionFormat(format);
 
-            byte[] data = image._data.ToArray();
+            (int dataOffset, int dataSize) = ComputeOffsetAndSize(image, level, index, format, compressionFormat);
 
-            try
+            dataSize = Math.Min(dataSize, image._data.Count - dataOffset);
+            
+            byte[] data = new byte[dataSize];
+
+            for (int i = 0; i < dataSize; i++)
             {
-                if (format.Contains("tile_ps4"))
-                {
-                    data = TextureHelper.UnswizzlePS4Texture(data, image._width, image._height, format);
-                }
-
-                if (format == "b8g8r8a8_tile_ps4")
-                {
-                    return data;
-                }
+                data[i] = image._data[dataOffset + i];
             }
-            catch (Exception e)
+            
+            int width = image._width >> level;
+            int height = image._height >> level;
+
+            if (format.Contains("tile_ps4"))
             {
-                Console.WriteLine(e);
+                try
+                {
+                    data = TextureHelper.UnswizzlePS4Texture(data, width, height, format);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine(e);
+                }
             }
 
             if (!decode)
@@ -95,10 +72,10 @@ namespace Alchemy
                 return data;
             }
 
-            byte[] outPixels = new byte[image._width * image._height * 4];
+            byte[] outPixels = new byte[width * height * 4];
 
             new BcDecoder()
-                .DecodeRawToImageRgba32(data, image._width, image._height, compressionFormat)
+                .DecodeRawToImageRgba32(data, width, height, compressionFormat)
                 .CopyPixelDataTo(outPixels);
             
             return outPixels;
@@ -142,6 +119,121 @@ namespace Alchemy
             image._data.Set(encoded[0].ToList());
         }
 
+        public static SKBitmap CreateBitmapLOD(this igImage2 image, int maxSize)
+        {
+            int logW = System.Numerics.BitOperations.Log2(image._width);
+            int logH = System.Numerics.BitOperations.Log2(image._height);
+            int logMax = System.Numerics.BitOperations.Log2((uint)maxSize);
+            int level = Math.Max(0, Math.Min(image._levelCount - 1, Math.Max(logW, logH) - logMax));
+
+            int width = image._width >> level;
+            int height = image._height >> level;
+
+            byte[] rgbaData = image.GetPixels(level: level);
+
+            var info = new SKImageInfo(width, height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
+            var bitmap = new SKBitmap(info);
+
+            Marshal.Copy(rgbaData, 0, bitmap.GetPixels(), rgbaData.Length);
+
+            return bitmap;
+        }
+
+        public static byte[] ConvertFromCtrToNst(this igImage2 image, string format)
+        {
+            bool decode = format == "b8g8r8a8_tile_ps4";
+
+            float bytesPerPixel = StringToCompressionFormat(format) switch
+            {
+                CompressionFormat.Bc1 => 0.5f,
+                CompressionFormat.Bc3 or CompressionFormat.Bc5 => 1,
+                _ => 4,
+            };
+
+            int width = image._width;
+            int height = image._height;
+            int totalSize = 0;
+            
+            for (int i = 0; i < image._levelCount; i++, width /= 2, height /= 2)
+            {
+                totalSize += (int)(Math.Max(16, width * height) * bytesPerPixel);
+            }
+            totalSize *= image._imageCount;
+
+            byte[] converted = new byte[totalSize];
+            int offset = 0;
+
+            for (int index = 0; index < image._imageCount; index++)
+            {
+                for (int level = 0; level < image._levelCount; level++)
+                {
+                    byte[] data = image.GetPixels(decode, level, index);
+                    Buffer.BlockCopy(data, 0, converted, offset, data.Length);
+                    offset += data.Length;
+                }
+            }
+
+            return converted;
+        }
+
+        private static (int, int) ComputeOffsetAndSize(this igImage2 image, int level, int index, string format, CompressionFormat compressionFormat)
+        {
+            float bytesPerPixel = compressionFormat switch
+            {
+                CompressionFormat.Bc1 => 0.5f,
+                CompressionFormat.Bc2 or CompressionFormat.Bc3 or CompressionFormat.Bc5 => 1,
+                _ => 4,
+            };
+            
+            int width = image._width;
+            int height = image._height;
+            int offset = 0;
+            int imageSize = 0;
+
+            if (!format.Contains("tile_ps4"))
+            {
+                for (int i = 0; i < image._levelCount; i++, width /= 2, height /= 2)
+                {
+                    int levelSize = (int)(Math.Max(16, width * height) * bytesPerPixel);
+
+                    if (i < level)
+                    {
+                        offset += levelSize;
+                    }
+
+                    imageSize += levelSize;
+                }
+
+                offset += imageSize * index;
+            }
+            else
+            {
+                int minSize = compressionFormat switch
+                {
+                    CompressionFormat.Bc1 or CompressionFormat.Bc2 or CompressionFormat.Bc3 or CompressionFormat.Bc5 => 32,
+                    _ => 8,
+                };
+
+                for (int i = 0; i < level; i++, width /= 2, height /= 2)
+                {
+                    int w = Math.Max(width, minSize);
+                    int h = Math.Max(height, minSize);
+
+                    var levelSize = w * h * bytesPerPixel * image._imageCount;
+                    
+                    offset += MathUtils.GetNextPowerOfTwo((int)levelSize);
+                }
+
+                width = Math.Max(image._width >> level, minSize);
+                height = Math.Max(image._height >> level, minSize);
+
+                imageSize = (int)(width * height * bytesPerPixel);
+                offset += imageSize * index;
+            }
+
+            return (offset, imageSize);
+        }
+
         /// <summary>
         /// Converts an igMetaImage string to a CompressionFormat
         /// </summary>
@@ -156,6 +248,9 @@ namespace Alchemy
                 case "dxt1_dx11":
                 case "dxt1_tile_ps4":
                     return CompressionFormat.Bc1;
+                case "dxt3_dx11":
+                case "dxt3_tile_ps4":
+                    return CompressionFormat.Bc2;
                 case "dxt5_dx11":
                 case "dxt5_tile_ps4":
                     return CompressionFormat.Bc3;
@@ -178,6 +273,8 @@ namespace Alchemy
                     return "r8g8b8a8_dx11";
                 case CompressionFormat.Bc1:
                     return "dxt1_dx11";
+                case CompressionFormat.Bc2:
+                    return "dxt3_dx11";
                 case CompressionFormat.Bc3:
                     return "dxt5_dx11";
                 case CompressionFormat.Bc5:

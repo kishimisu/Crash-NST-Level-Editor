@@ -85,7 +85,7 @@ namespace NST
         /// <summary>
         /// Create an OpenGL texture from a byte array of pixels
         /// </summary>
-        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false)
+        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false, bool linear = true)
         {
             // Flip image vertically
             if (flipY)
@@ -104,8 +104,8 @@ namespace NST
                 // Set texture parameters
                 gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapS, (int)TextureWrapMode.ClampToEdge);
                 gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureWrapT, (int)TextureWrapMode.ClampToEdge);
-                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)TextureMinFilter.Linear);
-                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)TextureMagFilter.Linear);
+                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMinFilter, (int)(linear ? TextureMinFilter.Linear : TextureMinFilter.Nearest));
+                gl.TexParameter(TextureTarget.Texture2D, TextureParameterName.TextureMagFilter, (int)(linear ? TextureMagFilter.Linear : TextureMagFilter.Nearest));
 
                 GLEnum internalFormat = GLEnum.Rgba;
                 GLEnum format = GLEnum.Rgba;
@@ -137,49 +137,65 @@ namespace NST
             {
                 { "b8g8r8a8_tile_ps4", (1, 1, 4) },
                 { "dxt1_tile_ps4", (4, 4, 8) },
+                { "dxt3_tile_ps4", (4, 4, 16) },
                 { "dxt5_tile_ps4", (4, 4, 16) },
                 { "bc5_tile_ps4", (4, 4, 16) },
             };
-            var deswizzleDataList = new List<(int, int)>() { (2,1), (2,0), (2,1), (2,0),(2,1), (2,0) };
+
+            var deswizzleDataList = new List<(int, int)>() 
+            { 
+                (2,1), (2,0), (2,1), (2,0), (2,1), (2,0) 
+            };
 
             (int blockWidth, int blockHeight, int bytesPerBlock) = blockData[format];
 
-            int tileDataSize = 64 * bytesPerBlock;
-            int expectedDataSize = imageWidth * imageHeight / (blockWidth * blockHeight) * bytesPerBlock;
-
-            int tileCount = expectedDataSize / tileDataSize;
             int tileWidth = 8 * blockWidth;
             int tileHeight = 8 * blockHeight;
-
-            int readSize = bytesPerBlock;
-            int readPerTileCount = 64;
+            
             int tilePerWidth = imageWidth / tileWidth;
+            int expectedDataSize = imageWidth * imageHeight / (blockWidth * blockHeight) * bytesPerBlock;
+            int paddedWidth = -1;
+            
+            // Resize data if dimensions are too low
+            if (imageWidth < tileWidth || imageHeight < tileHeight)
+            {
+                int ratio = Math.Max(tileWidth / imageWidth, tileHeight / imageHeight);
+                int newWidth = imageWidth * ratio;
+                int newHeight = imageHeight * ratio;
+                
+                tilePerWidth = newWidth / tileWidth;
+                expectedDataSize = newWidth * newHeight / (blockWidth * blockHeight) * bytesPerBlock;
+                paddedWidth = newWidth;
 
-            // if (expectedDataSize != dataSize)
-            //     Console.WriteLine($"Error: Invalid data size.\nExpected datasize (according to image and format specifications): {expectedDataSize}\nActual datasize: {dataSize}");
-            if (data.Length % tileDataSize != 0)
-                throw new Exception($"Error: Invalid data size. The data size should be a multiple of {tileDataSize}, while the given datasize is {data.Length}. Height and/or width padding may be required in the original image.");
-            if (imageWidth % tileWidth != 0)
-                throw new Exception($"Error: with the current parameters, image width should be a multiple of {tileWidth}, but the given width is {imageWidth}");
-            if (imageHeight % tileHeight != 0)
-                throw new Exception($"Error: with the current parameters, image height should be a multiple of {tileHeight}, but the given height is {imageHeight}");
+                if (data.Length < expectedDataSize)
+                {
+                    byte[] resized = new byte[expectedDataSize];
+                    System.Buffer.BlockCopy(data, 0, resized, 0, data.Length);
+                    data = resized;
+                }
+            }
+
+            int readPerTileCount = 64;
+            int tileDataSize = 64 * bytesPerBlock;
+            int tileCount = expectedDataSize / tileDataSize;
 
             List<byte[,]> tileList = [];
             List<byte[,]> tileData = [];
             int dataReadIdx = 0;
 
+            // Unswizzle
             for (int i = 0; i < tileCount; i++)
             {
                 tileData.Clear();
 
                 for (int j = 0; j < readPerTileCount; j++)
                 {
-                    byte[,] chunk = new byte[1, readSize];
-                    for (int x = 0; x < readSize; x++)
+                    byte[,] chunk = new byte[1, bytesPerBlock];
+                    for (int x = 0; x < bytesPerBlock; x++)
                     {
                         chunk[0, x] = data[dataReadIdx + x];
                     }
-                    dataReadIdx += readSize;
+                    dataReadIdx += bytesPerBlock;
                     tileData.Add(chunk);
                 }
 
@@ -198,7 +214,29 @@ namespace NST
 
             System.Buffer.BlockCopy(tileList[0], 0, unswizzled, 0, expectedDataSize);
 
-            return unswizzled;
+            if (paddedWidth == -1)
+            {
+                return unswizzled;
+            }
+
+            int blocksX = Math.Max(1, imageWidth / blockWidth);
+            int blocksY = Math.Max(1, imageHeight / blockHeight);
+            int paddedBlocksX = Math.Max(1, paddedWidth / blockWidth);
+
+            int srcRowSize = paddedBlocksX * bytesPerBlock;
+            int dstRowSize = blocksX * bytesPerBlock;
+
+            // Resize back to original dimensions
+            byte[] trimmed = new byte[blocksX * blocksY * bytesPerBlock];
+
+            for (int y = 0; y < blocksY; y++)
+            {
+                int srcOffset = y * srcRowSize;
+                int dstOffset = y * dstRowSize;
+                System.Buffer.BlockCopy(unswizzled, srcOffset, trimmed, dstOffset, dstRowSize);
+            }
+
+            return trimmed;
         }
 
         private static List<byte[,]> ConcatArrays(List<byte[,]> arrayList, int sectionNumber, int axis)

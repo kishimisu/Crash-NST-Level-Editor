@@ -14,6 +14,8 @@ namespace NST
         private int _textureId = -1; // OpenGL texture
         private int _imageWidth, _imageHeight;
 
+        private int _selectedLevel = 0; // Current LOD
+        private int _selectedIndex = 0; // Current image index
         private int _selectedChannel = -1; // RGBA selection
 
         public TexturePreview(IgzRenderer renderer, igImage2 image)
@@ -21,12 +23,15 @@ namespace NST
             _renderer = renderer;
             _image = image;
 
-            LoadImage(image.GetPixels(), image._width, image._height);
+            LoadImage(image.GetPixels());
         }
 
-        private void LoadImage(byte[] imageData, int width, int height)
+        private void LoadImage(byte[] imageData)
         {
-            _textureId = TextureHelper.CreateOpenGLTexture(SilkWindow.instance._gl, width, height, imageData, flipY: true);
+            int width = _image._width >> _selectedLevel;
+            int height = _image._height >> _selectedLevel;
+
+            _textureId = TextureHelper.CreateOpenGLTexture(SilkWindow.instance._gl, width, height, imageData, flipY: true, linear: false);
             _imageWidth = width;
             _imageHeight = height;
         }
@@ -50,6 +55,30 @@ namespace NST
             if (ImGui.Button("Replace Image"))
             {
                 OnClickReplaceImage();
+            }
+
+            float w = ImGui.GetContentRegionAvail().X * 0.15f;
+
+            if (_image._levelCount > 1)
+            {
+                ImGui.SameLine();
+                ImGuiUtils.Prefix("LOD");
+                ImGui.SetNextItemWidth(w);
+                if (ImGui.SliderInt("##imageLevel", ref _selectedLevel, 0, _image._levelCount - 1))
+                {
+                    LoadImage(_image.GetPixels(true, _selectedLevel, _selectedIndex));
+                }
+            }
+
+            if (_image._imageCount > 1)
+            {
+                ImGui.SameLine();
+                ImGuiUtils.Prefix("Index");
+                ImGui.SetNextItemWidth(w);
+                if (ImGui.SliderInt("##imageIndex", ref _selectedIndex, 0, _image._imageCount - 1))
+                {
+                    LoadImage(_image.GetPixels(true, _selectedLevel, _selectedIndex));
+                }
             }
 
             ImGui.SameLine();
@@ -88,7 +117,7 @@ namespace NST
         /// </summary>
         private void OnClickChannel(int index)
         {
-            byte[] pixels = _image.GetPixels();
+            byte[] pixels = _image.GetPixels(true, _selectedLevel, _selectedIndex);
 
             _selectedChannel = (_selectedChannel == index) ? -1 : index;
 
@@ -124,7 +153,7 @@ namespace NST
                 break;
             }
 
-            LoadImage(pixels, _image._width, _image._height);
+            LoadImage(pixels);
         }
 
         /// <summary>
@@ -147,7 +176,8 @@ namespace NST
 
             if (filePath == null) return;
 
-            TextureHelper.SaveImageToFile(image.GetPixels(), image._width, image._height, filePath);
+            byte[] pixels = image.GetPixels(true, _selectedLevel, _selectedIndex);
+            TextureHelper.SaveImageToFile(pixels, image._width, image._height, filePath);
         }
 
         /// <summary>
@@ -176,7 +206,7 @@ namespace NST
             _renderer.SetUpdated(image);
 
             // Create OpenGL texture for UI rendering
-            LoadImage(pixels, width, height);
+            LoadImage(pixels);
         }
     }
 }
