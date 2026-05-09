@@ -434,7 +434,7 @@ namespace NST
 
         public bool Copy(LevelExplorer explorer)
         {
-            _copyPaste = _selection.Where(e => e is NSTEntity || e is NSTCamera || e is NSTCameraBox).ToList();
+            _copyPaste = _selection.Where(e => e is NSTEntity || e is NSTCamera || e is NSTCameraBox || e is NSTWorldVisualData).ToList();
             _copyExplorer = explorer;
             return _copyPaste.Count > 0;
         }
@@ -674,6 +674,11 @@ namespace NST
                         if (src is CCameraBox srcCamBox && dst is CCameraBox dstCamBox)
                         {
                             newObjects.Add(new NSTCameraBox(dstCamBox, dstFile));
+                            continue;
+                        }
+                        if (src is CWorldVisualData srcWorldVisual && dst is CWorldVisualData dstVisual)
+                        {
+                            newObjects.Add(new NSTWorldVisualData(dstVisual, dstFile));
                             continue;
                         }
 

@@ -379,6 +379,12 @@ namespace NST
                         entityAdded = true;
                         continue;
                     }
+                    if (obj is CWorldVisualData worldVisual)
+                    {
+                        objects.Add(new NSTWorldVisualData(worldVisual, mapFile));
+                        entityAdded = true;
+                        continue;
+                    }
 
                     if (obj is not igEntity entity) continue;
 

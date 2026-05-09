@@ -144,6 +144,11 @@ namespace NST
                     cameras.Add(obj);
                     added = true;
                 }
+                else if (obj.GetObject() is CWorldVisualData worldVisual)
+                {
+                    light.Add(obj);
+                    added = true;
+                }
                 
                 if (!added)
                 {
