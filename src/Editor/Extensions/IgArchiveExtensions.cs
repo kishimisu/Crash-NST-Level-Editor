@@ -293,7 +293,10 @@ namespace NST
                 }
                 else if (obj is igIndexBuffer indexBuffer)
                 {
-                    indexBuffer._format = new igIndexFormat() { Reference = new NamedReference("indexformats", "i16_dx11", true) };
+                    if (indexBuffer._format?.Reference != null)
+                    {
+                        indexBuffer._format.Reference.objectName = indexBuffer._format.Reference.objectName.Replace("ps4", "dx11");
+                    }
                 }
                 else if (obj is igMemoryCommandStream commandStream)
                 {

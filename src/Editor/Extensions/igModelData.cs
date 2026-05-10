@@ -82,9 +82,19 @@ namespace NST
             using MemoryStream indexStream = new MemoryStream(buffer._data.ToArray());
             using BinaryReader indexReader = new BinaryReader(indexStream);
 
-            for (int i = 0; i < buffer._indexCount; i++)
+            if (buffer._format?.Reference?.objectName.StartsWith("i16") == true)
             {
-                data.indices.Add(indexReader.ReadUInt16());
+                for (int i = 0; i < buffer._indexCount; i++)
+                {
+                    data.indices.Add(indexReader.ReadUInt16());
+                }
+            }
+            else
+            {
+                for (int i = 0; i < buffer._indexCount; i++)
+                {
+                    data.indices.Add(indexReader.ReadUInt32());
+                }
             }
         }
 
