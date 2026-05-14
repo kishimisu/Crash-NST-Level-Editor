@@ -105,6 +105,11 @@ namespace Alchemy
         /// <returns>The object if found, null otherwise</returns>
         public igObject? FindObject(NamedReference reference)
         {
+            if (string.IsNullOrEmpty(reference.objectName))
+            {
+                return null;
+            }
+            
             if (!reference.namespaceName.Equals(GetName(false), StringComparison.CurrentCultureIgnoreCase))
             {
                 // The handle doesn't point to the current file

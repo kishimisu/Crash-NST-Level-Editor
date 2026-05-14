@@ -461,13 +461,22 @@ namespace NST
 
                 if (node != null)
                 {
-                    ImGui.Text(ImGuiUtils.TruncateTextToFit(node.GetDisplayName(), maxTextWidth));
+                    string displayName = node.GetDisplayName();
+                    string truncated = ImGuiUtils.TruncateTextToFit(displayName, maxTextWidth);
+                    ImGui.Text(truncated);
+
+                    if (displayName != truncated)
+                    {
+                        ImGui.SetItemTooltip(displayName);
+                    }
+                    
                     if (ImGui.IsItemHovered())
                     {
                         ImGui.SetMouseCursor(ImGuiMouseCursor.Hand);
                         if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
                         {
                             // Focus referenced object
+                            App.FocusRenderer(renderer);
                             renderer.TreeView.SelectChildNode(node);
                         }
                     }

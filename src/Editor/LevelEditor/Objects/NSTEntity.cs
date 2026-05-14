@@ -648,7 +648,13 @@ namespace NST
 
                 Object._transform._parentSpaceRotation = rotationDegrees.Mul(THREE.MathUtils.DEG2RAD);
 
-                Object3D?.Quaternion.SetFromEuler(Object._transform._parentSpaceRotation.ToEuler());
+                if (Object3D != null)
+                {
+                    var localRotation = new THREE.Quaternion().SetFromEuler(Object._transform._parentSpaceRotation.ToEuler());
+                    var parentRotation = new THREE.Quaternion().Copy(Object3D.Parent.Quaternion);
+                    Object3D.Quaternion.Copy(parentRotation.Invert().Multiply(localRotation));
+                }
+
                 explorer.RenderNextFrame = true;
             }
 

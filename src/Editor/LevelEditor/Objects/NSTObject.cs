@@ -118,17 +118,28 @@ namespace NST
         public void RenderName(float maxW = 0)
         {
             float startX = ImGui.GetCursorPos().X;
+            string objectName = GetObject().ObjectName ?? "";
 
             ImGui.PushStyleColor(ImGuiCol.Text, GetObject().GetType().GetUniqueColor());
             ImGui.Text(GetObject().GetType().Name + (maxW == 0 ? ":" : ": "));
             ImGui.PopStyleColor();
-
             ImGui.SameLine();
-            if (maxW == 0) ImGui.Text(GetObject().ObjectName);
+
+            if (maxW == 0)
+            {
+                ImGui.Text(objectName);
+            }
             else
             {
-                maxW -= (ImGui.GetCursorPos().X - startX);
-                ImGui.Text(ImGuiUtils.TruncateTextToFit(GetObject().ObjectName!, maxW));
+                maxW -= ImGui.GetCursorPos().X - startX;
+
+                string truncated = ImGuiUtils.TruncateTextToFit(objectName, maxW);
+                ImGui.Text(truncated);
+
+                if (truncated != objectName)
+                {
+                    ImGui.SetItemTooltip(objectName);
+                }
             }
         }
 

@@ -15,8 +15,8 @@ namespace NST
         public List<NSTSplineRotationKeyFrame> _rotationKeyFrames = [];
         public List<NSTSplineVelocityKeyFrame> _velocityKeyFrames = [];
         public List<NSTSplineMarker> _markers = [];
-        private NSTSplineControlPoint? _selectedControlPoint;
-        private NSTSplineRotationKeyFrame? _selectedRotationKeyFrame;
+        public NSTSplineControlPoint? SelectedControlPoint;
+        public NSTSplineRotationKeyFrame? SelectedRotationKeyFrame;
 
         private igSplineRotationKeyframeTrack? _rotationTrack;
         private igSplineFloatKeyframeTrack? _velocityTrack;
@@ -728,9 +728,9 @@ namespace NST
                             explorer.LookAtObject(controlPoint);
                         }
                         // Shift: select range
-                        else if (ImGui.IsKeyDown(ImGuiKey.LeftShift) && _selectedControlPoint != null)
+                        else if (ImGui.IsKeyDown(ImGuiKey.LeftShift) && SelectedControlPoint != null)
                         {
-                            int lastIndex = _controlPoints.IndexOf(_selectedControlPoint);
+                            int lastIndex = _controlPoints.IndexOf(SelectedControlPoint);
                             int startIndex = int.Min(i, lastIndex + 1);
                             int count = int.Abs(i - lastIndex);
                             var added = _controlPoints.GetRange(startIndex, count).Where(e => !e.IsSelected).Cast<NSTObject>().ToList();
@@ -744,7 +744,7 @@ namespace NST
                             bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.LeftCtrl);
                             explorer.SelectionManager.UpdateSelection([controlPoint.IsSelected && !ctrlPressed ? Parent : controlPoint], !ctrlPressed);
                             explorer.RenderNextFrame = true;
-                            _selectedControlPoint = controlPoint;
+                            SelectedControlPoint = controlPoint;
                             OpenControlPointList = true;
                         }
                     }
@@ -817,9 +817,9 @@ namespace NST
                         {
                             explorer.LookAtObject(keyframe);
                         }
-                        else if (ImGui.IsKeyDown(ImGuiKey.LeftShift) && _selectedRotationKeyFrame != null)
+                        else if (ImGui.IsKeyDown(ImGuiKey.LeftShift) && SelectedRotationKeyFrame != null)
                         {
-                            int lastIndex = _rotationKeyFrames.IndexOf(_selectedRotationKeyFrame);
+                            int lastIndex = _rotationKeyFrames.IndexOf(SelectedRotationKeyFrame);
                             int startIndex = int.Min(i, lastIndex + 1);
                             int count = int.Abs(i - lastIndex);
                             var added = _rotationKeyFrames.GetRange(startIndex, count).Where(e => !e.IsSelected).Cast<NSTObject>().ToList();
@@ -832,7 +832,7 @@ namespace NST
                             bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.LeftCtrl);
                             explorer.SelectionManager.UpdateSelection([keyframe.IsSelected && !ctrlPressed ? Parent : keyframe], !ctrlPressed);
                             explorer.RenderNextFrame = true;
-                            _selectedRotationKeyFrame = keyframe;
+                            SelectedRotationKeyFrame = keyframe;
                             OpenRotationList = true;
                         }
                     }
@@ -848,6 +848,15 @@ namespace NST
                         {
                             OpenRotationList = true;
                             explorer.SelectionManager.UpdateSelection([CreateNewRotationKeyFrame(explorer, i, false)]);
+                        }
+                        ImGui.Separator();
+                        if (ImGui.Selectable("Preview"))
+                        {
+                            keyframe.PreviewCamera(explorer);
+                        }
+                        if (ImGui.Selectable("Set from camera"))
+                        {
+                            keyframe.SetFromCamera(explorer);
                         }
                         ImGui.EndPopup();
                     }
@@ -867,6 +876,21 @@ namespace NST
                 }
                 ImGui.PopStyleVar();
                 ImGui.EndTable();
+                ImGui.Spacing();
+            }
+
+            if (_isRotationListOpen && SelectedRotationKeyFrame?.IsSelected == true)
+            {
+                ImGui.TextDisabled("Current rotation keyframe:");
+                if (ImGui.SmallButton("Preview"))
+                {
+                    SelectedRotationKeyFrame.PreviewCamera(explorer);
+                }
+                ImGui.SameLine();
+                if (ImGui.SmallButton("Set rotation from camera"))
+                {
+                    SelectedRotationKeyFrame.SetFromCamera(explorer);
+                }
                 ImGui.Spacing();
             }
 
@@ -1085,6 +1109,46 @@ namespace NST
             Object3D = group;
 
             return group;
+        }
+
+        public void PreviewCamera(LevelExplorer explorer)
+        {
+            if (!IsSelected)
+                explorer.SelectionManager.UpdateSelection([this]);
+
+            var position = Position.Clone();
+            var euler = Object._value.ToVector3() * THREE.MathUtils.DEG2RAD;
+            var rotation = new THREE.Quaternion().SetFromEuler(new THREE.Euler().SetFromVector3(euler, THREE.RotationOrder.ZYX));
+            var localTransform = new THREE.Matrix4().Compose(position, rotation, new THREE.Vector3(1, 1, 1));
+            var worldTransform = Parent.ObjectToWorld() * localTransform;
+
+            worldTransform.Decompose(position, rotation, new THREE.Vector3());
+            var direction = new THREE.Vector3(1, 0, 0).ApplyQuaternion(rotation);
+
+            explorer.Camera.Position.Copy(position);
+            explorer.FpsControls.LookAt(position + direction);
+            explorer.RenderNextFrame = true;
+        }
+
+        public void SetFromCamera(LevelExplorer explorer)
+        {
+            var direction = explorer.Camera.Front.Clone().Normalize();
+            var worldRotation = new THREE.Quaternion().SetFromUnitVectors(new THREE.Vector3(1, 0, 0), direction);
+            
+            var parentRotation = new THREE.Quaternion();
+            Parent.ObjectToWorld().Decompose(new THREE.Vector3(), parentRotation, new THREE.Vector3());
+
+            var localRotation = new THREE.Quaternion().Copy(parentRotation).Invert().Multiply(worldRotation);
+            var euler = new THREE.Euler().SetFromQuaternion(localRotation, THREE.RotationOrder.ZYX).ToVector3() * THREE.MathUtils.RAD2DEG;
+
+            Object._value = new igVec3fMetaField(0, euler.Y, euler.Z);
+
+            Parent.ComputeDistances();
+            Parent.RefreshSpline();
+
+            explorer.SelectionManager.UpdateSelection(explorer.SelectionManager._selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == Parent).ToList());
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
+            explorer.RenderNextFrame = true;
         }
     }
 

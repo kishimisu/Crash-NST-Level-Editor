@@ -23,7 +23,9 @@ namespace NST
         public InstancedMeshManager InstanceManager { get; private set; }
         public SelectionManager SelectionManager { get; private set; }
         public ActiveFileManager FileManager => ArchiveRenderer.FileManager;
+
         public THREE.Camera Camera => _camera;
+        public FirstPersonControls FpsControls => _fpsControls;
 
         public bool IsWindowFocused { get; private set; } = false;
         public bool IsSceneFocused { get; private set; } = false;
@@ -107,7 +109,6 @@ namespace NST
         public int DefaultCharacter { set => _defaultCharacter = value; }
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
-        public void RebuildTree() => _treeView.RebuildTree(InstanceManager.AllObjects);
 
         /// <summary>
         /// Constructor used when creating a new level
@@ -230,6 +231,7 @@ namespace NST
         {
             _camera.Near = 10.0f;
             _camera.Far = LocalStorage.Get("camera_far", 120000.0f);
+            _camera.Fov = LocalStorage.Get("camera_fov", 60.0f);
             _scene.Fog.Far = _camera.Far;
             _camera.UpdateProjectionMatrix();
 
@@ -1250,10 +1252,13 @@ namespace NST
                     _camera.UpdateProjectionMatrix();
                     RenderNextFrame = true;
                 }
-                // if (ImGui.SliderFloat("FOV", ref _camera.Fov, 30, 100))
-                // {
-                //     _camera.UpdateProjectionMatrix();
-                // }
+                ImGuiUtils.Prefix("Camera FOV");
+                if (ImGui.SliderFloat("FOV", ref _camera.Fov, 30, 120))
+                {
+                    LocalStorage.Set("camera_fov", _camera.Fov);
+                    _camera.UpdateProjectionMatrix();
+                    RenderNextFrame = true;
+                }
 
                 ImGuiUtils.Prefix("Debug mode");
                 if (ImGui.Combo("##debugMode", ref _debugMode, _debugModes, _debugModes.Length))
@@ -1291,6 +1296,30 @@ namespace NST
                 }
 
                 ImGui.PopItemWidth();
+                ImGui.Spacing();
+                
+                if (ImGui.SmallButton("Reset settings"))
+                {
+                    _maxTextureSize = 512;
+                    _camera.Far = _scene.Fog.Far = 120000;
+                    _camera.Fov = 60;
+                    _fpsControls.MouseSpeed = 50;
+                    _fpsControls.CameraSpeed = 100;
+                    _fpsControls.SpeedIncrease = true;
+                    _gizmos.EnableTranslateXYZ = true;
+
+                    LocalStorage.Set("max_texture_size", _maxTextureSize);
+                    LocalStorage.Set("camera_far", _camera.Far);
+                    LocalStorage.Set("camera_fov", _camera.Fov);
+                    LocalStorage.Set("mouse_speed", _fpsControls.MouseSpeed);
+                    LocalStorage.Set("camera_speed", _fpsControls.CameraSpeed);
+                    LocalStorage.Set("increase_speed", _fpsControls.SpeedIncrease);
+                    LocalStorage.Set("enable_translate_xyz", _gizmos.EnableTranslateXYZ);
+
+                    _camera.UpdateProjectionMatrix();
+                    _gizmos._gizmo.UpdateVisibility("XYZ", _gizmos.EnableTranslateXYZ);
+                    RenderNextFrame = true;
+                }
                 ImGui.Spacing();
             }
 
@@ -1491,7 +1520,6 @@ namespace NST
             {
                 raycaster.layers.Disable((int)CameraLayer.Splines);
                 raycaster.layers.Disable((int)CameraLayer.CameraBox);
-                raycaster.layers.Disable((int)CameraLayer.ClipEntities);
                 raycaster.layers.Disable((int)CameraLayer.ScriptTrigger);
                 raycaster.layers.Disable((int)CameraLayer.TriggerVolume);
                 raycaster.layers.Disable((int)CameraLayer.AudioBox);

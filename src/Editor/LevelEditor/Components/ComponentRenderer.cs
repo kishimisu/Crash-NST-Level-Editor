@@ -1,5 +1,7 @@
 using Alchemy;
 using ImGuiNET;
+using System.Reflection;
+using System.Linq.Expressions;
 
 namespace NST
 {
@@ -7,65 +9,6 @@ namespace NST
     {
         private static NamedReference? _copyReference = null;
         private static LevelExplorer? _copyReferenceExplorer = null;
-
-        private static readonly Dictionary<Type, Action<igComponentData, NSTComponent>> _renderMethods = new ()
-        {
-            // Static objects
-            { typeof(CModelComponentData), (c, m) =>                           RenderComponent((CModelComponentData)c, m) },
-            { typeof(CStaticComponentData), (c, m) =>                          RenderComponent((CStaticComponentData)c, m) },
-            { typeof(CStaticCollisionComponentData), (c, m) =>                 RenderComponent((CStaticCollisionComponentData)c, m) },
-            { typeof(igPrefabComponentData), (c, m) =>                         RenderComponent((igPrefabComponentData)c, m) },
-            // Crates
-            { typeof(Multiple_Spawner_Template_c), (c, m) =>                   RenderComponent((Multiple_Spawner_Template_c)c, m) },
-            { typeof(common_Spawner_TemplateData), (c, m) =>                   RenderComponent((common_Spawner_TemplateData)c, m) },
-            { typeof(common_Crate_SlotMachine_SpawnedData), (c, m) =>          RenderComponent((common_Crate_SlotMachine_SpawnedData)c, m) },
-            { typeof(common_Crate_SpawnIronWhenUsedData), (c, m) =>            RenderComponent((common_Crate_SpawnIronWhenUsedData)c, m) },
-            { typeof(common_Crate_Switch_IronData), (c, m) =>                  RenderComponent((common_Crate_Switch_IronData)c, m) },
-            { typeof(common_Crate_Switch_ReusableData), (c, m) =>              RenderComponent((common_Crate_Switch_ReusableData)c, m) },
-            { typeof(common_Crate_Switch_Iron_Reusable_SpawnedData), (c, m) => RenderComponent((common_Crate_Switch_Iron_Reusable_SpawnedData)c, m) },
-            { typeof(common_Crate_Switch_Nitro_SpawnedData), (c, m) =>         RenderComponent((common_Crate_Switch_Nitro_SpawnedData)c, m) },
-            { typeof(common_Crate_OutlineData), (c, m) =>                      RenderComponent((common_Crate_OutlineData)c, m) },
-            { typeof(common_Crate_LevelCountData), (c, m) =>                   RenderComponent((common_Crate_LevelCountData)c, m) },
-            { typeof(common_Crate_TimeTrialData), (c, m) =>                    RenderComponent((common_Crate_TimeTrialData)c, m) },
-            { typeof(common_Crate_TimeTrial_SpawnedData), (c, m) =>            RenderComponent((common_Crate_TimeTrial_SpawnedData)c, m) },
-            { typeof(common_Crate_StackCheckerData), (c, m) =>                 RenderComponent((common_Crate_StackCheckerData)c, m) },
-            { typeof(common_Crate_TNT_MessengerData), (c, m) =>                RenderComponent((common_Crate_TNT_MessengerData)c, m) },
-            { typeof(common_Crate_TNTData), (c, m) =>                          RenderComponent((common_Crate_TNTData)c, m) },
-            { typeof(common_Crate_IronBound_Spawned_OnHitSFXData), (c, m) =>   RenderComponent((common_Crate_IronBound_Spawned_OnHitSFXData)c, m) },
-            { typeof(common_Crate_FloatingData), (c, m) =>                     RenderComponent((common_Crate_FloatingData)c, m) },
-            { typeof(common_Crate_Flood_BehaviorData), (c, m) =>               RenderComponent((common_Crate_Flood_BehaviorData)c, m) },
-            { typeof(Egypt_Hazard_FloodWater_BehaviorData), (c, m) =>          RenderComponent((Egypt_Hazard_FloodWater_BehaviorData)c, m) },
-            { typeof(Egypt_Platform_FloodWater_BehaviorData), (c, m) =>        RenderComponent((Egypt_Platform_FloodWater_BehaviorData)c, m) },
-            // Levels
-            { typeof(L201_TurtleWoods_MousePit_CameraTriggerData), (c, m) =>   RenderComponent((L201_TurtleWoods_MousePit_CameraTriggerData)c, m) },
-            { typeof(Enemy_PlayAnimation_OnSplineDistance_BehaviorData), (c, m) => RenderComponent((Enemy_PlayAnimation_OnSplineDistance_BehaviorData)c, m) },
-            { typeof(common_finish_raceData), (c, m) =>                        RenderComponent((common_finish_raceData)c, m) },
-            // Other
-            { typeof(common_Level_ManagerData), (c, m) =>                      RenderComponent((common_Level_ManagerData)c, m) },
-            { typeof(DDA_CheckpointData), (c, m) =>                            RenderComponent((DDA_CheckpointData)c, m) },
-            { typeof(CVisualDataBoxComponentData), (c, m) =>                   RenderComponent((CVisualDataBoxComponentData)c, m) },
-            { typeof(Scripts_SpawnCollectiblesComponentData), (c, m) =>        RenderComponent((Scripts_SpawnCollectiblesComponentData)c, m) },
-            { typeof(CVfxTextComponentData), (c, m) =>                         RenderComponent((CVfxTextComponentData)c, m) },
-            { typeof(common_CameraDistanceFadeEntityData), (c, m) =>           RenderComponent((common_CameraDistanceFadeEntityData)c, m) },
-            { typeof(CDynamicCheckpointComponentData), (c, m) =>               RenderComponent((CDynamicCheckpointComponentData)c, m) },
-            { typeof(CPlayerTriggerRadiusComponentData), (c, m) =>             RenderComponent((CPlayerTriggerRadiusComponentData)c, m) },
-            { typeof(CMovementControllerComponentData), (c, m) =>              RenderComponent((CMovementControllerComponentData)c, m) },
-            { typeof(CSplineLaneMoverComponentData), (c, m) =>                 RenderComponent((CSplineLaneMoverComponentData)c, m) },
-            { typeof(CTriggerVolumeBoxComponentData), (c, m) =>                RenderComponent((CTriggerVolumeBoxComponentData)c, m) },
-            { typeof(common_ChangeCrashGameMode_TriggerData), (c, m) =>        RenderComponent((common_ChangeCrashGameMode_TriggerData)c, m) },
-            { typeof(common_C3_IntroSequenceData), (c, m) =>                   RenderComponent((common_C3_IntroSequenceData)c, m) },
-            { typeof(common_Collectible_TimeTrial_StartData), (c, m) =>        RenderComponent((common_Collectible_TimeTrial_StartData)c, m) },
-            { typeof(common_Collectible_Gem_TemplateData), (c, m) =>           RenderComponent((common_Collectible_Gem_TemplateData)c, m) },
-            { typeof(common_BonusRoundTeleporterData), (c, m) =>               RenderComponent((common_BonusRoundTeleporterData)c, m) },
-            { typeof(common_Generic_Path_Platform_SwapGameModeData), (c, m) => RenderComponent((common_Generic_Path_Platform_SwapGameModeData)c, m) },
-            { typeof(common_Path_Platform_Mover), (c, m) =>                    RenderComponent((common_Path_Platform_Mover)c, m) },
-            { typeof(common_Generic_Path_Teleporter_StartData), (c, m) =>      RenderComponent((common_Generic_Path_Teleporter_StartData)c, m) },
-            { typeof(common_OnStartMusicData), (c, m) =>                       RenderComponent((common_OnStartMusicData)c, m) },
-            // Lighting
-            { typeof(CTintSphereComponentData), (c, m) =>                      RenderComponent((CTintSphereComponentData)c, m) },
-            { typeof(CPointLightComponentData), (c, m) =>                      RenderComponent((CPointLightComponentData)c, m) },
-            { typeof(CBoxLightComponentData), (c, m) =>                        RenderComponent((CBoxLightComponentData)c, m) },
-        };
 
         private static readonly HashSet<Type> _emptyComponents = new ()
         {
@@ -75,7 +18,43 @@ namespace NST
             typeof(common_Crate_AkuAku_Illuminated_CheckData),
             typeof(global_VFX_OnStartData),
         };
-        
+
+        private static readonly Dictionary<Type, Action<igComponentData, NSTComponent>> _renderMethods = BuildRenderMethods();
+
+        private static Dictionary<Type, Action<igComponentData, NSTComponent>> BuildRenderMethods()
+        {
+            var dict = new Dictionary<Type, Action<igComponentData, NSTComponent>>();
+
+            var methods = typeof(ComponentRenderer)
+                .GetMethods(BindingFlags.Static | BindingFlags.NonPublic)
+                .Where(m => m.Name == "RenderComponent");
+
+            foreach (var method in methods)
+            {
+                var parameters = method.GetParameters();
+
+                if (parameters.Length != 2)
+                    continue;
+
+                var componentType = parameters[0].ParameterType;
+
+                if (!typeof(igComponentData).IsAssignableFrom(componentType))
+                    continue;
+
+                if (parameters[1].ParameterType != typeof(NSTComponent))
+                    continue;
+
+                var componentParam = Expression.Parameter(typeof(igComponentData), "component");
+                var managerParam = Expression.Parameter(typeof(NSTComponent), "manager");
+                var body = Expression.Call(method, Expression.Convert(componentParam, componentType), managerParam);
+                var lambda = Expression.Lambda<Action<igComponentData, NSTComponent>>(body, componentParam, managerParam);
+
+                dict[componentType] = lambda.Compile();
+            }
+
+            return dict;
+        }
+            
         public static void RenderComponent(NSTComponent c)
         {
             // Spline
@@ -584,6 +563,12 @@ namespace NST
             RenderFloat("Float:    ", ref component._Float, component, manager);
             RenderObjectReference("Collectible:", component._Entity, typeof(CEntity), manager);
             RenderEnum("Collectible type:", ref component._E_Zone_Collectible_Type, component, manager);
+        }
+
+        private static void RenderComponent(common_Village_Platform_CloudsData component, NSTComponent manager)
+        {
+            RenderObjectReference("Collision On:", component._Entity_0x28, typeof(CScriptTriggerEntity), manager);
+            RenderObjectReference("Collision Off:", component._Entity_0x30, typeof(CScriptTriggerEntity), manager);
         }
 
 #endregion
@@ -1367,11 +1352,8 @@ namespace NST
             {
                 if (skipIfNotFound) return null;
 
-                if (label != null)
-                {
-                    ImGui.Text(label);
-                    ImGui.SameLine();
-                }
+                ImGui.Text(label);
+                ImGui.SameLine();
                 
                 // Dropdown
                 var objects = explorer.InstanceManager.AllObjects.Where(e => (fileNamespace == null || e.FileNamespace == fileNamespace) && e.GetObject().GetType().IsAssignableTo(type));
@@ -1419,18 +1401,25 @@ namespace NST
 
             ImGui.PushID(obj.GetObject().ObjectName + label);
 
-            // Render object name
-            if (label != null)
+            // Render label
+            string truncated = ImGuiUtils.TruncateTextToFit(label, ImGui.GetContentRegionAvail().X * 0.4f);
+            ImGui.Text(truncated);
+            ImGui.SameLine();
+
+            if (truncated != label)
             {
-                ImGui.Text(ImGuiUtils.TruncateTextToFit(label, ImGui.GetContentRegionAvail().X * 0.4f));
-                ImGui.SameLine();
+                string trimmed = label.Trim();
+                ImGui.SetItemTooltip(trimmed.EndsWith(':') ? trimmed[..^1] : trimmed);
             }
 
+            // Render object name
             ImGui.SetNextItemAllowOverlap();
             ImGui.PushStyleVar(ImGuiStyleVar.ItemSpacing, new System.Numerics.Vector2(0, 0));
-
+            
             ImGuiTreeNodeFlags flags = defaultOpen ? ImGuiTreeNodeFlags.DefaultOpen : ImGuiTreeNodeFlags.None;
             bool open = ImGui.CollapsingHeader("##" + label, flags);
+
+            ImGui.SetItemTooltip(obj.GetObject().ObjectName);
 
             if (ImGui.IsItemHovered() && ImGui.IsMouseDoubleClicked(ImGuiMouseButton.Left))
             {

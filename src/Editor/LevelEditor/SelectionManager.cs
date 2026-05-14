@@ -570,7 +570,7 @@ namespace NST
                         {
                             if (copyToSameFile)
                             {
-                                srcIgz.AddClone(obj.GetObject(), null, clones, CloneMode.Deep | CloneMode.SkipComponents);
+                                srcIgz.AddClone(obj.GetObject(), null, clones, CloneMode.Deep | CloneMode.SkipComponents, []);
                             }
                             else
                             {
@@ -845,6 +845,18 @@ namespace NST
                     if (original.IsPrefabChild && !clone.IsPrefabChild && !clone.IsPrefabTemplate && clone.Object._bitfield._isArchetype)
                     {
                         clone.Object._bitfield._isArchetype = false;
+                    }
+                }
+
+                foreach (NSTObject obj in newObjects)
+                {
+                    if (obj is NSTCamera camera)
+                    {
+                        camera.Setup(_explorer.InstanceManager.AllEntities);
+                    }
+                    else if (obj is NSTCameraBox cameraBox)
+                    {
+                        cameraBox.Setup(_explorer.InstanceManager.AllObjects);
                     }
                 }
 

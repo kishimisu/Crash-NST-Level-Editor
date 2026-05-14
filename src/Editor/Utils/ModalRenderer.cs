@@ -32,11 +32,11 @@ namespace NST
         /// <summary>
         /// Show the modal
         /// </summary>
-        public void Open(string text, TAction? callback = null)
+        public void Open(string text, TAction? callback = null, bool forceOpen = true)
         {
             _text = text;
             _callback = callback;
-            _requestOpen = !_isOpen;
+            _requestOpen = forceOpen || !_isOpen;
             _isOpen = true;
         }
 
@@ -241,7 +241,7 @@ namespace NST
         public void Open(string message, float? progress = null)
         {
             _progress = progress;
-            base.Open(message);
+            base.Open(message, forceOpen: false);
         }
 
         public new void Close()

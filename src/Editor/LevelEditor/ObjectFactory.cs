@@ -12,7 +12,7 @@ namespace NST
 
         private static readonly List<string> _crateFloatingModes = new()
         {
-            "None", "Floating", "Flood", "Water",
+            "None", "Floating", "Flood", "Water", "Physics"
         };
 
         private static readonly Dictionary<string, Dictionary<string, string>> _crateNames = new()
@@ -120,12 +120,22 @@ namespace NST
             }}
         };
 
+        private static readonly Dictionary<string, (string fileName, string objectName, string suffix)> splineCameraPaths = new ()
+        {
+            { "forward",    ("L210_TheEelDeal_Cameras",  "MainPath_SplineCam06", "") },
+            { "backward",   ("L104_Boulders_Camera",     "CSplineCamera012", "Chase") },
+            { "sidescroll", ("L103_TheGreatGate_Camera", "Camera01_H", "Side") },
+            { "vertical",   ("L103_TheGreatGate_Camera", "Camera01_V", "Vertical") },
+        };
+
         private static string _floatMode = "None";
         private static string _gemColor = "Clear";
         private static bool _outlinedCrate = false;
         private static bool _bonusCrate = false;
         private static string _deathTriggerType = "Fall_Fast";
         private static string _deathTriggerVFX = "None";
+        private static int _splineCameraSegments = 1;
+        private static int _splineCameraSegmentLength = 500;
         
         private static float _scaleDownCTR = 0.65f;
 
@@ -190,7 +200,7 @@ namespace NST
                     ImGui.SameLine();
                     ImGui.Checkbox("Outline crate", ref _outlinedCrate);
 
-                    if (ImGui.BeginCombo("Floating behavior", _floatMode))
+                    if (ImGui.BeginCombo("Behavior", _floatMode))
                     {
                         foreach (string mode in _crateFloatingModes)
                         {
@@ -418,9 +428,22 @@ namespace NST
 
                 if (ImGui.BeginMenu("New camera..."))
                 {
+                    if (ImGui.BeginMenu("Spline camera..."))
+                    {
+                        ImGuiUtils.Prefix("Segment count: ");
+                        ImGui.InputInt("##segments", ref _splineCameraSegments, 1, 10);
+                        ImGuiUtils.Prefix("Segment length:");
+                        ImGui.InputInt("##segmentLength", ref _splineCameraSegmentLength, 100, 1000);
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Forward camera")) TryAddObject(() => AddSplineCamera(explorer, "forward"));
+                        if (ImGui.MenuItem("Backward camera")) TryAddObject(() => AddSplineCamera(explorer, "backward"));
+                        if (ImGui.MenuItem("Sidescroll camera")) TryAddObject(() => AddSplineCamera(explorer, "sidescroll"));
+                        if (ImGui.MenuItem("Vertical camera")) TryAddObject(() => AddSplineCamera(explorer, "vertical"));
+                        ImGui.EndMenu();
+                    }
                     if (ImGui.MenuItem("Relative camera")) TryAddObject(() => AddRelativeCamera(explorer));
-                    if (ImGui.MenuItem("Spline camera")) TryAddObject(() => AddSplineCamera(explorer));
                     if (ImGui.MenuItem("Free camera")) TryAddObject(() => AddStackCamera(explorer));
+                    ImGui.Separator();
                     if (ImGui.MenuItem("Camera Box")) TryAddObject(() => AddCameraBox(explorer));
                     if (ImGui.MenuItem("Camera Trigger")) TryAddObject(() => AddCameraTrigger(explorer));
                     ImGui.EndMenu();
@@ -469,10 +492,12 @@ namespace NST
                         }
                         ImGui.EndMenu();
                     }
-                    if (ImGui.MenuItem("New DynamicClipEntity")) TryAddObject(() => AddCDynamicClipEntity(explorer));
+                    if (ImGui.MenuItem("New Dynamic Clip")) TryAddObject(() => AddCDynamicClipEntity(explorer));
+                    if (ImGui.MenuItem("New Dynamic Clip Switch")) TryAddObject(() => AddGeneric("L103_TheGreatGate_Platforms", "PlatformHelper01_Collision", "Platforms", explorer, newObjectName: "DynamicClip_Switch_001", addToSelection: true));
                     ImGui.Separator();
                     if (ImGui.MenuItem("New Boost Pad")) TryAddObject(() => AddGenericTemplate("Chase_BoostPad", "Platforms", explorer));
                     if (ImGui.MenuItem("New Bounce Mine")) TryAddObject(() => AddGenericTemplate("Chase_BounceMine", "Hazards", explorer));
+                    if (ImGui.MenuItem("New Cannon Ball")) TryAddObject(() => AddCannonBall(explorer));
                     ImGui.EndMenu();
                 }
 
@@ -591,6 +616,15 @@ namespace NST
                 
                 crateSpawned.AddComponent("archetype_Scripts.Graph.common_Crate_Flood_BehaviorData", floodComponent);
             }
+            else if (_floatMode == "Physics")
+            {
+                CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
+                var physicsComponent = crateSpawned.GetComponent<CPhysicsGenericShapeComponentData>()!;
+
+                physicsComponent._mass = 1.0f;
+                physicsComponent._motionType = EHavokEntityType.eHET_Dynamic;
+                physicsComponent._collisionPriority = ECharacterCollisionPriority.eCCP_None;
+            }
 
             // Clone crate
 
@@ -679,30 +713,64 @@ namespace NST
             explorer.Clone([relativeCamera], null, null, cameraFile, cameraIgz);
         }
 
-        private static void AddSplineCamera(LevelExplorer explorer)
+        private static void AddSplineCamera(LevelExplorer explorer, string type)
         {
-            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "WR_C3_LevelEndTest.pak"));
-            IgArchiveFile sourceFile = sourceArchive.FindFile("WR_C3_LevelEndTest_Camera.igz")!;
+            if (!splineCameraPaths.TryGetValue(type, out var splinePath)) return;
+
+            string[] parts = splinePath.fileName.Split('_');
+            string archiveName = parts.Length >= 2 ? $"{parts[0]}_{parts[1]}" : splinePath.fileName;
+
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, archiveName + ".pak"));
+            IgArchiveFile sourceFile = sourceArchive.FindFile(splinePath.fileName + ".igz")!;
             IgzFile sourceIgz = sourceFile.ToIgzFile();
 
-            CSplineCamera? splineCamera = sourceIgz.FindObject<CSplineCamera>("Default_Camera");
-            CEntity? splineEntity = sourceIgz.FindObject<CEntity>("Default_CameraSpline");
+            var splineCamera = sourceIgz.FindObject<CSplineCamera>(splinePath.objectName)!;
+            var splineEntity = sourceIgz.FindObject<CEntity>(splineCamera._splineEntity.Reference!.objectName)!;
+            var splineComponent = splineEntity.GetComponent<CSplineComponentData>()!;
 
-            if (splineCamera == null || splineEntity == null)
-            {
-                Console.WriteLine("Spline camera not found");
-                return;
-            }
-
-            var points = splineEntity.GetComponent<CSplineComponentData>()?._spline?._data?._data;
+            var points = splineComponent._spline?._data?._data;
+            var keyframes = splineComponent._spline?._rotationTracks?.Values[0]._data?._data;
+            
+            points?.Clear();
+            keyframes?.Set(keyframes.Take(2).ToList());
+            
             if (points != null)
             {
-                points.Set(points.Take(2).ToList());
-                points[1]._position._x = 500;
+                for (int i = 0; i < _splineCameraSegments + 1; i++)
+                {
+                    var pos = new igVec3fMetaField(0, 0, -100);
+                    float x = _splineCameraSegmentLength * i;
+
+                    if (type == "vertical")
+                    {
+                        pos._x = 100;
+                        pos._z = x;
+                    }
+                    else if (type == "sidescroll")
+                    {
+                        pos._y = -x;
+                    }
+                    else
+                    {
+                        pos._x = x;
+                    }
+
+                    points.Add(new igSplineControlPoint2()
+                    {
+                        _position = pos,
+                        _tangentIn = new igVec3fMetaField(100, 0, 0),
+                        _tangentOut = new igVec3fMetaField(100, 0, 0),
+                    });
+                }   
             }
 
-            splineCamera.ObjectName = "Spline_Camera";
-            splineEntity.ObjectName = "Spline_Camera_Path";
+            splineCamera._position = new igVec3fMetaField(0, 0, 200);
+            splineEntity._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
+
+            string suffix = string.IsNullOrEmpty(splinePath.suffix) ? "" : $"_{splinePath.suffix}";
+
+            splineCamera.ObjectName = $"Spline_Camera{suffix}";
+            splineEntity.ObjectName = $"Spline_Camera_Path{suffix}";
             splineCamera._splineEntity.Reference!.objectName = splineEntity.ObjectName;
 
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
@@ -721,6 +789,22 @@ namespace NST
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone([stackCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
+        }
+
+        private static void AddCannonBall(LevelExplorer explorer)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L305_MakinWaves.pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile("L305_MakinWaves.igz")!.ToIgzFile();
+
+            CGameEntity cannonBall = sourceIgz.FindObject<CGameEntity>("Jetski_Hazard_Cannonball_Spawned_gen")!;
+
+            cannonBall.ObjectName = "CannonBall";
+            cannonBall._bitfield._isArchetype = false;
+            cannonBall.GetComponent<CPhysicsBoundingSphereComponentData>()!._motionType = EHavokEntityType.eHET_Dynamic;
+
+            explorer.GetOrCreateIgzFile("Hazards", out IgArchiveFile hazardFile, out IgzFile hazardIgz);
+
+            explorer.Clone([cannonBall], sourceArchive, sourceIgz, hazardFile, hazardIgz);
         }
 
         private static void AddCameraBox(LevelExplorer explorer)

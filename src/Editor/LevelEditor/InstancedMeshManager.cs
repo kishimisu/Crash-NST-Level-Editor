@@ -421,6 +421,7 @@ namespace NST
                     Console.WriteLine("Select control point");
                     controlPoint.Parent.Parent.Components?.SelectComponent<CSplineComponentData>();
                     controlPoint.Parent.OpenControlPointList = true;
+                    controlPoint.Parent.SelectedControlPoint = controlPoint;
                     return [ controlPoint ];
                 }
                 else
@@ -433,6 +434,7 @@ namespace NST
             {
                 Console.WriteLine("Select keyframe");
                 keyframe.Parent.OpenRotationList = true;
+                keyframe.Parent.SelectedRotationKeyFrame = keyframe;
                 return [ keyframe ];
             }
             else if (obj is NSTSplineMarker marker)
