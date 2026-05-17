@@ -180,6 +180,14 @@ namespace NST
             }
 
             RefreshInstances(AllObjects);
+
+            foreach (var manager in _instances.Values)
+            {
+                if (manager.Entities.Count == 0 && manager.Object3D != null)
+                {
+                    RootObject.Remove(manager.Object3D);
+                }
+            }
         }
 
         public void RegisterNew(List<NSTObject> objects)
@@ -645,10 +653,6 @@ namespace NST
             if (entity.IsSelected)
             {
                 _explorer.SelectionManager.UpdateSelection([ entity ]);
-            }
-            else
-            {
-                RefreshInstances([ entity ]);
             }
 
             _explorer.RenderNextFrame = true;

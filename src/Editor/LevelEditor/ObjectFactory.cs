@@ -56,13 +56,6 @@ namespace NST
             },
         };
 
-        private static readonly Dictionary<string, string> _specialCrateTemplates = new()
-        {
-            { "Crate_Switch", "Crate_Switch_Iron_Spawned_gen" },
-            { "Crate_Switch_Reusable", "Crate_Switch_Iron_Reusable_Spawned_gen" },
-            { "Crate_SlotMachine", "Crate_Empty_Spawned_gen" },
-        };
-
         private static readonly Dictionary<string, string> _collectibleNames = new()
         {
             { "Wumpa Fruit",  "Wumpa02" },
@@ -215,14 +208,7 @@ namespace NST
                     {
                         if (ImGui.MenuItem(displayName)) TryAddObject(() => AddCrate(objectName, explorer));
                     }
-
-                    if (ImGui.MenuItem("Nitro (not moving)")) TryAddObject(() => AddGeneric("L220_BeeHaving_Crates", "Crate_Nitro_Flying", "Crates", explorer, (objects) =>
-                    {
-                        if (objects.FirstOrDefault() is NSTEntity e && e.Object.TryGetComponent(out common_Crate_LevelCountData? levelCount))
-                        {
-                            levelCount._Bool = false; // disable bonus crate
-                        }
-                    }));
+                    if (ImGui.MenuItem("Nitro (not bouncing)")) TryAddObject(() => AddStaticNitro(explorer));
                     if (ImGui.MenuItem("Fake Nitro")) TryAddObject(() => AddFakeNitro(explorer));
                     if (ImGui.MenuItem("Big TNT")) TryAddObject(() => AddBigTNTCrate(explorer));
 
@@ -550,25 +536,32 @@ namespace NST
             Console.WriteLine($"Creating crate: {type}, Bonus: {_bonusCrate}, Outline: {_outlinedCrate}, Floating: {_floatMode}");
 
             // Find crate template
+            CEntity crate = templateIgz!.FindObject<CEntity>($"Crate_{type}")!;
+            string templateName = crate.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference!.objectName!;
+            CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateName)!;
 
-            string templateName = $"Crate_{type}";
-            string templateNameSpawned = _specialCrateTemplates.ContainsKey(templateName) ? _specialCrateTemplates[templateName] : $"{templateName}_Spawned_gen";
-
-            CEntity? crate = templateIgz!.FindObject<CEntity>(templateName);
-
-            if (crate == null)
-            {
-                Console.WriteLine("Warning: Could not find crate " + type);
-                return;
-            }
-
+            // Clone crate
             crate = (CEntity)crate.Clone(new());
 
-            // Apply settings
+            SetupCrate(crate, crateSpawned);
 
-            if (_bonusCrate && crate.TryGetComponent(out common_Crate_LevelCountData? levelCountComponent) && levelCountComponent != null)
+            string fileIdentifier = _bonusCrate ? "BonusCrates" : "Crates";
+            explorer.GetOrCreateIgzFile(fileIdentifier, out IgArchiveFile destination, out IgzFile crateIgz);
+            explorer.Clone([crate], templateArchive, templateIgz, destination, crateIgz, initializeObjects: true);
+
+            if (_floatMode != "None" && _floatMode != "Water")
             {
-                levelCountComponent._Bool = true;
+                templateIgz = templateFile?.ToIgzFile();
+            }
+        }
+
+        private static void SetupCrate(CEntity crate, CPhysicalEntity crateSpawned)
+        {
+            if (templateIgz == null) return;
+
+            if (crate.TryGetComponent(out common_Crate_LevelCountData? levelCountComponent))
+            {
+                levelCountComponent._Bool = _bonusCrate;
             }
 
             if (_outlinedCrate)
@@ -598,7 +591,6 @@ namespace NST
             }
             else if (_floatMode == "Floating")
             {
-                CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
                 CPhysicalEntity floatingCrateSpawned = templateIgz.FindObject<CPhysicalEntity>("Crate_Floating_Basic_Spawned_gen")!;
 
                 var floatingComponent = floatingCrateSpawned.GetComponent<common_Crate_FloatingData>()!;
@@ -609,7 +601,6 @@ namespace NST
             }
             else if (_floatMode == "Flood")
             {
-                CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
                 CPhysicalEntity floodCrateSpawned = templateIgz.FindObject<CPhysicalEntity>("Crate_Flood_Basic_Spawned_gen")!;
 
                 var floodComponent = floodCrateSpawned.GetComponent<common_Crate_Flood_BehaviorData>()!;
@@ -618,24 +609,33 @@ namespace NST
             }
             else if (_floatMode == "Physics")
             {
-                CPhysicalEntity crateSpawned = templateIgz.FindObject<CPhysicalEntity>(templateNameSpawned)!;
                 var physicsComponent = crateSpawned.GetComponent<CPhysicsGenericShapeComponentData>()!;
 
                 physicsComponent._mass = 1.0f;
                 physicsComponent._motionType = EHavokEntityType.eHET_Dynamic;
                 physicsComponent._collisionPriority = ECharacterCollisionPriority.eCCP_None;
             }
+        }
 
-            // Clone crate
+        private static void AddStaticNitro(LevelExplorer explorer)
+        {
+            SetupTemplateArchive();
+
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L220_BeeHaving.pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile("L220_BeeHaving_Crates.igz")!.ToIgzFile();
+
+            CEntity crate = sourceIgz.FindObject<CEntity>("Crate_Nitro_Flying")!;
+
+            string templateName = crate.GetComponent<common_Spawner_TemplateData>()?._EntityToSpawn.Reference?.objectName!;
+            CPhysicalEntity crateSpawned = sourceIgz.FindObject<CPhysicalEntity>(templateName)!;
+
+            SetupCrate(crate, crateSpawned);
 
             string fileIdentifier = _bonusCrate ? "BonusCrates" : "Crates";
             explorer.GetOrCreateIgzFile(fileIdentifier, out IgArchiveFile destination, out IgzFile crateIgz);
-            explorer.Clone([crate], templateArchive, templateIgz, destination, crateIgz, initializeObjects: true);
+            explorer.Clone([crate], sourceArchive, sourceIgz, destination, crateIgz, initializeObjects: true);
 
-            if (_floatMode == "Floating" || _floatMode == "Flood")
-            {
-                templateIgz = templateFile?.ToIgzFile();
-            }
+            templateIgz = templateFile?.ToIgzFile();
         }
 
         private static void AddBigTNTCrate(LevelExplorer explorer)
@@ -650,6 +650,8 @@ namespace NST
 
             CPhysicalEntity template = ripperRooIgz.FindObject<CPhysicalEntity>("BossRipperRoo_BigTNT_Character_gen")!;
 
+            SetupCrate(spawner, template);
+
             explorer.GetOrCreateIgzFile("Crates", out IgArchiveFile crateFile, out IgzFile crateIgz);
 
             var spawnerClone = explorer.Clone([spawner], templateArchive, templateIgz, crateFile, crateIgz).FirstOrDefault();
@@ -659,9 +661,18 @@ namespace NST
             {
                 templateEntity.Object.RemoveComponent("archetype_Scripts.Graph.BossRipperRoo_CrateHandlerData");
 
-                spawnerEntity.Object.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference = templateEntity.ToReference();
-                spawnerEntity.RefreshModel(explorer, templateEntity.Model!);
+                if (_outlinedCrate)
+                {
+                    spawnerEntity.Object.GetComponent<common_Crate_OutlineData>()!._ReplacementEntity.Reference = templateEntity.ToReference();
+                }
+                else
+                {
+                    spawnerEntity.Object.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference = templateEntity.ToReference();
+                    spawnerEntity.RefreshModel(explorer, templateEntity.Model!);
+                }
             }
+
+            templateIgz = templateFile?.ToIgzFile();
         }
 
         private static void AddFakeNitro(LevelExplorer explorer)

@@ -675,9 +675,9 @@ namespace NST
                     // Display "+" button
                     if (ImGui.Button("\uEA0A"))
                     {
-                        if (type.IsAssignableTo(typeof(igMetaField)))
+                        if (typeof(T).IsAssignableTo(typeof(igMetaField)))
                         {
-                            mem.Add((T?)Activator.CreateInstance(typeof(T)));
+                            mem.Add(Activator.CreateInstance<T>());
                         }
                         else
                         {

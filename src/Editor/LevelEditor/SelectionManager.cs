@@ -1076,7 +1076,7 @@ namespace NST
             if (entity.Model == null || entity.Object3D == null || entity.Object.ObjectName?.StartsWith("Crate_") != true) return;
 
             THREE.Vector3 worldPos = entity.Object3D.GetWorldPosition(new THREE.Vector3());
-            float crateSize = entity.Model.Name.Contains("Iron") || entity.Model.Name.Contains("Switch") ? 76.5f : 80.0f;
+            float crateSize = entity.Model.Name != "IronBoundCrate" && (entity.Model.Name.Contains("Iron") || entity.Model.Name.Contains("Switch")) ? 76.5f : 80.0f;
 
             NSTEntity? closestCrate = null;
             float closest = float.PositiveInfinity;

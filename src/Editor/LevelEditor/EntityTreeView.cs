@@ -59,6 +59,7 @@ namespace NST
         ];
 
         private Dictionary<string, List<EntityTreeNode>> _objectGroups = [];
+        private HashSet<string> _expandedNodes = [];
 
         public EntityTreeView(LevelExplorer explorer, List<NSTObject> entities)
         {
@@ -102,6 +103,8 @@ namespace NST
             List<NSTObject> other = [];
             List<NSTObject> templates = [];
             List<NSTObject> hidden = [];
+
+            SaveExpandedState();
 
             foreach (NSTObject obj in objects)
             {
@@ -242,6 +245,8 @@ namespace NST
                 return rootNode;
             })
             .ToList();
+
+            RestoreExpandedState();
         }
 
         public void SelectObject(NSTObject obj)
@@ -265,6 +270,30 @@ namespace NST
             }
         }
 
+        private void SaveExpandedState()
+        {
+            foreach (var node in AllNodes)
+            {
+                if (node.IsOpen)
+                {
+                    _expandedNodes.Add(node.BaseName);
+                }
+            }
+        }
+
+        private void RestoreExpandedState()
+        {
+            foreach (var node in AllNodes)
+            {
+                if (_expandedNodes.Contains(node.BaseName))
+                {
+                    node.NextOpen = NextOpenState.Open;
+                }
+            }
+
+            _expandedNodes.Clear();
+        }
+
         private static uint GetUniqueColor(string name)
         {
             if (name == "Lighting") return NSTEntity.ColorLighting.ToImGuiColor(60);
@@ -286,6 +315,8 @@ namespace NST
     {
         public NSTObject Object { get; }
         public uint? Color { get; set; }
+        
+        public string BaseName => Name.Contains('(') ? Name.Substring(0, Name.IndexOf('(')) : Name;
 
         public EntityTreeNode(string name, List<EntityTreeNode> childNodes, uint? color = null)
         {
