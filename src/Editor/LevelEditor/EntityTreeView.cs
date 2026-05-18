@@ -272,6 +272,8 @@ namespace NST
 
         private void SaveExpandedState()
         {
+            _expandedNodes.Clear();
+
             foreach (var node in AllNodes)
             {
                 if (node.IsOpen)
@@ -290,8 +292,6 @@ namespace NST
                     node.NextOpen = NextOpenState.Open;
                 }
             }
-
-            _expandedNodes.Clear();
         }
 
         private static uint GetUniqueColor(string name)

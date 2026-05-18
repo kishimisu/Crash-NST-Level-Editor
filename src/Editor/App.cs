@@ -17,6 +17,8 @@ namespace NST
 
         private static bool _showDemo = false;
 
+        public static bool AnyRendererActive => _archives.Count > 0 || _editors.Count > 0;
+
         public static void Initialize()
         {
             LocalStorage.Initialize();
@@ -33,7 +35,7 @@ namespace NST
             ImGui.DockSpaceOverViewport();
 
             // Render main menu
-            if (!_mainMenu.IsOpen && _archives.Count == 0 && _editors.Count == 0)
+            if (!_mainMenu.IsOpen && !AnyRendererActive)
             {
                 _mainMenu.IsOpen = true;
             }

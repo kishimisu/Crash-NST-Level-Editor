@@ -27,6 +27,8 @@ namespace NST
         private ImGuiController _imgui;
         private ImGuiIOPtr _io;
 
+        private bool _confirmClose = false;
+
         public List<ControlsContainer> controls = new List<ControlsContainer>();
 
         public void Run() => _window.Run();
@@ -155,6 +157,11 @@ namespace NST
             App.Render(deltaTime);
 
             _imgui.Render();
+
+            if (_confirmClose)
+            {
+                _window.Close();
+            }
         }
 
         private void OnResize(Vector2D<int> newSize)
@@ -252,9 +259,17 @@ namespace NST
 
         private void OnClose()
         {
-            _imgui.Dispose();
-            _input.Dispose();
-            _gl.Dispose();
+            if (_confirmClose || !App.AnyRendererActive)
+            {
+                _imgui.Dispose();
+                _input.Dispose();
+                _gl.Dispose();
+            }
+            else
+            {
+                _window.IsClosing = false;
+                ModalRenderer.ShowWarningModal("Exit confirmation", "Are you sure you want to exit?", () => _confirmClose = true);
+            }
         }
     }
 }

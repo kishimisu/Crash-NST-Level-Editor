@@ -372,7 +372,8 @@ namespace NST
             {
                 component._ReplacementEntity.Reference = value;
                 manager.SetUpdated(true);
-            });
+            }, 
+            defaultOpen: true);
 
             RenderObjectReference("2nd replacement:", component._UsedEntityToSpawn.Reference, typeof(CEntity), manager.Explorer, (value) => 
             {
@@ -590,7 +591,8 @@ namespace NST
                 RenderObjectReference("Spawn At Entity:", component._SpawnAtEntity, typeof(CEntity), manager);
             }
 
-            RenderObjectReference("Template:", component._EntityToSpawn, typeof(CGameEntity), manager, defaultOpen: true);
+            bool defaultOpen = manager.Manager.GetComponent<common_Crate_OutlineData>() == null && manager.Manager.GetComponent<common_Crate_Switch_IronData>() == null;
+            RenderObjectReference("Template:", component._EntityToSpawn, typeof(CGameEntity), manager, defaultOpen: defaultOpen);
         }
 
         private static void RenderComponent(Multiple_Spawner_Template_c component, NSTComponent manager)
@@ -664,6 +666,8 @@ namespace NST
                 component._Entity_0x48.Reference = value;
                 manager.SetUpdated(true);
             });
+
+            RenderInt("Max AkuAku:", ref component._Int, component, manager);
         }
 
         private static void RenderComponent(CVisualDataBoxComponentData component, NSTComponent manager)

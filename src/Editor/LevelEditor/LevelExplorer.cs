@@ -107,6 +107,15 @@ namespace NST
         public CZoneInfo? ZoneInfo => _zoneInfo;
         public int CrashMode => _crashMode;
         public int DefaultCharacter { set => _defaultCharacter = value; }
+
+        private static readonly Dictionary<string, string> _zoneInfoOptions = new()
+        {
+            {"Hog Ride", "hog"},
+            {"Bear Ride", "bear"},
+            {"Tiger Ride", "tiger"},
+            {"Jetpack", "jetpack"},
+            {"Digging", "dig"},
+        };
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
 
@@ -1179,18 +1188,9 @@ namespace NST
                     this.ChangeGameMode(GameplayModeManager.GameplayModes[_gameplayMode]);
                 }
 
-                Dictionary<string, string> options = new()
-                {
-                    {"Hog Ride", "hog"},
-                    {"Bear Ride", "bear"},
-                    {"Tiger Ride", "tiger"},
-                    {"Jetpack", "jetpack"},
-                    {"Digging", "dig"},
-                };
-
                 List<string> enabledOptions = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
 
-                foreach ((string displayName, string name) in options)
+                foreach ((string displayName, string name) in _zoneInfoOptions)
                 {
                     bool on = enabledOptions.Contains(name);
 

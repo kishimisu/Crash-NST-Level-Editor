@@ -35,8 +35,18 @@ namespace NST
                     if (fieldType.IsAssignableTo(typeof(igObject)))
                     {
                         // igObject field update
-                        IgzTreeNode? newNode = (IgzTreeNode?)newVal;
-                        field.SetValue(obj, newNode?.Object);
+                        if (newVal is IgzTreeNode newNode)
+                        {
+                            field.SetValue(obj, newNode?.Object);
+                        }
+                        else if (newVal is igObject newObject)
+                        {
+                            field.SetValue(obj, newObject.Clone(new(version: renderer.ArchiveFile.GameVersion)));
+                        }
+                        else
+                        {
+                            field.SetValue(obj, newVal);
+                        }
                         renderer.OnObjectRefChanged();
                     }
                     else if (fieldType.IsAssignableTo(typeof(hkObject)))
@@ -591,9 +601,18 @@ namespace NST
                         // On field update
                         if (typeof(T).IsAssignableTo(typeof(igObject)))
                         {
-                            IgzTreeNode? newNode = (IgzTreeNode?)value;
-
-                            mem[i] = (T?)(object?)newNode?.Object;
+                            if (value is IgzTreeNode newNode)
+                            {
+                                mem[i] = (T?)(object?)newNode?.Object;
+                            }
+                            else if (value is igObject obj)
+                            {
+                                mem[i] = (T?)(object?)obj.Clone(new(version: renderer.ArchiveFile.GameVersion));
+                            }
+                            else
+                            {
+                                mem[i] = (T?)value;
+                            }
 
                             renderer.OnObjectRefChanged();
                         }
@@ -888,6 +907,11 @@ namespace NST
                 else if (isIgObject && renderer is IgzRenderer igzRenderer)
                 {
                     _copyObject = igzRenderer.FindNode(value);
+
+                    if (_copyObject == null && value is igObject obj)
+                    {
+                        _copyObject = obj.Clone(new(version: renderer.ArchiveFile.GameVersion));
+                    }
                 }
                 else if (isHkObject && renderer is HavokRenderer havokRenderer)
                 {
@@ -912,7 +936,8 @@ namespace NST
                 {
                     if (isIgObject)
                     {
-                        canPaste = _copyObject is IgzTreeNode node && node.Object?.GetType().IsAssignableTo(type) == true;
+                        canPaste = _copyObject is IgzTreeNode node && node.Object?.GetType().IsAssignableTo(type) == true ||
+                                   _copyObject is igObject obj && obj.GetType().IsAssignableTo(type);
                     }
                     else if (isHkObject)
                     {

@@ -568,6 +568,11 @@ namespace NST
             {
                 CEntity outlinedCrate = (CEntity)templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!.Clone(new());
 
+                if (crate._entityData is CEntityData entityData && outlinedCrate._entityData is CEntityData outlinedEntityData)
+                {
+                    entityData._tags = outlinedEntityData._tags;
+                }
+
                 var outlineData = outlinedCrate.GetComponent<common_Crate_OutlineData>()!;
                 var triggerBox = outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!;
 
