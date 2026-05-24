@@ -552,7 +552,7 @@ namespace NST
 
             if (node.File == null) return;
 
-            node.NextFocus = NextFocusState.None;
+            // node.NextFocus = NextFocusState.None;
 
             try 
             {

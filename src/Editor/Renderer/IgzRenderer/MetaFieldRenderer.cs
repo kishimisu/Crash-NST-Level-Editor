@@ -140,7 +140,7 @@ namespace NST
                     reference.SetNamespace((string)newVal);
                 }
                 renderer.OnObjectRefChanged();
-            });
+            }, true, "file name");
 
             float buttonWidth = ImGui.CalcTextSize(" Open ").X;
             ImGui.SetNextItemWidth(ImGui.GetContentRegionAvail().X - buttonWidth - ImGui.GetStyle().ItemSpacing.X * 2);
@@ -151,7 +151,7 @@ namespace NST
                 if (newVal == null) return;
                 reference.SetObject((string)newVal);
                 renderer.OnObjectRefChanged();
-            }, false);
+            }, false, "object name");
             
             // Open button
             ImGui.SameLine();

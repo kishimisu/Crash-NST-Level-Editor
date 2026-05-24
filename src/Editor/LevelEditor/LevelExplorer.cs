@@ -938,21 +938,27 @@ namespace NST
             ArchiveRenderer.TrySaveArchive(saveAs, launchGame, compress, true, onPreSave, onPostSave);
         }
 
+        private bool ShouldClose()
+        {
+            if (IsOpen) return false;
+
+            if (ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
+            {
+                ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
+                IsOpen = true;
+            }
+            else
+            {
+                App.CloseExplorer(this);
+                return true;
+            }
+
+            return false;
+        }
+
         public override void Render(double? deltaTime)
         {
-            if (!IsOpen)
-            {
-                if (ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
-                {
-                    ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
-                    IsOpen = true;
-                }
-                else
-                {
-                    App.CloseExplorer(this);
-                    return;
-                }
-            }
+            if (ShouldClose()) return;
 
             ImGui.SetNextWindowPos(new System.Numerics.Vector2(0, 0), ImGuiCond.Once, new System.Numerics.Vector2(0, 0));
             ImGui.SetNextWindowSize(ImGui.GetIO().DisplaySize, ImGuiCond.Once);
@@ -979,6 +985,12 @@ namespace NST
 
                 var close = ArchiveRenderer?.RenderMenuBar(SaveArchive);
                 if (close == true) IsOpen = false;
+
+                if (ShouldClose())
+                {
+                    ImGui.End();
+                    return;
+                }
 
                 IsWindowFocused = _isDragging | ImGui.IsWindowHovered(ImGuiHoveredFlags.ChildWindows);
 

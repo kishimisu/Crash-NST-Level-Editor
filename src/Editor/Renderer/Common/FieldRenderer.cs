@@ -253,7 +253,7 @@ namespace NST
             }
         }
 
-        public static void CreateStringInput(string? value, string name, Action<object?> onChange, bool createClearButton = true)
+        public static void CreateStringInput(string? value, string name, Action<object?> onChange, bool createClearButton = true, string? hint = null)
         {
             ImGui.PushID(name);
             
@@ -271,7 +271,7 @@ namespace NST
             // Non-nullable string
             else if (!createClearButton)
             {
-                if (ImGui.InputText("##" + name, ref value, 256))
+                if (ImGui.InputTextWithHint("##" + name, hint ?? "", ref value, 256))
                 {
                     onChange.Invoke(value);
                 }
@@ -284,7 +284,7 @@ namespace NST
 
                 ImGui.SetNextItemWidth(inputWidth);
 
-                if (ImGui.InputText("##" + name, ref value, 256))
+                if (ImGui.InputTextWithHint("##" + name, hint ?? "", ref value, 256))
                 {
                     onChange.Invoke(value);
                 }

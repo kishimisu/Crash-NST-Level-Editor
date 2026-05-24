@@ -222,24 +222,21 @@ namespace NST
         {
             return !archive.IsUpdated || _editors.Find(e => e.ArchiveRenderer == archive)?.IsOpen == true;
         }
-        
+
         public static void CloseExplorer(LevelExplorer explorer)
         {
             SilkWindow.instance.controls.Remove(explorer);
-
-            explorer.Dispose();
-
             _editors.Remove(explorer);
-
-            if (_editors.Count == 0)
-            {
-                ThreeSceneRenderer.DisposeRenderer();
-                _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);
-            }
+            explorer.Dispose();
 
             if (explorer.ReOpen)
             {
                 OpenLevelExplorer(explorer.ArchiveRenderer);
+            }
+            else if (_editors.Count == 0)
+            {
+                ThreeSceneRenderer.DisposeRenderer();
+                // _editors.ForEach(e => e.RebuildState = ThreeSceneRenderer.RebuildStatus.NeedsRebuild);
             }
         }
 
@@ -264,9 +261,9 @@ namespace NST
         /// </summary>
         /// <param name="reference">The object reference</param>
         /// <param name="renderer">(Optional) The source renderer</param>
-        public static void FocusObject(NamedReference reference, IgzRenderer? renderer = null)
+        public static void FocusObject(NamedReference reference, IgzRenderer? renderer = null, IgArchiveRenderer? parentArchive = null)
         {
-            IgArchiveRenderer? parentArchive = renderer?.ArchiveRenderer;
+            parentArchive ??= renderer?.ArchiveRenderer;
 
             // Try to find file in the parent archive if provided
             if (parentArchive?.FocusObject(reference, renderer) == true)

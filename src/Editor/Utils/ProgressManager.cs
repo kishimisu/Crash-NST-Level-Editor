@@ -47,7 +47,7 @@ namespace NST
             { "textures", new ProgressEntry() }
         };
 
-        public bool IsCompleted() => _entries.Values.All(e => e.progress == 1);
+        public bool IsCompleted() => _entries["textures"].progress == 1;
 
         /// <summary>
         /// Update a specific progress bar

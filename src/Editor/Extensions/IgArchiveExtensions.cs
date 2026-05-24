@@ -180,6 +180,7 @@ namespace NST
                 if (name.EndsWith("_character")) name = name.Substring(0, name.Length - 10);
                 else if (name.EndsWith("_behavior")) name = name.Substring(0, name.Length - 9);
                 else if (name.EndsWith("_script")) name = name.Substring(0, name.Length - 7);
+                else if (name.Contains(',')) name = name.Substring(0, name.IndexOf(','));
 
                 AddSourceFile(f, originalName);
 

@@ -564,14 +564,23 @@ namespace NST
                 levelCountComponent._Bool = _bonusCrate;
             }
 
+            if (crate._entityData is CEntityData entityData && entityData._tags != null)
+            {
+                var outlineTag = entityData._tags.Dict.Keys.FirstOrDefault(k => k.Reference?.objectName == "Crate_Outlined");
+
+                if (!_outlinedCrate && outlineTag != null)
+                {
+                    entityData._tags.Remove(outlineTag);
+                }
+                else if (_outlinedCrate && outlineTag == null)
+                {
+                    entityData._tags.Add(new CEntityTag() { Reference = new("EntityTags", "Crate_Outlined") }, true);
+                }
+            }
+
             if (_outlinedCrate)
             {
                 CEntity outlinedCrate = (CEntity)templateIgz.FindObject<CEntity>("Crate_Basic_Outlined001")!.Clone(new());
-
-                if (crate._entityData is CEntityData entityData && outlinedCrate._entityData is CEntityData outlinedEntityData)
-                {
-                    entityData._tags = outlinedEntityData._tags;
-                }
 
                 var outlineData = outlinedCrate.GetComponent<common_Crate_OutlineData>()!;
                 var triggerBox = outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!;
@@ -633,6 +642,8 @@ namespace NST
 
             string templateName = crate.GetComponent<common_Spawner_TemplateData>()?._EntityToSpawn.Reference?.objectName!;
             CPhysicalEntity crateSpawned = sourceIgz.FindObject<CPhysicalEntity>(templateName)!;
+
+            crate.GetComponent<common_Crate_TimeTrialData>()!._NewEnum3_id_d9xdeh9x = common_Crate_TimeTrialData.ENewEnum3_id_d9xdeh9x.NoChange;
 
             SetupCrate(crate, crateSpawned);
 
