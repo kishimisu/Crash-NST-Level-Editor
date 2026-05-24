@@ -31,12 +31,15 @@ namespace NST
 
         public void Render(IgzRenderer renderer, bool fromChildNode = false)
         {
+            ImGui.PushID(_sound.GetDisplayName());
+
             if (fromChildNode)
             {
                 foreach (CSubSoundPreview subSound in _subSounds)
                 {
                     subSound.Render(renderer);
                 }
+                ImGui.PopID();
                 return;
             }
 
@@ -56,7 +59,7 @@ namespace NST
 
             ImGui.SetNextItemAllowOverlap();
 
-            bool isOpen = ImGui.TreeNodeEx("##CSound" + GetHashCode(), flags);
+            bool isOpen = ImGui.TreeNodeEx("##CSound", flags);
             ImGui.SameLine(0, 0);
 
             if (ImGui.IsItemClicked(ImGuiMouseButton.Left))
@@ -86,10 +89,11 @@ namespace NST
             }
             else if (_subSounds.Count == 1)
             {
-                _subSounds[0].RenderPlayButton();
+                _subSounds[0].RenderPlayButton(renderer.AudioPlayer);
             }
 
             ImGui.Separator();
+            ImGui.PopID();
         }
     }
 }

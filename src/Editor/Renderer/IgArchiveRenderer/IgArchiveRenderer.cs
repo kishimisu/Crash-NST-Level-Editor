@@ -17,13 +17,15 @@ namespace NST
         private IgArchiveFile? _selectedFile = null;
         private HashSet<IgArchiveFile> _includeInPackageFile = [];
 
+        private AudioPlayer _audioPlayerSnd { get; } = new();
+        private bool _showAudioPlayer = false; // Used for .snd files
+
         public bool IsOpen = true;
         public bool IsUpdated { get; set; } = false;
         public bool ForceSaveAs { get; set; } = false;
         public bool IsLevelArchive { get; private set; } = false;
 
         private uint _uuid;
-        private bool _showAudioPlayer = false; // Used for .snd files
         private bool _hasBackup = false;
         private bool _rebuildPackageFile = true;
         private bool _hasPackageFile = false;
@@ -205,7 +207,7 @@ namespace NST
                             App.OpenArchiveRenderer(this);
                         }
                         ImGui.Separator();
-                        AudioPlayerInstance.RenderAudioMenu();
+                        AudioPlayer.RenderAudioMenu();
                         if (ImGui.MenuItem("Rebuild package file", null, _rebuildPackageFile))
                         {
                             _rebuildPackageFile = !_rebuildPackageFile;
@@ -420,11 +422,11 @@ namespace NST
             // .snd files
             if (_showAudioPlayer)
             {
-                AudioPlayerInstance.Render(newAudioData =>
+                _audioPlayerSnd.Render(newAudioData =>
                 {
                     _selectedFile.SetData(newAudioData);
                     SetFileUpdated(_selectedFile, false);
-                    AudioPlayerInstance.InitAudioPlayer(_selectedFile.GetData(), true, _selectedFile.GetName(false));
+                    _audioPlayerSnd.InitAudioPlayer(_selectedFile.GetData(), true, _selectedFile.GetName(false));
                 });
             }
             // unsupported files
@@ -587,7 +589,7 @@ namespace NST
                 if (file.GetName().EndsWith(".snd"))
                 {
                     _showAudioPlayer = true;
-                    AudioPlayerInstance.InitAudioPlayer(file.Uncompress(), true, file.GetName(false));
+                    _audioPlayerSnd.InitAudioPlayer(file.Uncompress(), true, file.GetName(false));
                 }
 
                 return;

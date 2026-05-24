@@ -7,9 +7,9 @@ using NAudio.Wave.SampleProviders;
 namespace NST
 {
     /// <summary>
-    /// Static class for handling audio playback
+    /// Handles audio playback
     /// </summary>
-    public static class AudioPlayerInstance
+    public class AudioPlayer
     {
         private struct FSB5Header
         {
@@ -23,25 +23,43 @@ namespace NST
             public FSB5Header() {}
         }
         
-        private static MemoryStream _audioStream;
-        private static WaveStream _waveStream;
-        private static IWavePlayer _waveOut = new WaveOutEvent();
-        private static byte[] _rawData;
+        private MemoryStream _audioStream;
+        private WaveStream _waveStream;
+        private IWavePlayer _waveOut = new WaveOutEvent();
+        private byte[] _rawData;
 
-        private static float _seekPosition = 0;
-        private static float _duration;
-        private static string? _name;
+        private float _seekPosition = 0;
+        private float _duration;
+        private string? _name;
 
-        public static bool ErrorLoadingFile { get; set; } = false;
+        public bool ErrorLoadingFile { get; set; } = false;
         public static bool AutoPlayAudio { get; set; } = false;
 
-        public static void Play() => _waveOut.Play();
-        public static void Pause() => _waveOut.Pause();
-        public static void Stop() => _waveOut.Stop();
+        public static AudioPlayer? _currentlyPlaying = null;
 
-        public static IWavePlayer GetWaveOut() => _waveOut;
+        public void Play()
+        {
+            _currentlyPlaying?.Pause();
+            _currentlyPlaying = this;
+            _waveOut.Play();
+        }
 
-        public static void InitAudioPlayer(byte[] audioBuffer, bool autoPlay = false, string? name = null)
+        public void Pause()
+        {
+            _currentlyPlaying = null;
+            _waveOut.Pause();
+        } 
+            
+        public void Stop()
+        {
+            _currentlyPlaying = null;
+            _waveOut.Stop();
+        } 
+            
+
+        public IWavePlayer GetWaveOut() => _waveOut;
+
+        public void InitAudioPlayer(byte[] audioBuffer, bool autoPlay = false, string? name = null)
         {
             if (_waveOut.PlaybackState != PlaybackState.Stopped)
             {
@@ -62,6 +80,9 @@ namespace NST
 
             audioBuffer = File.ReadAllBytes(mp3PathTmp);
 
+            _waveStream?.Dispose();
+            _audioStream?.Dispose();
+
             _audioStream = new MemoryStream(audioBuffer);
             _waveStream = new Mp3FileReader(_audioStream);
 
@@ -76,15 +97,18 @@ namespace NST
             if (AutoPlayAudio && autoPlay) Play();
         }
 
-        public static void InitAudioPlayer(CSoundSample soundSample)
+        public void InitAudioPlayer(CSoundSample soundSample)
         {
             InitAudioPlayer(soundSample._data.ToArray(), true, soundSample.ObjectName ?? "CSoundSample");
         }
 
-        public static void Render(Action<byte[]>? onReplace = null)
+        public void Render(Action<byte[]>? onReplace = null, int verticalSpacing = 10)
         {
-            ImGuiUtils.VerticalSpacing(10);
-            ImGui.Separator();
+            if (verticalSpacing > 0)
+            {
+                ImGuiUtils.VerticalSpacing(verticalSpacing);
+                ImGui.Separator();
+            }
 
             if (ErrorLoadingFile)
             {
@@ -97,7 +121,7 @@ namespace NST
                 TogglePlayPause();
             }
             ImGui.SameLine();
-            ImGui.Text("Audio duration: " + _duration + "s");
+            ImGui.Text($"Audio duration: {_duration:F2}s");
 
             _seekPosition = (float)_waveStream.Position / _waveStream.Length * _duration;
             if (_waveOut.PlaybackState == PlaybackState.Stopped && _seekPosition > 0)
@@ -159,25 +183,25 @@ namespace NST
             }
         }
 
-        private static void TogglePlayPause()
+        private void TogglePlayPause()
         {
             if (_waveOut.PlaybackState == PlaybackState.Playing)
             {
-                _waveOut.Pause();
+                Pause();
             }
             else
             {
-                _waveOut.Play();
+                Play();
             }
         }
 
-        private static void Seek(float progress)
+        private void Seek(float progress)
         {
             long newPosition = (long)(_waveStream.Length * progress / _duration);
             _waveStream.Position = newPosition;
         }
 
-        private static void ExportAudio()
+        private void ExportAudio()
         {
             string? path = FileExplorer.SaveFile(FileExplorer.EXT_AUDIO, _name + ".mp3");
             if (path == null) return;
@@ -185,7 +209,7 @@ namespace NST
             File.WriteAllBytes(path, _audioStream.ToArray());
         }
 
-        private static byte[] ReplaceAudio(byte[] data, string inputPath)
+        public static byte[] ReplaceAudio(byte[] data, string inputPath)
         {
             using var readStream = new MemoryStream(data);
             using var reader = new BinaryReader(readStream);
@@ -258,13 +282,6 @@ namespace NST
             mp3Writer.Flush();
 
             return output.ToArray();
-        }
-
-        public static void Dispose()
-        {
-            _waveOut.Dispose();
-            _waveStream.Dispose();
-            _audioStream.Dispose();
         }
     }
 }

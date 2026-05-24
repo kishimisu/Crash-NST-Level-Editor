@@ -75,7 +75,7 @@ namespace NST
             RecentFiles = Get<List<string>>("recent_files") ?? [];
             RecentLevels = Get<List<string>>("recent_levels") ?? [];
 
-            AudioPlayerInstance.AutoPlayAudio = Get("auto_play_audio", false);
+            AudioPlayer.AutoPlayAudio = Get("auto_play_audio", false);
         }
 
         /// <summary>

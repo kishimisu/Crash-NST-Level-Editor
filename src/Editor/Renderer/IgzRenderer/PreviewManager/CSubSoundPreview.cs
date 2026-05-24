@@ -27,14 +27,16 @@ namespace NST
             _subSoundObject = (CSubSound)subSoundNode.Object!;
             _archiveRenderer = renderer.ArchiveRenderer;
 
-            AudioPlayerInstance.GetWaveOut().PlaybackStopped += (s, e) => _state = PlayState.Stopped;
+            renderer.AudioPlayer.GetWaveOut().PlaybackStopped += (s, e) => _state = PlayState.Stopped;
         }        
 
         public void Render(IgzRenderer renderer, bool fromChildNode = false)
         {
+            ImGui.PushID(_subSound.GetDisplayName());
+
             if (fromChildNode)
             {
-                AudioPlayerInstance.Render(newAudioData =>
+                renderer.AudioPlayer.Render(newAudioData =>
                 {
                     if (_audioFile == null) return;
 
@@ -42,20 +44,21 @@ namespace NST
                     {
                         _audioFile.SetData(newAudioData);
                         renderer.ArchiveRenderer.SetFileUpdated(_audioFile, false);
-                        LoadAudio(true);
+                        LoadAudio(renderer.AudioPlayer, true);
                     }
                     else if (_audioIgz != null) // CSoundSample
                     {
                         _soundSample._data.Set(newAudioData);
                         renderer.ArchiveRenderer.SetObjectUpdated(_audioFile, _soundSample).igz = _audioIgz;
-                        LoadAudio(true);
+                        LoadAudio(renderer.AudioPlayer, true);
                     }
                 });
+                ImGui.PopID();
                 return;
             }
 
             ImGui.SetNextItemAllowOverlap();
-            if (ImGui.Selectable("##CSubSound" + GetHashCode()))
+            if (ImGui.Selectable("##CSubSound"))
             {
                 renderer.TreeView.SetSelectedNode(_subSound);
             }
@@ -65,38 +68,39 @@ namespace NST
             ImGui.SameLine();
             _subSound.RenderObjectName();
 
-            RenderPlayButton();
+            RenderPlayButton(renderer.AudioPlayer);
+            ImGui.PopID();
         }
 
-        public void RenderPlayButton()
+        public void RenderPlayButton(AudioPlayer audioPlayer)
         {
             ImGui.SameLine();
             if (ImGui.SmallButton((_state == PlayState.Playing ? "\uEA1D" : "\uEA1C") + "##PlaySound" + _subSound.Name))
             {
                 if (_state == PlayState.Playing)
                 {
-                    AudioPlayerInstance.Pause();
+                    audioPlayer.Pause();
                     _state = PlayState.Paused;
                 }
                 else if (_state == PlayState.Paused)
                 {
-                    AudioPlayerInstance.Play();
+                    audioPlayer.Play();
                     _state = PlayState.Playing;
                 }
                 else
                 {
-                    LoadAudio(false);
-                    AudioPlayerInstance.Play();
+                    LoadAudio(audioPlayer, false);
+                    audioPlayer.Play();
                     _state = PlayState.Playing;
                 }
             }
         }
 
-        public void LoadAudio(bool autoPlay)
+        public void LoadAudio(AudioPlayer audioPlayer, bool autoPlay)
         {
             string? fileName = Path.GetFileNameWithoutExtension(_subSoundObject._fileName);
 
-            AudioPlayerInstance.ErrorLoadingFile = true;
+            audioPlayer.ErrorLoadingFile = true;
 
             if (fileName == null)
             {
@@ -104,8 +108,7 @@ namespace NST
                 return;
             }
 
-            // _audioFile = App.FindFile(fileName, out _, FileSearchType.NameStartsWith);
-            _audioFile = _archiveRenderer.Archive.FindFile(fileName, FileSearchType.NameStartsWith);
+            _audioFile = _archiveRenderer.Archive.FindFile(fileName + ",", FileSearchType.NameStartsWith);
 
             if (_audioFile == null)
             {
@@ -115,7 +118,7 @@ namespace NST
 
             if (_audioFile.GetName().EndsWith(".snd"))
             {
-                AudioPlayerInstance.InitAudioPlayer(_audioFile.Uncompress(), autoPlay, _subSoundObject._fileName);
+                audioPlayer.InitAudioPlayer(_audioFile.Uncompress(), autoPlay, _subSoundObject._fileName);
                 return;
             }
 
@@ -128,7 +131,7 @@ namespace NST
                 return;
             }
 
-            AudioPlayerInstance.InitAudioPlayer(_soundSample._data.ToArray(), autoPlay, _subSoundObject._fileName);
+            audioPlayer.InitAudioPlayer(_soundSample._data.ToArray(), autoPlay, _subSoundObject._fileName);
         }
     }
 }

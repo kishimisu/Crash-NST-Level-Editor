@@ -81,12 +81,12 @@ namespace NST
             if (Object is CSubSound)
             {
                 SubSoundPreview = new CSubSoundPreview(this, renderer);
-                SubSoundPreview.LoadAudio(false);
+                SubSoundPreview.LoadAudio(renderer.AudioPlayer, false);
             }
             else if (Object is CSoundSample soundSample)
             {
                 _audioPreview = true;
-                AudioPlayerInstance.InitAudioPlayer(soundSample);
+                renderer.AudioPlayer.InitAudioPlayer(soundSample);
             }
         }
 
@@ -342,13 +342,13 @@ namespace NST
 
             if (_audioPreview)
             {
-                AudioPlayerInstance.Render(newAudioData =>
+                renderer.AudioPlayer.Render(newAudioData =>
                 {
                     if (Object is CSoundSample sample)
                     {
                         sample._data.Set(newAudioData);
                         renderer.SetUpdated(sample);
-                        AudioPlayerInstance.InitAudioPlayer(sample);
+                        renderer.AudioPlayer.InitAudioPlayer(sample);
                     }
                 });
             }

@@ -10,6 +10,17 @@ namespace NST
         public IgzFile Igz { get; private set; } // Current file being rendered
         public override IgzTreeView TreeView { get; } // igObject tree
 
+        private AudioPlayer? _audioPlayer = null;
+
+        public AudioPlayer AudioPlayer
+        {
+            get
+            {
+                _audioPlayer ??= new();
+                return _audioPlayer;
+            }
+        }
+
         /// <summary>
         /// Handles object copy/paste through the context menu
         /// </summary>
