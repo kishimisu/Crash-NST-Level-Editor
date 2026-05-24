@@ -952,134 +952,408 @@ namespace NST
             RenderCheckbox("Warp animation:", ref component._Bool, component, manager);
         }
 
-        private static int _audioPlayerStatus = 0;
-        private static igComponentData? _musicComponent;
-        private static IgArchiveFile? _soundBankFile;
-        private static IgArchiveFile? _soundFile;
-        private static IgzFile? _soundBankIgz;
-        private static CSubSound? _subSound;
-        private static void InitAudioPlayer(LevelExplorer explorer)
+        private static void RenderComponent(CChangeSkin2ShardComponentData component, NSTComponent manager)
         {
-            string soundFileName = Path.GetFileNameWithoutExtension(_subSound!._fileName!);
-
-            _soundFile = explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
-
-            if (_soundFile != null)
+            if (!(component._skinShards?.Dict.Count > 0))
             {
-                AudioPlayerInstance.InitAudioPlayer(_soundFile.Uncompress());
-                _audioPlayerStatus = 1;
+                ImGui.TextDisabled("(No properties)");
+                return;
             }
-            else
+            
+            int id = 0;
+            foreach ((string key, igObject value) in component._skinShards.Dict.ToDictionary())
             {
-                _audioPlayerStatus = -1;
+                if (key == null || value is not CChangeSkin2ComponentItem item) continue;
+
+                ImGui.Spacing();
+                ImGui.PushID(id++);
+
+                string newKey = key;
+                if (RenderString("Key:  ", ref newKey))
+                {
+                    if (!component._skinShards.Dict.ContainsKey(newKey))
+                    {
+                        component._skinShards.Remove(key);
+                        component._skinShards.Add(newKey, value);
+                        manager.SetUpdated(component);
+                        manager.SetUpdated(component._skinShards);
+                    }
+                }
+
+                if (RenderString("Value:", ref item._skin, component, manager))
+                {
+                    manager.SetUpdated(item);
+                }
+
+                ImGui.PopID();
             }
         }
+
+        private static void RenderComponent(CDSPOverrideComponentData component, NSTComponent manager)
+        {
+            RenderHandle("DSP Override:", component._overrideSet, manager);
+            RenderCheckbox("Start active:", ref component._startActive);
+            RenderCheckbox("Allow camera to trigger:", ref component._allowCameraToTrigger);
+            RenderCheckbox("Is bike level:", ref component._ignoreChecksForCanPlayerControl);
+        }
+
+#endregion
+#region Audio
+
+        private static readonly Dictionary<igComponentData, AudioPlayerInfos> _audioPlayers = [];
+
+        public class AudioPlayerInfos
+        {
+            public AudioPlayer AudioPlayer = new();
+            public igComponentData? Component;
+            public IgArchiveFile? SoundBankFile;
+            public IgzFile? SoundBankIgz;
+            public CAudioArchive? AudioArchive;
+            public CSound? Sound;
+            public CSubSound? SubSound;
+            public int Status = 0; // 0: loading, 1: loaded, -1: error
+
+            public void Init(LevelExplorer explorer)
+            {
+                if (SubSound?._fileName == null)
+                {
+                    Status = -1;
+                    return;
+                }
+
+                string soundFileName = Path.GetFileNameWithoutExtension(SubSound._fileName);
+
+                byte[]? audioData = GetAudioData(explorer, soundFileName);
+
+                if (audioData != null)
+                {
+                    AudioPlayer.InitAudioPlayer(audioData, name: soundFileName);
+                    Status = 1;
+                }
+                else
+                {
+                    Status = -1;
+                }
+            }
+        }
+
         private static void RenderComponent(common_OnStartMusicData component, NSTComponent manager)
         {
-            if (_musicComponent == null || _musicComponent != component)
+            IgzFile igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile)!;
+
+            var musicSettings = (CGameSoundMusicSettings)igz.FindObject(component._OnStartMusic.Reference!)!;
+
+            RenderAudioPlayer(manager.Explorer, component, manager, musicSettings._nextStream.Reference);
+        }
+
+        private static void RenderComponent(CAmbientAudioComponentData component, NSTComponent manager)
+        {
+            RenderAudioPlayer(manager.Explorer, component, manager, component._sound.Reference);
+        }
+
+        private static void RenderComponent(CSoundBankListComponentData component, NSTComponent manager)
+        {
+            if (component._soundBankHandleList == null) return;
+
+            foreach (var soundBank in component._soundBankHandleList._data)
             {
-                _subSound = null;
-                _audioPlayerStatus = 0;
-                _musicComponent = component;
+                RenderAudioArchive(component, manager.Explorer, soundBank.Reference);
+            }
+
+            ImGui.BeginDisabled();
+            ImGui.TextWrapped("Note: You can right-click on sound names to extract or replace audio.");
+            ImGui.EndDisabled();
+        }
+
+        private static AudioPlayerInfos InitAudioArchive(igComponentData component, LevelExplorer explorer, NamedReference reference)
+        {
+            if (!_audioPlayers.TryGetValue(component, out var infos))
+            {
+                infos = new AudioPlayerInfos() { Component = component };
+                _audioPlayers.Add(component, infos);
+
+                IgArchiveFile? audioArchiveFile = explorer.Archive.FindFile(reference.namespaceName, FileSearchType.Name);
+                if (audioArchiveFile == null) return infos;
+
+                IgzFile? audioArchiveIgz = explorer.FileManager.GetIgz(audioArchiveFile) ?? audioArchiveFile.ToIgzFile();
+
+                infos.AudioArchive = audioArchiveIgz.FindObject<CAudioArchive>();
+
+                explorer.FileManager.Add(audioArchiveFile, audioArchiveIgz, true);
+            }
+
+            return infos;
+        }
+
+        private static void RenderAudioArchive(igComponentData component, LevelExplorer explorer, NamedReference? reference)
+        {
+            if (reference == null) return;
+
+            AudioPlayerInfos infos = InitAudioArchive(component, explorer, reference);
+            if (infos.AudioArchive?._soundList == null) return;
+
+            if (ImGui.Selectable("Sound bank: " + infos.AudioArchive.ObjectName))
+            {
+                App.FocusObject(reference, parentArchive: explorer.ArchiveRenderer);
+            }
+
+            ImGui.Separator();
+            ImGui.Spacing();
+
+            foreach (var sound in infos.AudioArchive._soundList._data)
+            {
+                if (sound._subSoundList == null || sound._subSoundList._data.Count == 0) return;
+                
+                if (ImGui.Selectable(sound._name))
+                {
+                    App.FocusObject(new NamedReference(reference.namespaceName, sound.ObjectName ?? ""), parentArchive: explorer.ArchiveRenderer);  
+                }
+
+                ImGui.PushID(sound._name);
+                ImGui.Spacing();
+
+                foreach (var subsound in sound._subSoundList._data)
+                {
+                    RenderSubSound(explorer, infos, subsound);
+                }
+
+                ImGui.Spacing();
+                ImGui.Separator();
+                ImGui.Spacing();
+                ImGui.PopID();
+            }
+        }
+
+        private static void RenderSubSound(LevelExplorer explorer, AudioPlayerInfos infos, CSubSound subSound)
+        {
+            if (string.IsNullOrEmpty(subSound._fileName)) return;
+
+            string fileName = NamespaceUtils.GetFileName(subSound._fileName, false);
+
+            ImGui.PushID(fileName);
+
+            if (ImGui.SmallButton("\uEA1C"))
+            {
+                var audioData = GetAudioData(explorer, fileName);
+                if (audioData != null)
+                {
+                    infos.AudioPlayer.InitAudioPlayer(audioData, name: fileName);
+                    infos.AudioPlayer.Play();
+                }
+            }
+
+            ImGui.SameLine();
+            ImGui.PushStyleColor(ImGuiCol.Text, 0xff999999);
+            ImGui.Text(fileName);
+            ImGui.PopStyleColor();
+
+            if (ImGui.BeginPopupContextItem(fileName))
+            {
+                ImGui.TextDisabled(fileName);
+                if (ImGui.Selectable("Extract audio"))
+                {
+                    var audioData = GetAudioData(explorer, fileName);
+                    if (audioData != null)
+                    {
+                        string? path = FileExplorer.SaveFile(FileExplorer.EXT_AUDIO, fileName + ".mp3");
+                        if (path != null)
+                        {
+                            File.WriteAllBytes(path, audioData);
+                        }
+                    }
+                }
+                if (ImGui.Selectable("Replace audio"))
+                {
+                    List<string> paths = FileExplorer.OpenFiles(FileExplorer.EXT_AUDIO, false, "");
+                    if (paths.Count == 1)
+                    {
+                        ReplaceAudioData(explorer, fileName, paths[0]);
+                    }
+                }
+                ImGui.EndPopup();
+            }
+
+            ImGui.PopID();
+        }
+
+        private static byte[]? GetAudioData(LevelExplorer explorer, string fileName)
+        {
+            IgArchiveFile? audioFile = explorer.Archive.FindFile(fileName + ",", FileSearchType.NameStartsWith);
+
+            if (audioFile != null)
+            {
+                if (audioFile.IsIGZ())
+                {
+                    return audioFile.ToIgzFile().FindObject<CSoundSample>()?._data.ToArray();
+                }
+                else
+                {
+                    return audioFile.Uncompress();
+                }
+            }
+
+            return null;
+        }
+
+        private static void ReplaceAudioData(LevelExplorer explorer, string fileName, string newAudioPath, byte[]? newAudioData = null)
+        {
+            IgArchiveFile? audioFile = explorer.Archive.FindFile(fileName + ",", FileSearchType.NameStartsWith);
+
+            if (audioFile != null)
+            {
+                if (audioFile.IsIGZ())
+                {
+                    IgzFile igz = explorer.FileManager.GetIgz(audioFile) ?? audioFile.ToIgzFile();
+                    CSoundSample soundSample = igz.FindObject<CSoundSample>()!;
+
+                    newAudioData ??= AudioPlayer.ReplaceAudio(soundSample._data.ToArray(), newAudioPath);
+                    soundSample._data.Set(newAudioData);
+                    audioFile.SetData(igz.Save());
+                }
+                else
+                {
+                    newAudioData ??= AudioPlayer.ReplaceAudio(audioFile.Uncompress(), newAudioPath);
+                    audioFile.SetData(newAudioData);
+                }
+
+                explorer.ArchiveRenderer.SetFileUpdated(audioFile);
+            }
+        }
+
+        private static void RenderAudioPlayer(LevelExplorer explorer, igComponentData component, NSTComponent manager, NamedReference? soundReference)
+        {
+            if (soundReference == null)
+            {
+                ImGui.TextDisabled("(Empty)");
+                return;
+            }
+
+            if (!_audioPlayers.TryGetValue(component, out var infos))
+            {
+                infos = new AudioPlayerInfos() { Component = component };
+
+                _audioPlayers.Add(component, infos);
 
                 Task.Run(() => 
                 {
-                    IgzFile igz = manager.Explorer.FileManager.GetIgz(manager.Entity.ArchiveFile)!;
+                    infos.SoundBankFile = explorer.Archive.FindFile(soundReference.namespaceName, FileSearchType.Name)!;
+                    infos.SoundBankIgz = explorer.FileManager.GetIgz(infos.SoundBankFile) ?? infos.SoundBankFile.ToIgzFile();
 
-                    var musicSettings = (CGameSoundMusicSettings)igz.FindObject(component._OnStartMusic.Reference!)!;
+                    infos.Sound = (CSound)infos.SoundBankIgz.FindObject(soundReference)!;
+                    infos.SubSound = infos.Sound._subSoundList!._data[0];
 
-                    _soundBankFile = manager.Explorer.Archive.FindFile(musicSettings._nextStream.Reference!.namespaceName, FileSearchType.Name)!;
-                    _soundBankIgz = manager.Explorer.FileManager.GetIgz(_soundBankFile) ?? _soundBankFile.ToIgzFile();
+                    explorer.FileManager.Add(infos.SoundBankFile, infos.SoundBankIgz, true);
 
-                    var sound = (CSound)_soundBankIgz.FindObject(musicSettings._nextStream.Reference)!;
-
-                    _subSound = sound._subSoundList!._data[0];
-
-                    InitAudioPlayer(manager.Explorer);
+                    infos.Init(explorer);
                 })
-                .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
+                .ContinueWith(_ => infos.Status = -1, TaskContinuationOptions.OnlyOnFaulted);
             }
 
-            if (_subSound != null && _soundBankFile != null && _soundBankIgz != null)
+            if (infos.Status == 0)
             {
-                if (RenderString("Sound file:", ref _subSound._fileName!))
+                ImGui.Spacing();
+                ImGui.Text("Loading audio player...");
+                ImGui.Spacing();
+            }
+            else if (infos.Status == 1 && !string.IsNullOrEmpty(infos.SubSound?._fileName))
+            {
+                infos.AudioPlayer.Render(newAudioData =>
                 {
-                    manager.Explorer.FileManager.Add(_soundBankFile, _soundBankIgz);
-                    manager.Explorer.ArchiveRenderer.SetObjectUpdated(_soundBankFile, _subSound);
+                    string fileName = NamespaceUtils.GetFileName(infos.SubSound._fileName, false);
+                    ReplaceAudioData(explorer, fileName, "", newAudioData);
+                    infos.AudioPlayer.InitAudioPlayer(newAudioData, name: fileName);
+                }, 0);
+            }
+            else
+            {
+                ImGui.Spacing();
+                ImGui.TextColored(new System.Numerics.Vector4(1, 0.7f, 0, 1), "Could not load audio file.");
+                ImGui.Spacing();
+            }
+
+            if (infos.Sound != null && infos.SubSound != null && infos.SoundBankFile != null && infos.SoundBankIgz != null)
+            {
+                bool updated = false;
+                THREE.Vector3? scale = null;
+
+                if (RenderFloat("Volume:       ", ref infos.Sound._volume, infos.Sound, manager))
+                {
+                    infos.Sound._volume = MathF.Min(1.0f, MathF.Max(0.0f, infos.Sound._volume));
+                    updated = true;
+                }
+
+                if (RenderFloat("Min. range:   ", ref infos.Sound._min3d, infos.Sound, manager, 1, 10, true))
+                {
+                    scale = THREE.Vector3.One() * infos.Sound._min3d;
+                    updated = true;
+                }
+                if (RenderFloat("Fade distance:", ref infos.Sound._max3d, infos.Sound, manager, 1, 10, true))
+                {
+                    scale = THREE.Vector3.One() * (infos.Sound._min3d + infos.Sound._max3d);
+                    updated = true;
+                }
+
+                if (updated)
+                {
+                    explorer.FileManager.Add(infos.SoundBankFile, infos.SoundBankIgz);
+                    explorer.ArchiveRenderer.SetObjectUpdated(infos.SoundBankFile, infos.Sound);
+                }
+
+                manager.Manager.UpdateBox3D(component, scale: scale);
+
+                if (RenderString("Sound file:", ref infos.SubSound._fileName!))
+                {
+                    explorer.FileManager.Add(infos.SoundBankFile, infos.SoundBankIgz);
+                    explorer.ArchiveRenderer.SetObjectUpdated(infos.SoundBankFile, infos.SubSound);
                 }
                 if (ImGui.Button("Locate"))
                 {
-                    string soundFileName = Path.GetFileNameWithoutExtension(_subSound._fileName!);
-                    IgArchiveFile? soundFile = manager.Explorer.Archive.FindFile(soundFileName, FileSearchType.NameStartsWith);
-                    if (soundFile != null)
-                    {
-                        App.OpenArchiveRenderer(manager.Explorer.ArchiveRenderer);
-                        manager.Explorer.ArchiveRenderer.FocusFile(soundFile);
-                    }
+                    App.FocusObject(soundReference, parentArchive: explorer.ArchiveRenderer);
                 }
                 ImGui.SameLine();
                 if (ImGui.Button("Reload"))
                 {
-                    _audioPlayerStatus = 0;
-
-                    Task.Run(() => InitAudioPlayer(manager.Explorer))
-                        .ContinueWith(_ => _audioPlayerStatus = -1, TaskContinuationOptions.OnlyOnFaulted);
+                    infos.Status = 0;
+                    Task.Run(() => infos.Init(explorer)).ContinueWith(_ => infos.Status = -1, TaskContinuationOptions.OnlyOnFaulted);
                 }
-            }
-
-            ImGui.Spacing();
-
-            if (_audioPlayerStatus == 0)
-            {
-                ImGui.Spacing();
-                ImGui.Text("Loading audio player...");
-            }
-            else if (_audioPlayerStatus == 1 && _soundFile != null)
-            {
-                AudioPlayerInstance.Render(newAudioData =>
-                {
-                    _soundFile.SetData(newAudioData);
-                    manager.Explorer.ArchiveRenderer.SetFileUpdated(_soundFile);
-                    AudioPlayerInstance.InitAudioPlayer(_soundFile.Uncompress());
-                });
-            }
-            else
-            {
-                ImGui.Spacing();
-                ImGui.Text("Could not load audio file.");
             }
         }
 
 #endregion
-#region Lighintg / VFX / SFX
+#region Lighting
 
         private static void RenderComponent(CTintSphereComponentData component, NSTComponent manager)
         {
             RenderColor("Color:       ", ref component._color, component, manager);
-            RenderFloat("Radius:      ", ref component._radius, component, manager);
+            RenderFloat("Radius:      ", ref component._radius, component, manager, 1, 10, true);
             RenderFloat("Intensity:   ", ref component._intensity, component, manager);
             RenderFloat("Additiveness:", ref component._additiveness, component, manager);
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
             RenderCheckbox("Ignore occlusion boxes: ", ref component._ignoreOcclusionBoxes, component, manager);
             RenderCheckbox("Depth blending enabled: ", ref component._depthBlendingEnabled, component, manager);
             RenderFloat("Depth blending softness:", ref component._depthBlendingSoftness, component, manager);
+
+            manager.Manager.UpdateBox3D(component, scale: THREE.Vector3.One() * component._radius, color: component._color.ToVector3(), useParentScale: false);
         }
 
         private static void RenderComponent(CPointLightComponentData component, NSTComponent manager)
         {
             RenderColor("Color:    ", ref component._color, component, manager);
-            RenderFloat("Radius:   ", ref component._radius, component, manager);
+            RenderFloat("Radius:   ", ref component._radius, component, manager, 1, 10, true);
             RenderFloat("Intensity:", ref component._intensity, component, manager);
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
             RenderEnum("Light bake type:", ref component._lightBakeType, component, manager);
             RenderCheckbox("Distance cull:  ", ref component._distanceCull, component, manager);
+
+            var color = new THREE.Vector3(component._color._x, component._color._y, component._color._z);
+            manager.Manager.UpdateBox3D(component, scale: THREE.Vector3.One() * component._radius, color: color, useParentScale: false);
         }
 
         private static void RenderComponent(CBoxLightComponentData component, NSTComponent manager)
         {
             RenderColor( "Color:     ", ref component._color, component, manager);
             RenderFloat( "Intensity: ", ref component._intensity, component, manager);
-            bool updated = RenderFloat3("Dimensions:", ref component._dimensions, component, manager);
+            bool updated = RenderFloat3("Dimensions:", ref component._dimensions, component, manager, true);
             ImGui.Spacing(); ImGui.Separator(); ImGui.Spacing();
             RenderFloat("Near attenuation:", ref component._nearAttenuation, component, manager);
             RenderFloat("Attenuation:     ", ref component._attenuation, component, manager);
@@ -1553,30 +1827,38 @@ namespace NST
             return false;
         }
 
-        public static bool RenderFloat(string name, ref float value, NSTObject obj, LevelExplorer explorer, float step = 0.1f, float step_fast = 1.0f)
+        public static bool RenderFloat(string name, ref float value, NSTObject obj, LevelExplorer explorer, float step = 0.1f, float step_fast = 1.0f, bool drag = false)
         {
-            if (RenderFloat(name, ref value, step, step_fast))
+            if (RenderFloat(name, ref value, step, step_fast, drag))
             {
                 explorer.ArchiveRenderer.SetObjectUpdated(obj.ArchiveFile, obj.GetObject());
                 return true;
             }
             return false;
         }
-        private static bool RenderFloat(string name, ref float value, igObject obj, NSTComponent c, float step = 0.1f, float step_fast = 1.0f)
+        private static bool RenderFloat(string name, ref float value, igObject obj, NSTComponent c, float step = 0.1f, float step_fast = 1.0f, bool drag = false)
         {
-            if (RenderFloat(name, ref value))
+            if (RenderFloat(name, ref value, step, step_fast, drag))
             {
                 c.SetUpdated(obj);
                 return true;
             }
             return false;
         }
-        private static bool RenderFloat(string name, ref float value, float step = 0.1f, float step_fast = 1.0f)
+        private static bool RenderFloat(string name, ref float value, float step = 0.1f, float step_fast = 1.0f, bool drag = false)
         {
             ImGui.Text(name);
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
-            return ImGui.InputFloat("##" + name, ref value, step, step_fast);
+
+            if (drag)
+            {
+                return ImGui.DragFloat("##" + name, ref value, step, step_fast);
+            }
+            else
+            {
+                return ImGui.InputFloat("##" + name, ref value, step, step_fast);
+            }
         }
 
         public static bool RenderFloat2(string name, ref igVec2fMetaField value, NSTObject obj, LevelExplorer explorer)
@@ -1738,6 +2020,20 @@ namespace NST
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
             return ImGui.InputText("##" + name, ref value, 256);
+        }
+
+        private static void RenderHandle(string label, igHandleMetaField handle, NSTComponent manager)
+        {
+            ImGui.Text(label);
+
+            if (handle.Reference != null) ImGui.Spacing();
+            else ImGui.SameLine();
+
+            var renderer = manager.Explorer.FileManager.GetOrCreateRenderer(manager.Entity.ArchiveFile, manager.Explorer.ArchiveRenderer);
+
+            MetaFieldRenderer.Render(renderer, handle, typeof(igHandleMetaField), label, false);
+
+            ImGui.Spacing();
         }
 
         private static bool RenderHandle(string name, string namespaceName, igHandleMetaField handle, igComponentData component, NSTComponent manager)

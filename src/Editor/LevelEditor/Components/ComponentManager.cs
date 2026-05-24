@@ -8,7 +8,7 @@ namespace NST
         private uint _uuid;
 
         public NSTEntity Entity { get; private set; }
-        public LevelExplorer Explorer { get; private set; }
+        public LevelExplorer Explorer { get; set; }
 
         public NSTComponent PopupComponent { get; set; }
 
@@ -22,6 +22,7 @@ namespace NST
         private static LevelExplorer? _copyEntityExplorer = null;
 
         public Dictionary<string, THREE.Object3D> Gizmos { get; private set; } = [];
+        public Dictionary<igComponentData, THREE.Vector3> DefaultSizes { get; }= [];
 
         private static readonly HashSet<Type> _autoFocusComponents = 
         [
@@ -539,7 +540,7 @@ namespace NST
             Gizmos[key] = object3D;
         }
 
-        public void UpdateBox3D(igComponentData component, THREE.Vector3? position = null, THREE.Euler? rotation = null, THREE.Vector3? scale = null)
+        public void UpdateBox3D(igComponentData component, THREE.Vector3? position = null, THREE.Euler? rotation = null, THREE.Vector3? scale = null, THREE.Vector3? color = null, bool useParentScale = true, bool updateLayer = true)
         {
             string key = component.ObjectName ?? component.GetType().Name;
             if (!Gizmos.TryGetValue(key, out THREE.Object3D? obj3D))
@@ -549,14 +550,17 @@ namespace NST
 
             var exists = Entity.Object3D?.Children.Contains(obj3D);
 
-            obj3D.Traverse(e => 
+            if (updateLayer)
             {
-                if ((e.Layers.Mask & (int)LevelExplorer.CameraLayer.TriggersOn) == 0)
+                obj3D.Traverse(e => 
                 {
-                    e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn);
-                    Explorer.RenderNextFrame = true;
-                }
-            });
+                    if ((e.Layers.Mask & (int)LevelExplorer.CameraLayer.TriggersOn) == 0)
+                    {
+                        e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn);
+                        Explorer.RenderNextFrame = true;
+                    }
+                });
+            }
 
             if (exists == false && Entity.Object3D != null)
             {
@@ -570,13 +574,26 @@ namespace NST
                 rotation ??= new THREE.Euler();
                 scale ??= new THREE.Vector3();
 
-                THREE.Vector3 parentScale = new THREE.Vector3();
-                Entity.ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+                THREE.Vector3 parentScale = new THREE.Vector3(1, 1, 1);
+
+                if (useParentScale)
+                {
+                    Entity.ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+                }
 
                 obj3D.Position.Copy(position / parentScale);
                 obj3D.Rotation.Copy(rotation);
                 obj3D.Scale.Copy(scale / parentScale);
                 Explorer.RenderNextFrame = true;
+            }
+
+            if (color != null)
+            {
+                obj3D.Traverse(e =>
+                {
+                    if (e.Material != null) 
+                        e.Material.Color = new THREE.Color(color.X, color.Y, color.Z);
+                });
             }
         }
     }

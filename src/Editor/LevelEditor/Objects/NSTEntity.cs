@@ -126,14 +126,23 @@ namespace NST
         {
             THREE.Object3D group = Model?.CreateObject() ?? new THREE.Object3D();
 
+            THREE.Matrix4 objectToWorld = ObjectToWorld(true);
+
             if (Model == null && !IsPrefabInstance && Object is not CScriptTriggerEntity && Object is not CDynamicClipEntity)
             {
                 var geo = new THREE.BoxGeometry(20, 20, 20);
+
+                if (IsLight)
+                {
+                    THREE.Vector3 scale = objectToWorld.GetScale();
+                    geo.Scale(1.0f / scale.X, 1.0f / scale.Y, 1.0f / scale.Z);
+                }
+
                 var mat = new THREE.MeshPhongMaterial() { Color = Color };
                 group.Add(new THREE.Mesh(geo, mat));
             }
 
-            group.ApplyMatrix4(ObjectToWorld(true));
+            group.ApplyMatrix4(objectToWorld);
 
             group.Traverse(e => e.UserData["entity"] = this);
 
@@ -210,25 +219,24 @@ namespace NST
         {
             List<THREE.Object3D> group = [];
 
-            THREE.Object3D? special = CreateSpecialObject3D(selected);
-            if (special != null) group.Add(special);
+            AddComponentsGizmos(group, selected);
 
             foreach (NSTObject child in Children)
             {
                 if (child.IsSelected || child is NSTEntity || child is NSTCamera) continue;
-
                 group.Add(child.CreateObject3D(selected));
             }
 
             return group;
         }
 
-        private THREE.Object3D? CreateSpecialObject3D(bool focused = false)
+        private THREE.Object3D? AddComponentsGizmos(List<THREE.Object3D> group, bool focused = false)
         {
-            if (Object is CEntity entity && (Object is CScriptTriggerEntity || Object is CDynamicClipEntity))
+            if (Object is CEntity entity && (Object is CScriptTriggerEntity || Object is CDynamicClipEntity) && (!IsSFX || focused))
             {
+                var layer = Object is CDynamicClipEntity ? LevelExplorer.CameraLayer.ClipEntities : LevelExplorer.CameraLayer.ScriptTrigger;
+
                 THREE.Color color = IsSFX ? ColorSFX : new THREE.Color(Object is CScriptTriggerEntity ? 0xFFA500 : 0xFF0000);
-                var layer = IsSFX ? LevelExplorer.CameraLayer.AudioBox : Object is CDynamicClipEntity ? LevelExplorer.CameraLayer.ClipEntities : LevelExplorer.CameraLayer.ScriptTrigger;
                 THREE.Mesh mesh = CreateBoxHelper(entity._min.ToVector3(), entity._max.ToVector3(), color, focused, layer);
 
                 if (Object is CScriptTriggerEntity && !OutlineTrigger)
@@ -238,66 +246,120 @@ namespace NST
 
                 mesh.ApplyMatrix4(ObjectToWorld());
 
-                return mesh;
+                group.Add(mesh);
+
+                return null;
             }
 
-            if (Object.TryGetComponent(out CTriggerVolumeBoxComponentData? trigger))
+            foreach (var component in Object.GetComponents())
             {
-                THREE.Vector3 position = trigger._offset.ToVector3();
-                THREE.Euler rotation = trigger._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
-                THREE.Vector3 scale = trigger._dimensions.ToVector3();
-                var b = SetupBox(trigger, position, rotation, scale, focused);
-                b.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.TriggerVolume));
-                if (IsSpawned)
+                if (component is CTriggerVolumeBoxComponentData trigger)
                 {
-                    b.ApplyMatrix4(ObjectToWorld());
-                    return b;
+                    THREE.Vector3 position = trigger._offset.ToVector3();
+                    THREE.Euler rotation = trigger._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
+                    THREE.Vector3 scale = trigger._dimensions.ToVector3();
+
+                    SetupBoxGizmo(group, trigger, position, rotation, scale, focused, LevelExplorer.CameraLayer.TriggerVolume);
                 }
-            }
-            if (Object.TryGetComponent(out CVisualDataBoxComponentData? box))
-            {
-                THREE.Vector3 scale = box._dimensions.ToVector3();
-                var b = SetupBox(box, new THREE.Vector3(), new THREE.Euler(), scale, focused);
-                b.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.VisualBox));
-                if (IsSpawned)
+                else if (component is CVisualDataBoxComponentData box)
                 {
-                    b.ApplyMatrix4(ObjectToWorld());
-                    return b;
+                    THREE.Vector3 scale = box._dimensions.ToVector3();
+
+                    SetupBoxGizmo(group, box, new THREE.Vector3(), new THREE.Euler(), scale, focused, LevelExplorer.CameraLayer.VisualBox);
                 }
-            }
-            if (Object.TryGetComponent(out CBoxLightComponentData? boxLight))
-            {
-                THREE.Vector3 scale = boxLight._dimensions.ToVector3();
-                var b = SetupBox(boxLight, new THREE.Vector3(), new THREE.Euler(), scale, focused);
-                b.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.VisualBox));
-                if (IsSpawned)
+                else if (component is CBoxLightComponentData boxLight)
                 {
-                    b.ApplyMatrix4(ObjectToWorld());
-                    return b;
+                    THREE.Color color = new THREE.Color(boxLight._color._x, boxLight._color._y, boxLight._color._z);
+                    THREE.Vector3 scale = boxLight._dimensions.ToVector3();
+
+                    SetupBoxGizmo(group, boxLight, new THREE.Vector3(), new THREE.Euler(), scale, true, LevelExplorer.CameraLayer.BoxLight, color);
+                }
+                else if (component is CTintSphereComponentData tintSphere)
+                {
+                    THREE.Color color = new THREE.Color(tintSphere._color._x, tintSphere._color._y, tintSphere._color._z);
+
+                    SetupSphereGizmo(group, tintSphere, tintSphere._radius, LevelExplorer.CameraLayer.TintSphere, color);
+                }
+                else if (component is CPointLightComponentData pointLight)
+                {
+                    THREE.Color color = new THREE.Color(pointLight._color._x, pointLight._color._y, pointLight._color._z);
+
+                    SetupSphereGizmo(group, pointLight, pointLight._radius, LevelExplorer.CameraLayer.PointLight, color);
+                }
+                else if (component is CAmbientAudioComponentData audio)
+                {
+                    if (Components?.DefaultSizes.TryGetValue(audio, out var scale) != true || scale == null)
+                    {
+                        scale = THREE.Vector3.One();
+                    }
+                    
+                    SetupBoxGizmo(group, audio, new THREE.Vector3(), new THREE.Euler(), scale, focused, LevelExplorer.CameraLayer.AudioBox, ColorSFX);
+                }
+                else if (component is common_OnStartMusicData music)
+                {
+                    SetupBoxGizmo(group, music, new THREE.Vector3(), new THREE.Euler(), THREE.Vector3.One() * 1800, focused, LevelExplorer.CameraLayer.AudioBox, ColorSFX);
                 }
             }
 
             return null;
         }
 
-        private THREE.Object3D SetupBox(igComponentData component, THREE.Vector3 position, THREE.Euler rotation, THREE.Vector3 scale, bool focused)
+        private void SetupBoxGizmo(List<THREE.Object3D> group, igComponentData component, THREE.Vector3 position, THREE.Euler rotation, THREE.Vector3 scale, bool focused, LevelExplorer.CameraLayer layer, THREE.Color? color = null)
         {
             THREE.Vector3 parentScale = new THREE.Vector3();
             ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
 
             THREE.Matrix4 localMatrix = new THREE.Matrix4().Compose(position / parentScale, new THREE.Quaternion().SetFromEuler(rotation), scale / parentScale);
 
-            THREE.Color color =  MathUtils.FromImGuiColor(component.GetType().GetUniqueColor());
             THREE.Vector3 min = THREE.Vector3.One() * -0.5f;
             THREE.Vector3 max = THREE.Vector3.One() * 0.5f;
 
-            THREE.Object3D box3D = CreateBoxHelper(min, max, color, focused);
+            color ??= MathUtils.FromImGuiColor(component.GetType().GetUniqueColor());
+
+            THREE.Object3D box3D = CreateBoxHelper(min, max, color.Value, focused);
             box3D.ApplyMatrix4(localMatrix);
 
             Components ??= new ComponentManager(this);
             Components.CreateObject3D(component, box3D);
 
-            return box3D;
+            box3D.Traverse(e => e.Layers.Set((int)layer));
+            if (IsSpawned)
+            {
+                box3D.ApplyMatrix4(ObjectToWorld());
+                group.Add(box3D);
+            }
+        }
+
+        private THREE.Object3D SetupSphereGizmo(List<THREE.Object3D> group, igComponentData component, float radius, LevelExplorer.CameraLayer layer, THREE.Color color)
+        {
+            THREE.SphereGeometry geo = new THREE.SphereGeometry(1, 16, 16);
+            THREE.SphereGeometry geoWire = new THREE.SphereGeometry(1, 8, 8);
+            THREE.MeshBasicMaterial mat = new THREE.MeshBasicMaterial() { Transparent = true, Opacity = 0.35f, Color = color };
+            THREE.MeshBasicMaterial matWire = new THREE.MeshBasicMaterial() { Wireframe = true, Color = color };
+
+            THREE.Mesh mesh = new THREE.Mesh(geo, mat)
+            {
+                new THREE.Mesh(geoWire, matWire)
+            };
+
+            mesh.Scale.Set(radius, radius, radius);
+
+            mesh.Traverse(e =>
+            {
+                e.Layers.Set((int)layer);
+                e.UserData["entity"] = this;
+            });
+
+            if (IsSpawned)
+            {
+                mesh.ApplyMatrix4(ObjectToWorld());
+                group.Add(mesh);
+            }
+
+            Components ??= new ComponentManager(this);
+            Components.CreateObject3D(component, mesh);
+
+            return mesh;
         }
 
         public NSTWaypoint AddWaypoint(CWaypoint waypoint, LevelExplorer explorer)

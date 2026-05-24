@@ -73,7 +73,11 @@ namespace NST
             THREE.Color highlightColor = new THREE.Color(0xff5141);
             THREE.Color defaultColor = new THREE.Color(0xb6b6b6);
 
-            List<THREE.Matrix4> matrices = instances.Select(e => e.ObjectToWorld(true)).ToList();
+            List<THREE.Matrix4> matrices = instances.Select(e => {
+                var mat = e.ObjectToWorld(true);
+                if (e.IsLight) mat = mat.ResetScale();
+                return mat;
+            }).ToList();
 
             List<THREE.Color> colors = (debugMode switch
             {   
@@ -274,6 +278,7 @@ namespace NST
                      entity.Object.GetComponent<CTriggerVolumeBoxComponentData>() == null && 
                      entity.Object.GetComponent<CVisualDataBoxComponentData>() == null &&
                      entity.Object.GetComponent<CBoxLightComponentData>() == null &&
+                     entity.Object.GetComponent<CAmbientAudioComponentData>() == null &&
                      entity.Object.GetComponent<igPrefabComponentData>() == null)
             {
                 _entitiesWithoutModel.Add(entity);
@@ -656,6 +661,45 @@ namespace NST
             }
 
             _explorer.RenderNextFrame = true;
+        }
+
+        public void InitAudioBoxes(bool show)
+        {
+            Dictionary<IgArchiveFile, IgzFile> soundBanks = [];
+
+            foreach (var entity in AllEntities)
+            {
+                if (entity.Object.GetType() != typeof(CEntity)) continue;
+
+                foreach (var component in entity.Object.GetComponents())
+                {
+                    if (component is not CAmbientAudioComponentData audio || audio._sound.Reference == null) continue;
+
+                    var file = _explorer.Archive.FindFile(audio._sound.Reference.namespaceName, FileSearchType.Name);
+                    if (file == null) continue;
+
+                    if (!soundBanks.TryGetValue(file, out var igz))
+                    {
+                        igz = _explorer.FileManager.GetIgz(file) ?? file.ToIgzFile();
+                        soundBanks.Add(file, igz);
+                    }
+
+                    var obj = igz.FindObject<CSound>(audio._sound.Reference.objectName);
+                    if (obj == null) continue;
+
+                    float size = obj._min3d + obj._max3d;
+                    var scale = new THREE.Vector3(size, size, size);
+
+                    entity.Components ??= new ComponentManager(entity);
+                    entity.Components.DefaultSizes[component] = scale;
+
+                    if (show)
+                    {
+                        entity.Components.Explorer = _explorer;
+                        entity.Components.UpdateBox3D(component, scale: scale, updateLayer: false);
+                    }
+                }
+            }
         }
 
         /// <summary>

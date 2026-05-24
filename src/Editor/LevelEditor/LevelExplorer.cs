@@ -51,23 +51,26 @@ namespace NST
         
         public enum CameraLayer 
         { 
-            Default = 0, 
-            AllEntities = 1, 
-            Splines = 2, 
-            Camera = 3, 
+            Default = 0,
+            AllEntities = 1,
+            Splines = 2,
+            Camera = 3,
             CameraBox = 4,
             ClipEntities = 5,
             ScriptTrigger = 6,
             TriggerVolume = 7,
-            VisualBox = 8,
-            AudioBox = 9,
-            Templates = 10, 
-            Clouds = 11, 
-            Shadows = 12, 
-            Hidden = 13,
-            StaticCollision = 14,
-            BorderCollision = 15,
-            TriggersOn = 20,
+            AudioBox = 8,
+            VisualBox = 9,
+            BoxLight = 10,
+            PointLight = 11,
+            TintSphere = 12,
+            Templates = 13,
+            Clouds = 14,
+            Shadows = 15,
+            Hidden = 16,
+            StaticCollision = 17,
+            BorderCollision = 18,
+            TriggersOn = 30,
         };
 
         private readonly Dictionary<string, bool> _layers = new()
@@ -79,8 +82,11 @@ namespace NST
             { "Dynamic Clips", true },
             { "Script Triggers", false },
             { "Trigger Volumes", false },
-            { "Visual Boxes", false },
             { "Audio Boxes", false },
+            { "Visual Boxes", false },
+            { "Box Lights", false },
+            { "Point Lights", false },
+            { "Tint Lights", false },
             { "Templates", false },
             { "Clouds", false },
             { "Shadows", false },
@@ -118,6 +124,7 @@ namespace NST
         };
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
+        public bool IsLayerActive(string name) => _layers[name];
 
         /// <summary>
         /// Constructor used when creating a new level
@@ -352,7 +359,7 @@ namespace NST
             Dictionary<NSTEntity, string?> entities = [];
             List<NSTObject> objects = [];
 
-            HashSet<(string, string)> modelNames = [];
+            Dictionary<string, string> modelNames = [];
 
             // Step 1: Find entities (+ model names)
 
@@ -409,8 +416,8 @@ namespace NST
                     entities.Add(entity3D, modelName);
                     entityAdded = true;
                     
-                    if (modelPath != null && modelName != null) {
-                        modelNames.Add((modelName, modelPath));
+                    if (modelPath != null && modelName != null && !modelNames.ContainsKey(modelName)) {
+                        modelNames.Add(modelName, modelPath);
                     }
                 }
 
@@ -431,13 +438,15 @@ namespace NST
 
             InstanceManager.ShowCollisions(true, _layers["Static Collisions"], _layers["Border Collisions"]);
 
+            InstanceManager.InitAudioBoxes(_layers["Audio Boxes"]);
+
             // Step 10: Add objects to tree
             _treeView = new EntityTreeView(this, InstanceManager.AllObjects);
 
             Console.WriteLine($"[THREAD] Loaded {entities.Count} entities in {sw.ElapsedMilliseconds}ms");
         }
 
-        private void LoadModels(Dictionary<NSTEntity, string?> entities, HashSet<(string, string)> modelNames, bool progressBar = false)
+        private void LoadModels(Dictionary<NSTEntity, string?> entities, Dictionary<string, string> modelNames, bool progressBar = false)
         {
             Dictionary<string, NSTModel> models = [];
 
@@ -1376,7 +1385,7 @@ namespace NST
 
                     foreach (KeyValuePair<string, bool> layer in _layers)
                     {
-                        if (layer.Key == "Dynamic Clips" || layer.Key == "Templates" || layer.Key == "Static Collisions")
+                        if (layer.Key == "Dynamic Clips" || layer.Key == "Audio Boxes" || layer.Key == "Box Lights" || layer.Key == "Templates" || layer.Key == "Static Collisions")
                         {
                             ImGui.Separator();
                         }
@@ -1390,7 +1399,11 @@ namespace NST
                             
                             RenderNextFrame = true;
 
-                            if (layer.Key == "Static Collisions")
+                            if (layer.Key == "Audio Boxes")
+                            {
+                                InstanceManager.InitAudioBoxes(enabled);
+                            }
+                            else if (layer.Key == "Static Collisions")
                             {
                                 InstanceManager.ShowCollisions(enabled, true, false);
                             }
@@ -1524,6 +1537,9 @@ namespace NST
                 raycaster.layers.Disable((int)CameraLayer.TriggerVolume);
                 raycaster.layers.Disable((int)CameraLayer.AudioBox);
                 raycaster.layers.Disable((int)CameraLayer.VisualBox);
+                raycaster.layers.Disable((int)CameraLayer.BoxLight);
+                raycaster.layers.Disable((int)CameraLayer.PointLight);
+                raycaster.layers.Disable((int)CameraLayer.TintSphere);
                 raycaster.layers.Disable((int)CameraLayer.TriggersOn);
             }
 
@@ -1669,7 +1685,7 @@ namespace NST
             Dictionary<igObject, igObject>? clones = null)
         {
             Dictionary<NSTEntity, string?> newEntities = [];
-            HashSet<(string, string)> modelNames = [];
+            Dictionary<string, string> modelNames = [];
             List<NSTObject> newObjects = [];
             List<NSTObject> allObjects = [];
 
@@ -1716,8 +1732,8 @@ namespace NST
                 string? modelPath = cloneEntity.GetModelName(destIgz, this);
                 string? modelName = Path.GetFileNameWithoutExtension(modelPath);
 
-                if (modelPath != null && modelName != null) {
-                    modelNames.Add((modelName, modelPath));
+                if (modelPath != null && modelName != null && !modelNames.ContainsKey(modelName)) {
+                    modelNames.Add(modelName, modelPath);
                 }
 
                 newEntities.Add(entity, modelName);

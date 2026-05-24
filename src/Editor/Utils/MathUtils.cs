@@ -8,6 +8,31 @@ namespace NST
     public static class MathUtils
     {
         /// <summary>
+        /// Get the scale component of the matrix
+        /// </summary>
+        public static THREE.Vector3 GetScale(this THREE.Matrix4 matrix)
+        {
+            THREE.Vector3 scale = new THREE.Vector3();
+
+            matrix.Decompose(new THREE.Vector3(), new THREE.Quaternion(), scale);
+
+            return scale;
+        }
+
+        /// <summary>
+        /// Reset the scale component of the matrix to (1, 1, 1)
+        /// </summary>
+        public static THREE.Matrix4 ResetScale(this THREE.Matrix4 matrix)
+        {
+            THREE.Vector3 pos = new THREE.Vector3();
+            THREE.Quaternion rot = new THREE.Quaternion();
+
+            matrix.Decompose(pos, rot, new THREE.Vector3());
+
+            return matrix.Compose(pos, rot, THREE.Vector3.One());
+        }
+
+        /// <summary>
         /// Get the next power of two greater or equal than n
         /// </summary>
         public static int GetNextPowerOfTwo(int n)

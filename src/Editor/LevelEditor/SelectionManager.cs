@@ -1019,6 +1019,8 @@ namespace NST
                     }
                 }
 
+                _explorer.InstanceManager.InitAudioBoxes(_explorer.IsLayerActive("Audio Boxes") && newObjects.Any(o => o is NSTEntity e && e.IsSFX));
+                
                 UpdateSelection(newObjects.Where(e => e is not NSTEntity entity || entity.IsSpawned).ToList());
 
                 if (_copyPaste.All(e => e is NSTEntity entity && entity.IsPrefabChild))
