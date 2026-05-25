@@ -496,8 +496,15 @@ namespace NST
             List<string> options = GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build);
             if (options.Count > 0)
             {
-                IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter ?? "Crash");
-                update.AddFile(characterData);
+                try
+                {
+                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter);
+                    update.AddFile(characterData);
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Could not create character data for {zoneInfo._overrideCharacter}: {e.Message}");
+                }
             }
 
             zoneInfo._zoneVehicle = null;

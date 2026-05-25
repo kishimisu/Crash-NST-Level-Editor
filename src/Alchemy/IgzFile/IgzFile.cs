@@ -118,9 +118,7 @@ namespace Alchemy
 
             if (reference.objectName.All(char.IsDigit))
             {
-                uint hash = uint.Parse(reference.objectName);
-
-                return Objects.Find(o => o.ObjectName != null && NamespaceUtils.ComputeHash(o.ObjectName) == hash);
+                return FindObject<igObject>(uint.Parse(reference.objectName));
             }
 
             string objectName = reference.objectName.ToLowerInvariant();
@@ -130,9 +128,19 @@ namespace Alchemy
 
         public T? FindObject<T>(string objectName) where T : igObject
         {
+            if (objectName.All(char.IsDigit))
+            {
+                return FindObject<T>(uint.Parse(objectName));
+            }
+
             objectName = objectName.ToLowerInvariant();
 
             return Objects.Find(o => o.ObjectName?.ToLowerInvariant() == objectName) as T;
+        }
+
+        public T? FindObject<T>(uint hash) where T : igObject
+        {
+            return Objects.Find(o => o.ObjectName != null && NamespaceUtils.ComputeHash(o.ObjectName) == hash) as T;
         }
 
         private static readonly HashSet<Type> _ctrToNstIncompatible =

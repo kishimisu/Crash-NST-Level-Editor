@@ -97,9 +97,9 @@ namespace NST
             if (AutoPlayAudio && autoPlay) Play();
         }
 
-        public void InitAudioPlayer(CSoundSample soundSample)
+        public void InitAudioPlayer(CSoundSample soundSample, string name)
         {
-            InitAudioPlayer(soundSample._data.ToArray(), true, soundSample.ObjectName ?? "CSoundSample");
+            InitAudioPlayer(soundSample._data.ToArray(), true, name);
         }
 
         public void Render(Action<byte[]>? onReplace = null, int verticalSpacing = 10)

@@ -118,7 +118,7 @@ namespace NST
 
             if (_audioFile.GetName().EndsWith(".snd"))
             {
-                audioPlayer.InitAudioPlayer(_audioFile.Uncompress(), autoPlay, _subSoundObject._fileName);
+                audioPlayer.InitAudioPlayer(_audioFile.Uncompress(), autoPlay, fileName);
                 return;
             }
 
@@ -131,7 +131,7 @@ namespace NST
                 return;
             }
 
-            audioPlayer.InitAudioPlayer(_soundSample._data.ToArray(), autoPlay, _subSoundObject._fileName);
+            audioPlayer.InitAudioPlayer(_soundSample._data.ToArray(), autoPlay, fileName);
         }
     }
 }

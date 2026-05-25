@@ -432,8 +432,13 @@ namespace NST
             return buildName + optionsStr;
         }
 
-        public static IgArchiveFile CreateCharacterData(List<string> options, string zoneInfoName, string characterName = "Crash")
+        public static IgArchiveFile CreateCharacterData(List<string> options, string zoneInfoName, string? characterName)
         {
+            if (string.IsNullOrEmpty(characterName))
+            {
+                characterName = "Crash";
+            }
+
             IgArchive crashArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, $"{characterName}.pak"))!;
             IgArchiveFile file = crashArchive.FindFile($"{characterName}_CharacterData.igz")!;
             IgzFile igz = file.ToIgzFile();
@@ -469,6 +474,11 @@ namespace NST
                         diggingData._Zone_Info_0x80.Reference!.namespaceName = zoneInfoName;
                         break;
 
+                    case "boulder":
+                        Crash_BoulderData boulderData = igz.FindObject<Crash_BoulderData>()!;
+                        boulderData._Zone_Info_0x88.Reference!.namespaceName = zoneInfoName;
+                        break;
+
                     // case "jetski":
                     //     var jetskiData = igz.FindObject<Crash_Ride_JetskiData>()!;
                     //     jetskiData._Zone_Info_0x28.Reference!.namespaceName = zoneInfoName;
@@ -478,11 +488,6 @@ namespace NST
                     // case "plane":
                     //     var planeData = igz.FindObject<Crash_Ride_PlaneData>()!;
                     //     planeData._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
-                    //     break;
-
-                    // case "boulder":
-                    //     Crash_BoulderData boulderData = igz.FindObject<Crash_BoulderData>()!;
-                    //     boulderData._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
                     //     break;
                 }
             }
@@ -505,7 +510,7 @@ namespace NST
             if (id == "L308" || id == "L314" || id == "L322" || id == "L328") return "bike";
             if (id == "L305" || id == "L318" || id == "L326" || id == "L331") return "jetski";
             if (id == "L317" || id == "L324" || id == "L330")                 return "plane";
-            // if (id == "L104" || id == "L113" || id == "L205" || id == "L209" || id == "L215") return "boulder";
+            if (id == "L104" || id == "L113" || id == "L205" || id == "L209" || id == "L215") return "boulder";
 
             return null;
         }

@@ -76,7 +76,7 @@ namespace NST
 
         private static readonly List<string> _deathTriggerTypes = new()
         {
-            "Fall_Fast", "Fall_Shoes", "Ashes", "Drowning", "Drowning_Shallow", "Swim_Whirlpool"
+            "Fall_Fast", "Fall_Shoes", "Ashes", "Electrocuted", "Drowning", "Drowning_Shallow", "Swim_Whirlpool"
         };
         private static readonly Dictionary<string, string> _deathTriggerVFXs = new()
         {

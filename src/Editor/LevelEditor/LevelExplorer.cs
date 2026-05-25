@@ -16,6 +16,7 @@ namespace NST
         private bool _updateCachedModels = true;
 
         public Dictionary<igComponentData, List<NSTEntity>> CachedComponents { get; } = [];
+        public Dictionary<igComponentData, ComponentRenderer.AudioPlayerInfos> AudioPlayers { get; } = [];
 
         public IgArchiveRenderer ArchiveRenderer { get; private set; }
         public IgArchive Archive => ArchiveRenderer.Archive;
@@ -120,6 +121,7 @@ namespace NST
             {"Bear Ride", "bear"},
             {"Tiger Ride", "tiger"},
             {"Jetpack", "jetpack"},
+            {"Boulder", "boulder"},
             {"Digging", "dig"},
         };
         

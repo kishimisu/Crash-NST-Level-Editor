@@ -1000,8 +1000,6 @@ namespace NST
 #endregion
 #region Audio
 
-        private static readonly Dictionary<igComponentData, AudioPlayerInfos> _audioPlayers = [];
-
         public class AudioPlayerInfos
         {
             public AudioPlayer AudioPlayer = new();
@@ -1067,10 +1065,10 @@ namespace NST
 
         private static AudioPlayerInfos InitAudioArchive(igComponentData component, LevelExplorer explorer, NamedReference reference)
         {
-            if (!_audioPlayers.TryGetValue(component, out var infos))
+            if (!explorer.AudioPlayers.TryGetValue(component, out var infos))
             {
                 infos = new AudioPlayerInfos() { Component = component };
-                _audioPlayers.Add(component, infos);
+                explorer.AudioPlayers.Add(component, infos);
 
                 IgArchiveFile? audioArchiveFile = explorer.Archive.FindFile(reference.namespaceName, FileSearchType.Name);
                 if (audioArchiveFile == null) return infos;
@@ -1228,11 +1226,11 @@ namespace NST
                 return;
             }
 
-            if (!_audioPlayers.TryGetValue(component, out var infos))
+            if (!explorer.AudioPlayers.TryGetValue(component, out var infos))
             {
                 infos = new AudioPlayerInfos() { Component = component };
 
-                _audioPlayers.Add(component, infos);
+                explorer.AudioPlayers.Add(component, infos);
 
                 Task.Run(() => 
                 {

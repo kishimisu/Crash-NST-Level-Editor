@@ -86,7 +86,7 @@ namespace NST
             else if (Object is CSoundSample soundSample)
             {
                 _audioPreview = true;
-                renderer.AudioPlayer.InitAudioPlayer(soundSample);
+                renderer.AudioPlayer.InitAudioPlayer(soundSample, renderer.ArchiveFile.GetName(false));
             }
         }
 
@@ -348,7 +348,7 @@ namespace NST
                     {
                         sample._data.Set(newAudioData);
                         renderer.SetUpdated(sample);
-                        renderer.AudioPlayer.InitAudioPlayer(sample);
+                        renderer.AudioPlayer.InitAudioPlayer(sample, renderer.ArchiveFile.GetName(false));
                     }
                 });
             }
