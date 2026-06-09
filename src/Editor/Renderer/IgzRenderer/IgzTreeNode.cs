@@ -93,11 +93,11 @@ namespace NST
         /// <summary>
         /// Setup and render this node
         /// </summary>
-        public void Render(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent = null, bool defaultOpen = false)
+        public void Render(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent = null, bool defaultOpen = false, string parentNodePath = "")
         {
             bool recursion = parentNodes.Contains(this);
 
-            NodePath = string.Join(" > ", parentNodes.Select(n => n.GetDisplayName())) + " > " + GetDisplayName();
+            NodePath = parentNodePath + GetDisplayName();
 
             // Setup node
             ImGuiTreeNodeFlags? flags = SetupNode(tree, recursion, defaultOpen, () => OnFocus(tree.Renderer));
@@ -123,9 +123,10 @@ namespace NST
 
                 parentNodes.Add(this);
                 
-                foreach (IgzTreeNode child in Children.ToList())
+                var children = Children.OfType<IgzTreeNode>().ToList();
+                for (int i = 0; i < children.Count; i++)
                 {
-                    child.Render(tree, parentNodes, this, openChildNode);
+                    children[i].Render(tree, parentNodes, this, openChildNode, NodePath + i);
                 }
 
                 parentNodes.Remove(this);

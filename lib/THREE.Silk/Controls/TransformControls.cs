@@ -467,6 +467,7 @@ namespace THREE.Silk
         IControlsContainer control;
         Func<MouseEventArgs, Vector2?> getMousePositionFunc;
         public bool EnableTranslateXYZ = true;
+        public Vector3 startPos = new Vector3();
 
         public TransformControls(IControlsContainer control, Camera camera, bool enableTranslateXYZ, Func<MouseEventArgs, Vector2?> getMousePosition) : base()
         {
@@ -704,21 +705,21 @@ namespace THREE.Silk
                         if (axis.IndexOf("X") != -1)
                         {
 
-                            object3D.Position.X = (float)System.Math.Round(object3D.Position.X / this.translationSnap) * this.translationSnap;
+                            object3D.Position.X = (float)System.Math.Round((object3D.Position.X - startPos.X) / this.translationSnap) * this.translationSnap + startPos.X;
 
                         }
 
                         if (axis.IndexOf("Y") != -1)
                         {
 
-                            object3D.Position.Y = (float)System.Math.Round(object3D.Position.Y / this.translationSnap) * this.translationSnap;
+                            object3D.Position.Y = (float)System.Math.Round((object3D.Position.Y - startPos.Y) / this.translationSnap) * this.translationSnap + startPos.Y;
 
                         }
 
                         if (axis.IndexOf("Z") != -1)
                         {
 
-                            object3D.Position.Z = (float)System.Math.Round(object3D.Position.Z / this.translationSnap) * this.translationSnap;
+                            object3D.Position.Z = (float)System.Math.Round((object3D.Position.Z - startPos.Z) / this.translationSnap) * this.translationSnap + startPos.Z;
 
                         }
 
@@ -739,21 +740,21 @@ namespace THREE.Silk
                         if (axis.IndexOf("X") != -1)
                         {
 
-                            object3D.Position.X = (float)System.Math.Round(object3D.Position.X / this.translationSnap) * this.translationSnap;
+                            object3D.Position.X = (float)System.Math.Round((object3D.Position.X - startPos.X) / this.translationSnap) * this.translationSnap + startPos.X;
 
                         }
 
                         if (axis.IndexOf("Y") != -1)
                         {
 
-                            object3D.Position.Y = (float)System.Math.Round(object3D.Position.Y / this.translationSnap) * this.translationSnap;
+                            object3D.Position.Y = (float)System.Math.Round((object3D.Position.Y - startPos.Y) / this.translationSnap) * this.translationSnap + startPos.Y;
 
                         }
 
                         if (axis.IndexOf("Z") != -1)
                         {
 
-                            object3D.Position.Z = (float)System.Math.Round(object3D.Position.Z / this.translationSnap) * this.translationSnap;
+                            object3D.Position.Z = (float)System.Math.Round((object3D.Position.Z - startPos.Z) / this.translationSnap) * this.translationSnap + startPos.Z;
 
                         }
 

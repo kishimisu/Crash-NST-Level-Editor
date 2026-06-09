@@ -125,6 +125,8 @@ namespace NST
                 _selectionContainer.Quaternion.Copy(THREE.Quaternion.Identity());
                 _selectionContainer.Scale.Copy(THREE.Vector3.One());
 
+                _gizmos.startPos.Copy(_selectionContainer.Position);
+
                 if (obj is NSTSplineRotationKeyFrame && _gizmos.mode != "rotate")
                 {
                     _gizmos.mode = "rotate";
@@ -206,6 +208,8 @@ namespace NST
         {
             HashSet<NSTSpline> refreshSplines = [];
             HashSet<NSTObject> refreshedObjects = [];
+
+            _gizmos.startPos.Copy(_selectionContainer.Position);
 
             foreach (NSTObject obj in _selection)
             {

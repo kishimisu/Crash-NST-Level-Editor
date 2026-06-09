@@ -107,6 +107,9 @@ namespace NST
         private bool _refreshSelectionOnMouseUp = false;
         private static int _maxTextureSize = 512;
 
+        private float _gizmoTranslationSnap = 80;
+        private float _gizmoRotationSnap = 45;
+
         public bool CanUseBoxSelection => !_gizmos.dragging && _clickedInsideScene && IsWindowFocused;
 
         public EntityTreeView TreeView => _treeView;
@@ -164,7 +167,7 @@ namespace NST
         /// <summary>
         /// Constructor used when opening an existing level
         /// </summary>
-        public LevelExplorer(IgArchiveRenderer archiveRenderer, igObject? objToFocus = null) : base(useEffectComposer: true, alwaysRender: false)
+        public LevelExplorer(IgArchiveRenderer archiveRenderer, igObject? objToFocus = null, THREE.Vector3? camPos = null, THREE.Vector3? camLookAt = null) : base(useEffectComposer: true, alwaysRender: false)
         {
             ArchiveRenderer = archiveRenderer;
 
@@ -173,6 +176,12 @@ namespace NST
             _initializationTask = Task.Run(() => 
             {
                 LoadEntities();
+
+                if (camPos != null && camLookAt != null)
+                {
+                    _camera.Position.Copy(camPos);
+                    _fpsControls?.LookAt(camLookAt);
+                }
 
                 if (objToFocus != null)
                 {
@@ -276,6 +285,9 @@ namespace NST
 
             bool enableTranslateXYZ = LocalStorage.Get("enable_translate_xyz", true);
             _gizmos = new THREE.Silk.TransformControls(this, _camera, enableTranslateXYZ, GetClipSpaceMousePos);
+
+            _gizmoTranslationSnap = LocalStorage.Get("translation_snap", 80.0f);
+            _gizmoRotationSnap = LocalStorage.Get("rotation_snap", 45.0f);
 
             foreach ((string layerName, bool active) in _layers)
             {
@@ -708,6 +720,17 @@ namespace NST
                 }
             }
         }
+        
+        private void CopyObjects()
+        {
+            if (SelectionManager.Copy(this))
+            {
+                THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
+                _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
+                Task.Delay(250).ContinueWith(_ => { _outlinePass.visibleEdgeColor.Copy(prev); RenderNextFrame = true; });
+                RenderNextFrame = true;
+            }
+        }
 
         private void PasteObjects(bool keepOriginalPosition = false, bool moveSelection = false)
         {
@@ -1011,8 +1034,7 @@ namespace NST
 
                         if (ImGui.Button("Collapse all"))
                         {
-                            _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
-                            if (SelectionManager._selection.Count > 0) _treeView.SelectObject(SelectionManager._selection[0]);
+                            CollapseTree();
                         }
 
                         if (ImGui.BeginChild("ObjectTree" + GetHashCode()))
@@ -1106,7 +1128,24 @@ namespace NST
                 ImGui.InputInt("##tmp", ref tmp);
             }
 
-            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
+            if (ImGui.IsKeyDown(ImGuiKey.LeftShift))
+            {
+                _gizmos.translationSnap = _gizmoTranslationSnap;
+                _gizmos.rotationSnap = _gizmoRotationSnap * THREE.MathUtils.DEG2RAD;
+                _gizmos.scaleSnap = 1.0f;
+            }
+            else
+            {
+                _gizmos.translationSnap = 0;
+                _gizmos.scaleSnap = 0;
+                _gizmos.rotationSnap = 0;
+            }
+
+            if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.O))
+            {
+                App.OnClickOpen(true);
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S))
             {
                 SaveArchive(launchGame: false, saveAs: false);
             }
@@ -1124,13 +1163,7 @@ namespace NST
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.C))
             {
-                if (SelectionManager.Copy(this))
-                {
-                    THREE.Color prev = new THREE.Color().Copy(_outlinePass.visibleEdgeColor);
-                    _outlinePass.visibleEdgeColor.SetRGB(1.0f, 0.25f, 0.0f);
-                    Task.Delay(250).ContinueWith(_ => { _outlinePass.visibleEdgeColor.Copy(prev); RenderNextFrame = true; });
-                    RenderNextFrame = true;
-                }
+                CopyObjects();
             }   
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.V))
             {
@@ -1143,6 +1176,11 @@ namespace NST
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.X))
             {
                 PasteObjects(moveSelection: true);
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.D))
+            {
+                CopyObjects();
+                PasteObjects(keepOriginalPosition: true);
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
@@ -1166,12 +1204,19 @@ namespace NST
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
             {
-                SelectionManager.ClearSelection(true);
-                RenderNextFrame = true;
-                _gizmos.Visible = false;
+                if (SelectionManager._selection.Count > 0)
+                {
+                    SelectionManager.ClearSelection(true);
+                    RenderNextFrame = true;
+                    _gizmos.Visible = false;
+                }
+                else
+                {
+                    CollapseTree();
+                }
             }
         }
-        
+
         private void RenderSettingsPanel()
         {
             const uint levelColor = 0xffcc66;
@@ -1318,6 +1363,20 @@ namespace NST
                     RenderNextFrame = true;
                 }
 
+                ImGuiUtils.ColoredSeparator("Align to grid", editorColor);
+                ImGuiUtils.Prefix("Translation:");
+                if (ImGui.DragFloat("##translateSnap", ref _gizmoTranslationSnap))
+                {
+                    _gizmos.translationSnap = _gizmoTranslationSnap;
+                    LocalStorage.Set("translation_snap", _gizmoTranslationSnap);
+                }
+                ImGuiUtils.Prefix("Rotation:   ");
+                if (ImGui.DragFloat("##rotateSnap", ref _gizmoRotationSnap, 1, 0, 360))
+                {
+                    _gizmos.rotationSnap = _gizmoRotationSnap;
+                    LocalStorage.Set("rotation_snap", _gizmoRotationSnap);
+                }
+
                 ImGui.PopItemWidth();
                 ImGui.Spacing();
                 
@@ -1330,6 +1389,8 @@ namespace NST
                     _fpsControls.CameraSpeed = 100;
                     _fpsControls.SpeedIncrease = true;
                     _gizmos.EnableTranslateXYZ = true;
+                    _gizmoTranslationSnap = 80;
+                    _gizmoRotationSnap = 45;
 
                     LocalStorage.Set("max_texture_size", _maxTextureSize);
                     LocalStorage.Set("camera_far", _camera.Far);
@@ -1338,6 +1399,8 @@ namespace NST
                     LocalStorage.Set("camera_speed", _fpsControls.CameraSpeed);
                     LocalStorage.Set("increase_speed", _fpsControls.SpeedIncrease);
                     LocalStorage.Set("enable_translate_xyz", _gizmos.EnableTranslateXYZ);
+                    LocalStorage.Set("translation_snap", _gizmoTranslationSnap);
+                    LocalStorage.Set("rotation_snap", _gizmoRotationSnap);
 
                     _camera.UpdateProjectionMatrix();
                     _gizmos._gizmo.UpdateVisibility("XYZ", _gizmos.EnableTranslateXYZ);
@@ -1352,7 +1415,7 @@ namespace NST
                 ImGui.BulletText("W,A,S,D: move camera");
                 ImGui.BulletText("Right click: rotate camera");
                 ImGui.BulletText("Shift: move faster");
-                ImGui.BulletText("A,E: move down/up");
+                ImGui.BulletText("Q,E: move down/up");
                 ImGui.BulletText("Scroll: zoom in/out");
                 ImGuiUtils.ColoredSeparator("Selection", controlsColor);
                 ImGui.BulletText("Left click: select object(s)");
@@ -1361,16 +1424,18 @@ namespace NST
                 ImGui.BulletText("Left Alt: align/snap selected crates");
                 ImGui.BulletText("Escape: unselect all (greatly improves FPS)");
                 ImGuiUtils.ColoredSeparator("Objects", controlsColor);
-                ImGui.BulletText("Right click: add objects");
+                ImGui.BulletText("Right click: create objects");
                 ImGui.BulletText("Ctrl + C: copy selected objects");
-                ImGui.BulletText("Ctrl + V: paste selected objects (current position)");
-                ImGui.BulletText("Ctrl+Shift + V: paste selected objects (original position)");
-                ImGui.BulletText("Ctrl+Shift + X: move selected objects");
-                ImGui.BulletText("Del/Suppr: delete selected objects");
+                ImGui.BulletText("Ctrl + V: paste objects");
+                ImGui.BulletText("Ctrl+Shift + V: paste objects (original position)");
+                ImGui.BulletText("Ctrl+Shift + X: move selection");
+                ImGui.BulletText("Ctrl + D: duplicate selection");
+                ImGui.BulletText("Del/Suppr: delete selection");
                 ImGuiUtils.ColoredSeparator("Gizmos", controlsColor);
                 ImGui.BulletText("Ctrl + E: translate mode");
                 ImGui.BulletText("Ctrl + R: rotate mode");
                 ImGui.BulletText("Ctrl + T: scale mode");
+                ImGui.BulletText("Hold Shift: align to grid");
                 ImGuiUtils.ColoredSeparator("Save & launch", controlsColor);
                 ImGui.BulletText("Ctrl + S: save level");
                 ImGui.BulletText("Ctrl + L: backup + save + launch");
@@ -1807,6 +1872,16 @@ namespace NST
             List<THREE.Intersection> intersections = Raycast(THREE.Vector2.Zero(), maxDistance, true);
             float distance = intersections.Count == 0 ? maxDistance * 0.5f : intersections[0].distance;
             return _camera.Position.Clone().Add(_camera.Front.Clone().MultiplyScalar(distance));
+        }
+
+        private void CollapseTree()
+        {
+            _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
+
+            if (SelectionManager._selection.Count > 0)
+            {
+                _treeView.SelectObject(SelectionManager._selection[0]);
+            }
         }
 
         public void OnStartScaling(NSTEntity entity)

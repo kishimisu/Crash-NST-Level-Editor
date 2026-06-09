@@ -99,18 +99,18 @@ namespace NST
         {
             Vector2 size = new Vector2(200, 0);
 
-            ImGui.SeparatorText("Create/edit mods    ");
+            ImGui.SeparatorText("Archive Editor    ");
 
             ImGui.SameLine();
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() - ImGui.CalcTextSize("    ").X);
             ImGui.TextDisabled("(?)");
-            ImGui.SetItemTooltip("View and edit files inside .pak archives.\n\n- New Mod: Create a new empty .pak archive (mod)\n- Open Archive: View and edit a .pak archive (mod, level...)");
+            ImGui.SetItemTooltip("View and edit files inside .pak archives.\n\n- New Mod: Create a new empty .pak archive\n- Open Archive Editor: View and edit a .pak archive");
 
             ImGuiUtils.VerticalSpacing(10);
 
             if (ImGuiUtils.CenteredButton("New Mod...", size)) App.OnClickNew();
             ImGui.Spacing();
-            if (ImGuiUtils.CenteredButton("Open Archive", size)) App.OnClickOpen();
+            if (ImGuiUtils.CenteredButton("Open Archive Editor", size)) App.OnClickOpen();
         }
 
         /// <summary>

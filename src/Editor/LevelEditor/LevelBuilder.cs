@@ -58,9 +58,7 @@ namespace NST
 
                 if (ImGuiUtils.CenteredButton("Play Custom Level", size))
                 {
-                    List<string> files = FileExplorer.OpenFiles(FileExplorer.EXT_ARCHIVES, false);
-                    if (files.Count == 0) return;
-                    IgArchive.Open(files[0]).TryRunLevel();
+                    App.OnClickPlayCustom();
                 }
             }
             else

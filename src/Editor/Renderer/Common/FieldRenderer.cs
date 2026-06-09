@@ -451,12 +451,6 @@ namespace NST
         /// </summary>
         private static void CreateObjectRefInput(FileRenderer renderer, object? value, Type type, string name, Action<object?> onChange)
         {
-            List<TreeNode> derivedNodes = renderer.FindDerivedObjectNodes(type, value, out int selectedIndex);
-            List<string> options = derivedNodes.Select(node => node.GetDisplayName()).ToList();
-            if (value != null) selectedIndex += 1;
-            options.Insert(0, "null");
-            options.Add($"(+) New {type.Name}...");
-
             ImGui.AlignTextToFramePadding();
 
             float availableWidth = ImGui.GetContentRegionAvail().X;
@@ -499,13 +493,20 @@ namespace NST
             ImGui.SetCursorPosX(ImGui.GetCursorPosX() + ImGui.GetContentRegionAvail().X - arrowWidth);
 
             // Display dropdown input
-            if (ImGui.BeginCombo(name, options[selectedIndex], ImGuiComboFlags.NoPreview))
+            if (ImGui.BeginCombo(name, "", ImGuiComboFlags.NoPreview))
             {
-                for (int i = 0; i < options.Count; i++)
+                List<TreeNode> derivedNodes = renderer.FindDerivedObjectNodes(type, value, out int selectedIndex);
+                
+                for (int i = 0; i < derivedNodes.Count + 2; i++)
                 {
-                    bool isSelected = (selectedIndex == i);
+                    string displayName = 
+                        i == 0 ? "null" : 
+                        i == derivedNodes.Count + 1 ? $"(+) New {type.Name}..." :
+                        derivedNodes[i-1].GetDisplayName();
 
-                    if (ImGui.Selectable(options[i], isSelected))
+                    bool isSelected = selectedIndex == i;
+
+                    if (ImGui.Selectable(displayName, isSelected))
                     {
                         selectedIndex = i;
 
@@ -515,9 +516,9 @@ namespace NST
                             onChange.Invoke(null);
                         }
                         // Update object ref
-                        else if (i < options.Count - 1)
+                        else if (i < derivedNodes.Count + 1)
                         {
-                            onChange.Invoke(derivedNodes[i - 1]);
+                            onChange.Invoke(derivedNodes[i-1]);
                         }
                         // Create new object
                         else

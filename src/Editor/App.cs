@@ -80,8 +80,12 @@ namespace NST
                 if (ImGui.MenuItem("Open archive")) OnClickOpen();
                 RenderOpenRecent(true);
                 ImGui.Separator();
+                if (ImGui.MenuItem("Play custom level")) OnClickPlayCustom();
+                if (ImGui.MenuItem("Open level editor")) OnClickOpen(true);
+                RenderOpenRecent(true, true);
+                ImGui.Separator();
                 if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
-                if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
+                // if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
                 if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                 ImGui.EndMenu();
             }
@@ -109,7 +113,7 @@ namespace NST
         /// </summary>
         public static void RenderOpenRecent(bool fromMainMenu = false, bool fromLevelEditor = false)
         {
-            if (ImGui.BeginMenu("Open recent"))
+            if (ImGui.BeginMenu($"Open recent {(fromLevelEditor ? "level" : "archive")}"))
             {
                 ImGui.SeparatorText(fromLevelEditor ? "Recent Levels" : "Recent Archives");
                 List<string> recent = fromLevelEditor ? LocalStorage.RecentLevels : LocalStorage.RecentFiles;
@@ -197,7 +201,7 @@ namespace NST
         /// <summary>
         /// Set focus on a level editor, creating it if necessary
         /// </summary>
-        public static void OpenLevelExplorer(IgArchiveRenderer archiveRenderer, igObject? objToFocus = null)
+        public static void OpenLevelExplorer(IgArchiveRenderer archiveRenderer, igObject? objToFocus = null, THREE.Vector3? camPos = null, THREE.Vector3? camLookAt = null)
         {
             foreach (LevelExplorer editor in _editors)
             {
@@ -210,7 +214,7 @@ namespace NST
                 }
             }
 
-            LevelExplorer newEditor = new LevelExplorer(archiveRenderer, objToFocus);
+            LevelExplorer newEditor = new LevelExplorer(archiveRenderer, objToFocus, camPos, camLookAt);
             LocalStorage.AddRecentFile(archiveRenderer.Archive.GetPath(), true);
             _editors.Add(newEditor);
         }
@@ -231,7 +235,7 @@ namespace NST
 
             if (explorer.ReOpen)
             {
-                OpenLevelExplorer(explorer.ArchiveRenderer);
+                OpenLevelExplorer(explorer.ArchiveRenderer, null, explorer.Camera.Position, explorer.Camera.Position + explorer.Camera.Front);
             }
             else if (_editors.Count == 0)
             {
@@ -365,6 +369,13 @@ namespace NST
             }
 
             _mainMenu.IsOpen = false;
+        }
+
+        public static void OnClickPlayCustom()
+        {
+            List<string> files = FileExplorer.OpenFiles(FileExplorer.EXT_ARCHIVES, false);
+            if (files.Count == 0) return;
+            IgArchive.Open(files[0]).TryRunLevel();
         }
 
         public static void OnClickNew()

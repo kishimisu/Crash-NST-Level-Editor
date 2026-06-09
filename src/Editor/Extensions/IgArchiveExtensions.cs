@@ -256,7 +256,125 @@ namespace NST
 
             return added;
         }
-        
+
+        public static void RemoveUnusedFiles(this IgArchiveRenderer renderer)
+        {
+            ModalRenderer.ShowLoadingModal("Removing usused files...");
+
+            Task.Run(() =>
+            {
+                HashSet<IgArchiveFile> visited = [];
+
+                if (renderer.Archive.FindPackageFile() is IgArchiveFile pkg) visited.Add(pkg);
+                if (renderer.Archive.FindCollisionFile(".igz") is IgArchiveFile colIgz) visited.Add(colIgz);
+                if (renderer.Archive.FindCollisionFile(".hkx") is IgArchiveFile colHkx) visited.Add(colHkx);
+
+                var FindDeps = (IEnumerable<IgArchiveFile> files) =>
+                {
+                    HashSet<string> strings = [];
+
+                    // Console.WriteLine("Visiting " + files.Count() + " files...");
+
+                    foreach (var file in files)
+                    {
+                        visited.Add(file);
+
+                        if (!file.IsIGZ() || file.GetPath().StartsWith("textures/")) continue;
+
+                        IgzFile igz = file.ToIgzFile();
+
+                        foreach (var objects in igz.Objects)
+                        {
+                            foreach (var str in objects.GetStrings(file.GameVersion))
+                            {
+                                strings.Add(str);
+                            }
+                        }
+                    }
+
+                    // Console.WriteLine("Added " + strings.Count + " strings.");
+
+                    return strings
+                        .Select(s => NamespaceUtils.GetFileName(s, false).ToLowerInvariant())
+                        .Where(s => !string.IsNullOrEmpty(s) && !s.Contains(' '))
+                        .ToHashSet();
+                };
+
+                var FindFiles = (HashSet<string> names) =>
+                {
+                    return renderer.Archive.GetFiles().Where(f =>
+                    {
+                        if (visited.Contains(f)) return false;
+
+                        string fileName = f.GetName(false).ToLowerInvariant();
+
+                        var SimplifyName = (string str) =>
+                        {
+                            int idx = str.LastIndexOf('!');
+                            if (idx == -1 || idx >= str.Length - 1) return str;
+
+                            str = str.Substring(idx + 1);
+                            str = str.Replace("{", "").Replace("}", "");
+
+                            idx = str.IndexOf('`');
+
+                            if (idx != -1)
+                            {
+                                str = str.Substring(0, idx);
+                            }
+
+                            if (!str.EndsWith('_'))
+                            {
+                                str = str.Substring(0, str.Length - 1);
+                            }
+
+                            return str;
+                        };
+
+                        fileName = SimplifyName(fileName);
+
+                        return names.Any(n => 
+                            fileName == n                || 
+                            fileName == n + "_sub"       ||
+                            fileName == n + "_anims"     ||
+                            fileName == n + "_script"    ||
+                            fileName == n + "_behavior"  ||
+                            fileName == n + "_character" ||
+                            fileName == SimplifyName(n)  ||
+                            fileName.StartsWith(n + ",") ||
+                            fileName == n.Replace("statemachine", "_behavior") ||
+                            fileName == n.Replace("hogrun", "run") + "_sub"
+                        );
+                    });
+                };
+
+                var files = renderer.Archive.GetFiles().Where(f => f.GetPath().StartsWith("maps/"));
+
+                while (files.Any())
+                {
+                    var deps = FindDeps(files);
+                    files = FindFiles(deps);
+                }
+
+                int removedCount = 0;
+
+                foreach (var file in renderer.Archive.GetFiles().OrderBy(f => f.GetPath()))
+                {
+                    if (file.GetPath().StartsWith("update/")) continue;
+                    
+                    if (!visited.Contains(file))
+                    {
+                        removedCount++;
+                        renderer.RemoveFile(file);
+                        // Console.WriteLine("Removed " + file.GetPath());
+                    }
+                }
+
+                // Console.WriteLine("Found " + visited.Count + "/" + renderer.Archive.GetFiles().Count + " dependencies");
+                ModalRenderer.ShowMessageModal("Success", $"Removed {removedCount} files");
+            });
+        }
+
         private record VertexData
         {
             public uint vertexSize { get; init; }

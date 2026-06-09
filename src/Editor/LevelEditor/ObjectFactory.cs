@@ -121,6 +121,24 @@ namespace NST
             { "vertical",   ("L103_TheGreatGate_Camera", "Camera01_V", "Vertical") },
         };
 
+        private static readonly Dictionary<string, bool> selectAll = new() 
+        {
+            {"Static Objects", true},
+            {"Prefabs", true},
+            {"CEntity", true},
+            {"CGameEntity", true},
+            {"CPhysicalEntity", true},
+            {"Cameras", true},
+            {"Camera Boxes", true},
+            {"Dynamic Clips", true},
+            {"Script Triggers", true},
+            {"Lights", true},
+            {"VFX", true},
+            {"SFX", true},
+            {"Hidden", true},
+            {"Other", true},
+        };
+
         private static string _floatMode = "None";
         private static string _gemColor = "Clear";
         private static bool _outlinedCrate = false;
@@ -435,7 +453,7 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
-                if (ImGui.BeginMenu("Other..."))
+                if (ImGui.BeginMenu("New other..."))
                 {
                     if (ImGui.BeginMenu("New Death Trigger..."))
                     {
@@ -484,6 +502,69 @@ namespace NST
                     if (ImGui.MenuItem("New Boost Pad")) TryAddObject(() => AddGenericTemplate("Chase_BoostPad", "Platforms", explorer));
                     if (ImGui.MenuItem("New Bounce Mine")) TryAddObject(() => AddGenericTemplate("Chase_BounceMine", "Hazards", explorer));
                     if (ImGui.MenuItem("New Cannon Ball")) TryAddObject(() => AddCannonBall(explorer));
+                    ImGui.EndMenu();
+                }
+
+                if (ImGui.BeginMenu("Select all..."))
+                {
+                    if (ImGui.SmallButton("Toggle all"))
+                    {
+                        bool toggle = !selectAll["Static Objects"];
+                        foreach (var e in selectAll)
+                        {
+                            selectAll[e.Key] = toggle;
+                        }
+                    }
+
+                    foreach (var e in selectAll)
+                    {
+                        bool tmp = e.Value;
+                        if (ImGui.Checkbox(e.Key, ref tmp))
+                        {
+                            selectAll[e.Key] = tmp;
+                        }
+                    }
+
+                    ImGui.Separator();
+                    
+                    if (ImGui.MenuItem("Select Objects"))
+                    {
+                        List<NSTObject> selection = explorer.InstanceManager.AllObjects.Where(obj =>
+                        {
+                            if (obj is NSTEntity entity)
+                            {
+                                Type type = obj.GetObject().GetType();
+
+                                if (entity.IsPrefabChild || entity.IsPrefabTemplate)  return false;
+                                if (entity.IsPrefabInstance)                          return selectAll["Prefabs"];
+                                if (entity.Model != null && type == typeof(igEntity)) return selectAll["Static Objects"];
+
+                                if (entity.IsLight)  return selectAll["Lights"];
+                                if (entity.IsVFX)    return selectAll["VFX"];
+                                if (entity.IsSFX)    return selectAll["SFX"];
+                                if (entity.IsHidden) return selectAll["Hidden"];
+
+                                if (type == typeof(CEntity))              return selectAll["CEntity"];
+                                if (type == typeof(CGameEntity))          return selectAll["CGameEntity"];
+                                if (type == typeof(CPhysicalEntity))      return selectAll["CPhysicalEntity"];
+                                if (type == typeof(CDynamicClipEntity))   return selectAll["Dynamic Clips"];
+                                if (type == typeof(CScriptTriggerEntity)) return selectAll["Script Triggers"];
+                            }
+                            else
+                            {
+                                if (obj is NSTCamera)    return selectAll["Cameras"];
+                                if (obj is NSTCameraBox) return selectAll["Camera Boxes"];
+                            }
+
+                            return selectAll["Other"];
+                        })
+                        .SelectMany(e => explorer.InstanceManager.Select(e))
+                        .Distinct()
+                        .ToList();
+
+                        explorer.SelectionManager.UpdateSelection(selection);
+                    }
+
                     ImGui.EndMenu();
                 }
 

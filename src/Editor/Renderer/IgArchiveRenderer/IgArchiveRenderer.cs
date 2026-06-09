@@ -151,6 +151,7 @@ namespace NST
                 }
 
                 // Shortcuts
+                if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.O)) App.OnClickOpen(); // Open
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.S)) TrySaveArchive(); // Save
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.S)) TrySaveArchive(saveAs: true); // Save as
                 if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.L)) TrySaveArchive(launchGame: true); // Save and run
@@ -178,7 +179,7 @@ namespace NST
                 }
                 if (ImGui.BeginMenu("File"))
                 {
-                    if (ImGui.MenuItem("Open", "Ctrl+O")) App.OnClickOpen(fromLevelEditor);
+                    if (ImGui.MenuItem($"Open {(fromLevelEditor ? "level" : "archive")}", "Ctrl+O")) App.OnClickOpen(fromLevelEditor);
                     App.RenderOpenRecent(fromLevelEditor: fromLevelEditor);
                     if (ImGui.MenuItem("Reload", "Ctrl+Shift+R")) TryReload(fromLevelEditor);
                     ImGui.Separator();
@@ -197,6 +198,7 @@ namespace NST
                         if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) customSaveMethod(false, true, false);
                         if (ImGui.MenuItem("Compress and save")) customSaveMethod(false, false, true);
                     }
+                    if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
 
                     ImGui.Separator();
 
@@ -673,6 +675,8 @@ namespace NST
         /// </summary>
         public void TrySaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false, bool fromLevelEditor = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
         {
+            saveAs |= compress;
+            
             if (!fromLevelEditor && App.GetLevelExplorer(this) is LevelExplorer explorer)
             {
                 explorer.SaveArchive(saveAs, launchGame, compress);
