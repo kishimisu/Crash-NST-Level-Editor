@@ -1195,7 +1195,7 @@ namespace NST
                     obj.ObjectName = newObjectNames[i];
                 }
 
-                explorer.GetOrCreateExternalIgzFile(sourceFile.GetPath(), out IgArchiveFile dstFile, out IgzFile dstIgz);
+                explorer.GetOrCreateExternalIgzFile(sourceFile.Path, out IgArchiveFile dstFile, out IgzFile dstIgz);
 
                 clones.AddRange(explorer.Clone([obj], sourceArchive, sourceIgz, dstFile, dstIgz, addToSelection: null, initializeObjects: true));
             }
@@ -1393,7 +1393,7 @@ namespace NST
                         if (handle.namespaceName.StartsWith(archiveName))
                         {
                             IgArchiveFile? refFile = archive.FindFile(handle.namespaceName, FileSearchType.Name);
-                            if (refFile == null || !refFile.GetPath().StartsWith("maps/")) continue;
+                            if (refFile == null || !refFile.Path.StartsWith("maps/")) continue;
 
                             string id = handle.namespaceName.Replace(archiveName, "");
                             

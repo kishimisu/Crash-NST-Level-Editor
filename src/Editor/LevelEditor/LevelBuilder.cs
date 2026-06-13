@@ -155,9 +155,9 @@ namespace NST
 
             Console.WriteLine($"Duplicating level: {levelName} ({newLevelName})");
 
-            archive.RebuildPackageFile(archive.GetFiles().Where(f => !f.GetPath().StartsWith("update/")).ToList(), out _);
+            archive.RebuildPackageFile(archive.Files.Where(f => !f.Path.StartsWith("update/")).ToList(), out _);
 
-            archive.SetPath($"{newLevelName}.pak");
+            archive.Path = $"{newLevelName}.pak";
 
             progress.SetProgress("newlevel", 1.0f, $"Duplicating level...");
 
@@ -191,8 +191,8 @@ namespace NST
 
             // Create zone info file
 
-            int index = packageFile.GetPath().IndexOf("maps/");
-            string levelIdentifier = packageFile.GetPath().Substring(index + 5).Replace("_pkg.igz", "").ToLowerInvariant();
+            int index = packageFile.Path.IndexOf("maps/");
+            string levelIdentifier = packageFile.Path.Substring(index + 5).Replace("_pkg.igz", "").ToLowerInvariant();
             string zoneInfoPath = $"update/maps/{levelIdentifier}_zoneinfo.igz";
             string crashMode = levelIdentifier.Substring(0, levelIdentifier.IndexOf('/'));
             EGameYear year = GetGameYear(crashMode);
@@ -262,7 +262,7 @@ namespace NST
 
             IgArchive archive = new IgArchive("Custom_Level.pak", GameVersion.NST);
 
-            string basePath = sourceFile.GetPath().Split("/").SkipLast(2).Aggregate((a, b) => a + "/" + b);
+            string basePath = sourceFile.Path.Split("/").SkipLast(2).Aggregate((a, b) => a + "/" + b);
             string mainPath = $"{basePath}/Custom_Level/Custom_Level.igz";
             string cameraPath = $"{basePath}/Custom_Level/Custom_Level_Camera.igz";
             string lightingPath = $"{basePath}/Custom_Level/Custom_Level_lighting.igz";
@@ -484,7 +484,7 @@ namespace NST
 
             var CreateMusicFromFile = (string identifier) =>
             {
-                IgArchiveFile? sourceMusicFile = sourceMusicArchive.GetFiles().Find(f => f.GetPath().StartsWith("maps/") && f.GetName().ToLowerInvariant().Contains(identifier));
+                IgArchiveFile? sourceMusicFile = sourceMusicArchive.Files.Find(f => f.Path.StartsWith("maps/") && f.GetName().ToLowerInvariant().Contains(identifier));
                 if (sourceMusicFile == null) return false;
 
                 IgzFile sourceMusicIgz = sourceMusicFile.ToIgzFile();
@@ -573,12 +573,12 @@ namespace NST
             using Stream template = Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.L332_CollisionTemplate.pak")!;
             IgArchive collisionArchive = IgArchive.Open(template, "L332_CollisionTemplate.pak");
             
-            foreach (IgArchiveFile collisionFile in collisionArchive.GetFiles())
+            foreach (IgArchiveFile collisionFile in collisionArchive.Files)
             {
-                collisionFile.archiveStream = template;
+                collisionFile.ArchiveStream = template;
                 collisionFile.SetData(collisionFile.Uncompress());
                 
-                string newPath = collisionFile.GetPath().Replace("maps/Crash1", basePath);
+                string newPath = collisionFile.Path.Replace("maps/Crash1", basePath);
                 archive.AddFile(collisionFile.Clone(newPath));
             }
 
@@ -617,7 +617,7 @@ namespace NST
             // Build package file
 
             string packagePath = $"packages/generated/{mainPath}".Replace(".igz", "_pkg.igz");
-            archive.RebuildPackageFile(archive.GetFiles(), out IgArchiveFile? packageFile, packagePath);
+            archive.RebuildPackageFile(archive.Files, out IgArchiveFile? packageFile, packagePath);
 
             if (packageFile != null)
             {

@@ -377,8 +377,8 @@ namespace NST
 
             // Step 1: Find entities (+ model names)
 
-            List<IgArchiveFile> mapFiles = Archive.GetFiles()
-                .Where( f => f.GetPath().StartsWith("maps/") && f.GetPath().EndsWith(".igz") 
+            List<IgArchiveFile> mapFiles = Archive.Files
+                .Where( f => f.Path.StartsWith("maps/") && f.Path.EndsWith(".igz") 
                              && !f.GetName().Contains("LegacyCamera") && ArchiveRenderer.IncludeInPackageFile(f) )
                 .ToList();
 
@@ -472,9 +472,8 @@ namespace NST
 
             // Step 2 : Load models (+ find meshes and materials)
 
-            Dictionary<string, IgArchiveFile> modelFiles = Archive
-                .GetFiles()
-                .Where(f => (f.GetPath().StartsWith("actors/") || f.GetPath().StartsWith("models/")) && f.IsIGZ())
+            Dictionary<string, IgArchiveFile> modelFiles = Archive.Files
+                .Where(f => (f.Path.StartsWith("actors/") || f.Path.StartsWith("models/")) && f.IsIGZ())
                 .ToDictionary(e => e.GetName(false).ToLowerInvariant(), e => e);
 
             for (int i = 0; i < modelNames.Count; i++)
@@ -511,7 +510,7 @@ namespace NST
                 }
 
                 model.OriginalPath = modelPath;
-                model.FilePath = modelFile.GetPath();
+                model.FilePath = modelFile.Path;
 
                 models[modelName] = model;
                 _cachedModels[modelNameLower] = model;
@@ -1682,7 +1681,7 @@ namespace NST
 
             if (existing != null) return existing.GetName(false);
 
-            string path = Archive.FindMainMapFile()!.GetPath().Replace(".igz", $"{identifier}.igz");
+            string path = Archive.FindMainMapFile()!.Path.Replace(".igz", $"{identifier}.igz");
             return Path.GetFileNameWithoutExtension(path);
         }
 
@@ -1704,7 +1703,7 @@ namespace NST
             }
             else
             {
-                string path = Archive.FindMainMapFile()!.GetPath().Replace(".igz", $"{identifier}.igz");
+                string path = Archive.FindMainMapFile()!.Path.Replace(".igz", $"{identifier}.igz");
 
                 file = new IgArchiveFile(path, Archive.GameVersion);
                 igz = new IgzFile(path);

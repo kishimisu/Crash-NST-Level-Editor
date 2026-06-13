@@ -556,7 +556,7 @@ namespace NST
 
                     if (!copyToSameFile)
                     {
-                        newFile = _explorer.GetOrCreateExternalIgzFile(file.GetPath(), out dstFile, out dstIgz);
+                        newFile = _explorer.GetOrCreateExternalIgzFile(file.Path, out dstFile, out dstIgz);
                     }
                     
                     // Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));

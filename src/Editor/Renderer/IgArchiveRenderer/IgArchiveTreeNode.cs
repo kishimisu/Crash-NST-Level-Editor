@@ -144,7 +144,7 @@ namespace NST
 
             if (File == null) displayName += "/";
 
-            bool excludeFromPkg = (File != null && !File.GetPath().StartsWith("packages/") && !tree.Renderer.IncludeInPackageFile(File));
+            bool excludeFromPkg = File != null && !File.Path.StartsWith("packages/") && !tree.Renderer.IncludeInPackageFile(File);
 
             if (excludeFromPkg)
             {

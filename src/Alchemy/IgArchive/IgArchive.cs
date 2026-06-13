@@ -35,7 +35,6 @@ namespace Alchemy
     public class IgArchive
     {
         private const u32 SIGNATURE = 0x1A414749;
-        private const u32 VERSION = 11;
         private const u32 HEADER_SIZE = 0x38;
         public const i32 SECTOR_SIZE = 0x800;
         
@@ -71,22 +70,18 @@ namespace Alchemy
             public List<u8> smallBlocks = [];
         }
 
+        public string Path { get; set; } = "";
+        public List<IgArchiveFile> Files { get; } = [];
         public GameVersion GameVersion { get; set; } = GameVersion.NST;
 
-        private string _path = "";
-        private List<IgArchiveFile> _files = [];
-
-        public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(_path, includeExtension);
-        public string GetPath() => _path;
-        public void SetPath(string path) => _path = path;
-
-        public void AddFile(IgArchiveFile file) => _files.Add(file);
-        public void RemoveFile(IgArchiveFile file) => _files.Remove(file);
+        public void AddFile(IgArchiveFile file) => Files.Add(file);
+        public void RemoveFile(IgArchiveFile file) => Files.Remove(file);
+        public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(Path, includeExtension);
 
         public IgArchive(string path, GameVersion version, List<IgArchiveFile>? files = null)
         {
-            _path = path;
-            _files = files ?? [];
+            Path = path;
+            Files = files ?? [];
             GameVersion = version;
         }
 
@@ -134,12 +129,7 @@ namespace Alchemy
             {
                 (string fullPath, string path) = filePaths[i];
 
-                IgArchiveFile file = new IgArchiveFile(archivePath, path, fullPath, fileInfos[i], blockTables, fs, version);
-
-                if (fileIds[i] != file.GetHash())
-                    Console.WriteLine($"[ERROR] {i}: {fileIds[i]} != {file.GetHash()} for {path}");
-                if (fullPath != file.GetFullPath())
-                    Console.WriteLine($"[ERROR] {i}: {fullPath} != {file.GetFullPath()} for {path}");
+                var file = new IgArchiveFile(archivePath, path, fullPath, fileInfos[i], blockTables, fs, version);
 
                 files.Add(file);
             }
@@ -156,46 +146,47 @@ namespace Alchemy
         {
             if (filePath == null)
             {
-                filePath = _path;
+                filePath = Path;
             }
             else if (updatePath)
             {
-                _path = filePath;
+                Path = filePath;
             }
 
             // Sort files by hash
-            _files.Sort((f1, f2) => f1.GetHash().CompareTo(f2.GetHash()));
+            Files.Sort((f1, f2) => f1.Hash.CompareTo(f2.Hash));
 
             // Output writer
             using FileStream fs = new FileStream(temporaryPath ?? filePath, FileMode.Create, FileAccess.ReadWrite);
             using BinaryWriter writer = new BinaryWriter(fs);
 
             // File data writer
-            using MemoryStream fileStream = new MemoryStream(_files.Count * SECTOR_SIZE);
+            using MemoryStream fileStream = new MemoryStream(Files.Count * SECTOR_SIZE);
             using BinaryWriter fileWriter = new BinaryWriter(fileStream);
 
-            FileInfo[] fileInfos = new FileInfo[_files.Count];
-            long[] fileOffsets = new long[_files.Count];
+            FileInfo[] fileInfos = new FileInfo[Files.Count];
+            long[] fileOffsets = new long[Files.Count];
+            int[] blockIndices = new int[Files.Count];
 
             // Dump file data
-            for (int i = 0; i < _files.Count; i++)
+            for (int i = 0; i < Files.Count; i++)
             {
                 fileOffsets[i] = fileWriter.BaseStream.Position;
 
-                if (compress && !_files[i].SkipCompression())
+                if (compress && !Files[i].SkipCompression())
                 {
-                    fileWriter.Write(_files[i].Compress(true));
+                    fileWriter.Write(Files[i].Compress(true));
                 }
                 else
                 {
-                    fileWriter.Write(_files[i].GetData());
+                    fileWriter.Write(Files[i].GetData());
                 }
 
                 fileWriter.Align(SECTOR_SIZE);
             }
 
             // Build block tables
-            BlockTables blockTables = BuildBlockTables();
+            BlockTables blockTables = BuildBlockTables(blockIndices);
 
             // Build header
             IgArchiveHeader header = BuildHeader(blockTables);
@@ -206,44 +197,29 @@ namespace Alchemy
             writer.Align(SECTOR_SIZE);
 
             // Build file infos
-            for (int i = 0; i < _files.Count; i++)
+            for (int i = 0; i < Files.Count; i++)
             {
-                fileInfos[i].ordinal = (i - 1) << 0x8;
-
-                long offset = fileOffsets[i] + writer.BaseStream.Position;
-
-                if (offset > uint.MaxValue)
-                {
-                    fileInfos[i].offset = (u32)(offset - uint.MaxValue - 1);
-                    fileInfos[i].ordinal |= 0x1;
-                }
-                else
-                {
-                    fileInfos[i].offset = (u32)offset;
-                }
-
-                fileInfos[i].blockIndex = _files[i].GetBlockIndex();
-                fileInfos[i].uncompressedSize = _files[i].GetUncompressedSize();
+                fileInfos[i] = Files[i].BuildFileInfos(i, writer.BaseStream.Position, fileOffsets[i], blockIndices[i]);
             }
 
             // Write file data
             fileWriter.Write((byte)0);
-            writer.Write(fileStream.ToArray(), 0, fileWriter.GetPosition()-1);
+            writer.Write(fileStream.ToArray(), 0, fileWriter.GetPosition() - 1);
 
             int pathsOffsetsStart = writer.GetPosition();
-            int pathsNamesStart = writer.GetPosition() + _files.Count * sizeof(uint);
+            int pathsNamesStart = writer.GetPosition() + Files.Count * sizeof(uint);
             writer.Seek(pathsNamesStart, SeekOrigin.Begin);
 
             // Write file paths
-            for (int i = 0; i < _files.Count; i++)
+            for (int i = 0; i < Files.Count; i++)
             {
                 int offset = writer.GetPosition();
                 writer.Seek(pathsOffsetsStart + i * sizeof(uint), SeekOrigin.Begin);
                 writer.Write(offset - pathsOffsetsStart);
 
                 writer.Seek(offset, SeekOrigin.Begin);
-                writer.WriteNullTerminatedString(_files[i].GetFullPath());
-                writer.WriteNullTerminatedString(_files[i].GetPath());
+                writer.WriteNullTerminatedString(Files[i].FullPath);
+                writer.WriteNullTerminatedString(Files[i].Path);
                 writer.Write(0);
             }
 
@@ -256,11 +232,11 @@ namespace Alchemy
             writer.WriteStruct(header);
 
             // Write file hashes
-            for (int i = 0; i < _files.Count; i++)
-                writer.Write(_files[i].GetHash());
+            for (int i = 0; i < Files.Count; i++)
+                writer.Write(Files[i].Hash);
 
             // Write file infos
-            for (int i = 0; i < _files.Count; i++)
+            for (int i = 0; i < Files.Count; i++)
                 writer.WriteStruct(fileInfos[i]);
 
             // Write block tables
@@ -274,8 +250,8 @@ namespace Alchemy
                 writer.Write(blockTables.smallBlocks[i]);
 
             // Update file infos
-            for (int i = 0; i < _files.Count; i++)
-                _files[i].Setup(fs, filePath, blockTables, fileInfos[i]);
+            for (int i = 0; i < Files.Count; i++)
+                Files[i].Setup(fs, filePath, blockTables, fileInfos[i]);
 
             fs.Dispose();
 
@@ -285,7 +261,7 @@ namespace Alchemy
                 File.Delete(temporaryPath);
             }
 
-            Console.WriteLine($"Saved {filePath} ({_files.Count} files, {archiveSize/1024f/1024f:0.00} MB)");
+            Console.WriteLine($"Saved {filePath} ({Files.Count} files, {archiveSize/1024f/1024f:0.00} MB)");
         }
 
         /// <summary>
@@ -303,12 +279,13 @@ namespace Alchemy
             int index = 1;
             do
             {
-                path = file.GetPath().Replace(fileName, fileName + "_" + index++);
+                path = file.Path.Replace(fileName, fileName + "_" + index++);
             } 
             while (FindFile(path, FileSearchType.Path) != null);
 
             IgArchiveFile clone = file.Clone(path);
-            AddFile(clone);
+
+            Files.Add(clone);
 
             return clone;
         }
@@ -316,11 +293,11 @@ namespace Alchemy
         /// <summary>
         /// Returns a list of files in the archive verifying the specified filter
         /// </summary>
-        public List<IgArchiveFile> GetFiles(FileSearchParams searchParams = FileSearchParams.All)
+        public List<IgArchiveFile> GetFiles(FileSearchParams searchParams)
         {
             if (searchParams == FileSearchParams.All)
             {
-                return _files;
+                return Files;
             }
 
             bool includeIgz = searchParams.HasFlag(FileSearchParams.Igz);
@@ -329,11 +306,11 @@ namespace Alchemy
 
             if (includeAll) includeIgz = includeHkx = true;
 
-            return _files.Where(f =>
+            return Files.Where(f =>
             {
-                if (searchParams.HasFlag(FileSearchParams.Map) && !f.GetPath().StartsWith("maps/")) return false;
+                if (searchParams.HasFlag(FileSearchParams.Map) && !f.Path.StartsWith("maps/")) return false;
 
-                string ext = Path.GetExtension(f.GetName());
+                string ext = NamespaceUtils.GetExtension(f.GetName());
                 if (ext == ".igz") return includeIgz;
                 else if (ext == ".hkx") return includeHkx;
                 else return includeAll;
@@ -366,9 +343,9 @@ namespace Alchemy
                 FileSearchType.NameWithExtension =>
                     files.Find(f => f.GetName().Equals(name, comp)),
                 FileSearchType.Path => 
-                    files.Find(f => f.GetPath().Equals(name, comp)),
+                    files.Find(f => f.Path.Equals(name, comp)),
                 FileSearchType.FullPath => 
-                    files.Find(f => f.GetFullPath().Equals(name, comp)),
+                    files.Find(f => f.FullPath.Equals(name, comp)),
                 FileSearchType.NamespaceHash =>
                     files.Find(f => NamespaceUtils.ComputeHash(f.GetName(false)).ToString() == name),
 
@@ -387,12 +364,12 @@ namespace Alchemy
 
         public IgArchiveFile? FindCollisionFile(string extension = ".igz")
         {
-            return _files.Find(f => f.GetPath().Contains("StaticCollision") && f.GetPath().EndsWith(extension));
+            return Files.Find(f => f.Path.Contains("StaticCollision") && f.Path.EndsWith(extension));
         }
 
         public IgArchiveFile? FindPackageFile()
         {
-            return _files.Find(f => f.GetPath().EndsWith("_pkg.igz"));
+            return Files.Find(f => f.Path.EndsWith("_pkg.igz"));
         }
 
         public IgArchiveFile? FindMainMapFile()
@@ -400,7 +377,7 @@ namespace Alchemy
             IgArchiveFile? packageFile = FindPackageFile();
             if (packageFile == null) return null;
 
-            string? levelName = Path.GetFileName(Path.GetDirectoryName(packageFile.GetPath()));
+            string? levelName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(packageFile.Path));
             if (levelName == null) return null;
             
             return FindFile(levelName, FileSearchType.Name, FileSearchParams.MapIgz);
@@ -447,13 +424,13 @@ namespace Alchemy
             return paths;
         }
 
-        private BlockTables BuildBlockTables()
+        private BlockTables BuildBlockTables(int[] blockIndices)
         {
             BlockTables blockTables = new BlockTables();
 
-            for (int i = 0; i < _files.Count; i++)
+            for (int i = 0; i < Files.Count; i++)
             {
-                _files[i].BuildBlockTable(blockTables);
+                blockIndices[i] = Files[i].BuildBlockTable(blockTables);
             }
             
             return blockTables;
@@ -461,9 +438,9 @@ namespace Alchemy
 
         private IgArchiveHeader BuildHeader(BlockTables blockTables)
         {
-            (uint hashSearchDivider, uint hashSearchMargin) = ComputeHashSearchParams(_files);
+            (uint hashSearchDivider, uint hashSearchMargin) = ComputeHashSearchParams(Files);
 
-            uint tocSize = (uint)(_files.Count * sizeof(u32) * 5
+            uint tocSize = (uint)(Files.Count * sizeof(u32) * 5
                             + blockTables.largeBlocks.Count  * sizeof(u32)
                             + blockTables.mediumBlocks.Count * sizeof(u16)
                             + blockTables.smallBlocks.Count  * sizeof(u8));
@@ -473,7 +450,7 @@ namespace Alchemy
                 signature = SIGNATURE,
                 version = GameVersion.GetArchiveVersion(),
                 tocSize = tocSize,
-                fileCount = (uint)_files.Count,
+                fileCount = (uint)Files.Count,
                 sectorSize = SECTOR_SIZE,
                 hashSearchDivider = hashSearchDivider,
                 hashSearchMargin = hashSearchMargin,
@@ -501,7 +478,7 @@ namespace Alchemy
             // Find the first margin value that works for all files
             for (uint margin = 0; margin < files.Count; margin++)
             {
-                if (files.All(file => HashBinarySearch(hashSearchDivider, margin, file.GetHash(), files) != -1))
+                if (files.All(file => HashBinarySearch(hashSearchDivider, margin, file.Hash, files) != -1))
                 {
                     hashSearchMargin = margin;
                     break;
@@ -533,41 +510,16 @@ namespace Alchemy
                     
                 int mid = start + (end - start) / 2;
                 
-                if (files[mid].GetHash() == target)
+                if (files[mid].Hash == target)
                     return mid;
                 
-                if (files[mid].GetHash() < target)
+                if (files[mid].Hash < target)
                     start = mid + 1;
                 else
                     end = mid - 1;
             }
             
             return -1;
-        }
-
-        private static void VerifyHeader(IgArchiveHeader header)
-        {
-            if (header.signature != SIGNATURE)
-                throw new Exception($"Invalid IgArchive signature: 0x{header.signature:X}");
-            if (header.version != VERSION)
-                throw new Exception($"Invalid IgArchive version: {header.version}");
-            if (header.sectorSize != SECTOR_SIZE)
-                throw new Exception($"Invalid IgArchive sector size: {header.sectorSize}");
-        }
-
-        private static void LogHeader(IgArchiveHeader header)
-        {
-            Console.WriteLine($"[ igArchive header ] File count: {header.fileCount}");
-            Console.WriteLine($"Signature: 0x{header.signature:X}, version: {header.version}");
-            Console.WriteLine($"TOC size: {header.tocSize}, Sector size: {header.sectorSize}, Flags: 0x{header.flags:X}");
-            Console.WriteLine($"Hash search params: {header.hashSearchDivider}/{header.hashSearchMargin}");
-            Console.WriteLine($"Block count (small, medium, large): {header.smallBlockCount}, {header.mediumBlockCount}, {header.largeBlockCount}");
-            Console.WriteLine($"Path table offset: 0x{header.pathTableOffset:X}, size: {header.pathTableSize}");
-        }
-
-        private static void LogFileInfo(FileInfo fileInfo)
-        {
-            Console.WriteLine($"[ igArchive file ] offset: 0x{fileInfo.offset:X} ordinal: {fileInfo.ordinal} size: {fileInfo.uncompressedSize} blockIndex: {fileInfo.blockIndex}");
         }
     }
 

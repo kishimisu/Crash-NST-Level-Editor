@@ -1,5 +1,5 @@
-using System.Text.RegularExpressions;
 using NST;
+using System.Text.RegularExpressions;
 
 namespace Alchemy
 {
@@ -9,11 +9,13 @@ namespace Alchemy
     /// </summary>
     public class IgzFile
     {
-        public uint uid;
         private string _path;
-        public GameVersion GameVersion { get; set; } = GameVersion.NST;
+
         public List<igObject> Objects { get; set; } = [];
+
         public TDEP_Fixup Dependencies { get; set; } = [];
+
+        public GameVersion GameVersion { get; set; } = GameVersion.NST;
 
         public string GetName(bool includeExtension = true) => NamespaceUtils.GetFileName(_path, includeExtension);
         
@@ -25,7 +27,6 @@ namespace Alchemy
             _path = path;
             GameVersion = version;
             Objects = objects ?? [];
-            uid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -41,7 +42,6 @@ namespace Alchemy
             GameVersion = version;
             Objects = reader.GetObjects();
             Dependencies = reader.GetDependencies();
-            uid = ImGuiUtils.Uuid();
         }
 
         /// <summary>
@@ -459,31 +459,5 @@ namespace Alchemy
 
             return input.Substring(0, match.Index) + newNumberStr;
         }
-
-        // public List<igObject> FindParents(igObject obj, ChildrenSearchParams searchParams = ChildrenSearchParams.Default)
-        // {
-        //     return Objects.Where(o => o.GetChildren(searchParams).Any(c => c == obj)).ToList();
-        // }
-        // public List<igObject> FindParentsRecursive(igObject obj, ChildrenSearchParams searchParams = ChildrenSearchParams.Default, HashSet<igObject> visited = null)
-        // {
-        //     visited ??= new HashSet<igObject>();
-
-        //     List<igObject> parents = FindParents(obj, searchParams)
-        //         .Where(p => visited.Add(p))
-        //         .ToList();
-
-        //     return parents.Concat(parents.SelectMany(p => FindParentsRecursive(p, searchParams, visited))).ToList();
-        // }
-
-        // public static IgzFile CreateTexture(string imagePath, CompressionFormat compressionFormat = CompressionFormat.Bc1)
-        // {
-        //     byte[] pixels = TextureHelper.LoadImageFromFile(imagePath, out int width, out int height);
-
-        //     igImage2 image = new igImage2("image_name");
-
-        //     image.SetPixels(pixels, width, height, compressionFormat);
-
-        //     return new IgzFile([ image ]);
-        // }
     }
 }

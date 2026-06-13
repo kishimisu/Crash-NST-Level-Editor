@@ -34,62 +34,55 @@ namespace Alchemy
             public int uncompressedSize;
         }
 
+        public string Path { get; private set; }
+        public string FullPath { get; private set; }
+
+        public uint Hash { get; private set; }
         public GameVersion GameVersion { get; private set; }
 
-        private string _fullPath;
-        private string _path;
-        private uint _hash;
-
-        private byte[]? _data = null;
         private CompressionType _compressionType = CompressionType.Uncompressed;
-        private int _uncompressedSize;
-
         private BlockData[] _blocksData = [];
-        private int _blockIndex;
-        private int _sectorSize = IgArchive.SECTOR_SIZE;
+        private int _uncompressedSize;
+        private byte[]? _data = null;
 
-        public Stream? archiveStream = null;
         private string _archivePath;
         private long _archiveOffset;
 
-        public string GetFullPath() => _fullPath;
-        public string GetPath() => _path;
-        public uint GetHash() => _hash;
-        public int GetUncompressedSize() => _uncompressedSize;
-        public int GetBlockIndex() => _blockIndex;
+        public Stream? ArchiveStream { get; set; } = null;
 
         public bool IsCompressed() => _compressionType != CompressionType.Uncompressed;
-        public bool IsIGZ() => _path.EndsWith(".igz") || _path.EndsWith(".lng");
-        public bool IsHKX() => Path.GetExtension(_path).StartsWith(".hk");
+        public bool IsIGZ() => Path.EndsWith(".igz") || Path.EndsWith(".lng");
+        public bool IsHKX() => NamespaceUtils.GetExtension(Path).StartsWith(".hk");
 
         /// <summary>
         /// Uncompress and convert this file to an IGZ file
         /// </summary>
-        public IgzFile ToIgzFile() => new IgzFile(_path, Uncompress(), GameVersion);
+        public IgzFile ToIgzFile() => new IgzFile(Path, Uncompress(), GameVersion);
 
         /// <summary>
         /// Uncompress and convert this file to a Havok file
         /// </summary>
-        public HavokFile ToHavokFile() => new HavokFile(_path, Uncompress(), GameVersion);
+        public HavokFile ToHavokFile() => new HavokFile(Path, Uncompress(), GameVersion);
 
         public IgArchiveFile(string path, GameVersion version)
         {
+            Path = path;
+            FullPath = version.GetRootPath(path);
+            Hash = NamespaceUtils.ComputeHash(path);
+
             GameVersion = version;
-            _path = path;
-            _fullPath = version.GetRootPath(path);
-            _hash = NamespaceUtils.ComputeHash(path);
         }
 
         /// <summary>
         /// Constructor used when parsing an IgArchive
         /// </summary>
-        public IgArchiveFile(string archivePath, string path, string fullPath, IgArchive.FileInfo fileInfo, IgArchive.BlockTables blockTables, Stream igArchiveStream, GameVersion version, int sectorSize = IgArchive.SECTOR_SIZE) 
+        public IgArchiveFile(string archivePath, string path, string fullPath, IgArchive.FileInfo fileInfo, IgArchive.BlockTables blockTables, Stream igArchiveStream, GameVersion version) 
         {
+            Path = path;
+            FullPath = fullPath;
+            Hash = NamespaceUtils.ComputeHash(path);
+
             GameVersion = version;
-            _path = path;
-            _fullPath = fullPath;
-            _sectorSize = sectorSize;
-            _hash = NamespaceUtils.ComputeHash(path);
 
             Setup(igArchiveStream, archivePath, blockTables, fileInfo);
         }
@@ -97,27 +90,26 @@ namespace Alchemy
         /// <summary>
         /// Constructor used when cloning a file
         /// </summary>
-        private IgArchiveFile(string path, byte[]? data, int uncompressedSize, CompressionType compressionType, BlockData[] blocksData, int sectorSize = IgArchive.SECTOR_SIZE)
+        private IgArchiveFile(string path, byte[]? data, int uncompressedSize, CompressionType compressionType, BlockData[] blocksData)
         {
-            _path = path;
+            Path = path;
+            Hash = NamespaceUtils.ComputeHash(path);
+
             _data = data;
-            _sectorSize = sectorSize;
             _uncompressedSize = uncompressedSize;
             _compressionType = compressionType;
             _blocksData = blocksData;
-            _hash = NamespaceUtils.ComputeHash(path);
         }
 
         public void Setup(Stream igArchiveStream, string archivePath, IgArchive.BlockTables blockTables, IgArchive.FileInfo fileInfo)
         {
+            _uncompressedSize = fileInfo.uncompressedSize;
+
             _archivePath = archivePath;
             _archiveOffset = GetGlobalOffset(fileInfo);
-
-            _uncompressedSize = fileInfo.uncompressedSize;
+            
             _compressionType = GetCompressionType(fileInfo.blockIndex);
-
-            // If compressed, extract blocks data for uncompression
-            _blocksData = ReadBlockTable(igArchiveStream, blockTables, fileInfo);
+            _blocksData = ReadBlockTable(igArchiveStream, blockTables, fileInfo.blockIndex);
         }
 
         /// <summary>
@@ -139,24 +131,24 @@ namespace Alchemy
         /// <param name="updateHandles">(IGZ files only) Also update self-referencing handles to match the new path.</param>
         public void SetPath(string newPath, bool updateHandles = true)
         {
-            if (_path == newPath) return;
+            if (Path == newPath) return;
 
             if (updateHandles && IsIGZ())
             {
-                string newNamespace = Path.GetFileNameWithoutExtension(newPath);
+                string newNamespace = NamespaceUtils.GetFileName(newPath, false);
                 SetData(ToIgzFile().Save(newNamespace));
             }
 
-            _path = newPath;
-            _hash = NamespaceUtils.ComputeHash(newPath);
+            Path = newPath;
+            Hash = NamespaceUtils.ComputeHash(newPath);
 
-            if (_fullPath.Contains(_path))
+            if (FullPath.Contains(Path))
             {
-                _fullPath = _fullPath.Replace(_path, newPath);
+                FullPath = FullPath.Replace(Path, newPath);
             }
             else
             {
-                _fullPath = GameVersion.GetRootPath(newPath);
+                FullPath = GameVersion.GetRootPath(newPath);
             }
         }
         
@@ -167,7 +159,7 @@ namespace Alchemy
         public void SetGameVersion(GameVersion version)
         {
             GameVersion = version;
-            _fullPath = version.GetRootPath(_path);
+            FullPath = version.GetRootPath(Path);
         }
 
         /// <summary>
@@ -176,7 +168,7 @@ namespace Alchemy
         /// <param name="nameWithExtension">The new name for this file, including the extension</param>
         public void Rename(string nameWithExtension)
         {
-            string newPath = GetPath().Replace(GetName(), nameWithExtension);
+            string newPath = Path.Replace(GetName(), nameWithExtension);
             SetPath(newPath);
         }
 
@@ -187,10 +179,10 @@ namespace Alchemy
         /// <returns>A new copy of this file</returns>
         public IgArchiveFile Clone(string? path = null)
         {
-            IgArchiveFile clone = new IgArchiveFile(_path, _data, _uncompressedSize, _compressionType, _blocksData, _sectorSize)
+            IgArchiveFile clone = new IgArchiveFile(Path, _data, _uncompressedSize, _compressionType, _blocksData)
             {
+                FullPath = FullPath,
                 GameVersion = GameVersion,
-                _fullPath = _fullPath,
                 _archivePath = _archivePath,
                 _archiveOffset = _archiveOffset,
             };
@@ -218,7 +210,7 @@ namespace Alchemy
         /// <param name="includeExtension"></param>
         public string GetName(bool includeExtension = true)
         {
-            return NamespaceUtils.GetFileName(_path, includeExtension);
+            return NamespaceUtils.GetFileName(Path, includeExtension);
         }
 
         private byte[] ReadDataFromDisk()
@@ -226,7 +218,7 @@ namespace Alchemy
             int compressedSize = GetCompressedSize();
             byte[] data = new byte[compressedSize];
 
-            if (archiveStream == null)
+            if (ArchiveStream == null)
             {
                 using FileStream fs = File.OpenRead(_archivePath);
                 fs.Seek(_archiveOffset, SeekOrigin.Begin);
@@ -234,8 +226,8 @@ namespace Alchemy
             }
             else
             {
-                archiveStream.Seek(_archiveOffset, SeekOrigin.Begin);
-                archiveStream.ReadExactly(data, 0, compressedSize);
+                ArchiveStream.Seek(_archiveOffset, SeekOrigin.Begin);
+                ArchiveStream.ReadExactly(data, 0, compressedSize);
             }
 
             return data;
@@ -343,7 +335,7 @@ namespace Alchemy
                     blocksData[i].compressionType = CompressionType.Uncompressed;
                 }
 
-                compressedData.Align(_sectorSize);
+                compressedData.Align(IgArchive.SECTOR_SIZE);
             }
 
             byte[] compressedBytes = compressedData.ToArray();
@@ -366,7 +358,31 @@ namespace Alchemy
         /// </summary>
         public bool SkipCompression()
         {
-            return _path.StartsWith("sound_samples") || _path.StartsWith("sound_streams");
+            return Path.StartsWith("sound_samples") || Path.StartsWith("sound_streams");
+        }
+
+        public IgArchive.FileInfo BuildFileInfos(int index, long offset, long fileOffset, int blockIndex)
+        {
+            var fileInfos = new IgArchive.FileInfo()
+            {
+                ordinal = (index - 1) << 0x8,
+                uncompressedSize = _uncompressedSize,
+                blockIndex = blockIndex,
+            };
+
+            offset += fileOffset;
+            
+            if (offset > uint.MaxValue)
+            {
+                fileInfos.offset = (u32)(offset - uint.MaxValue - 1);
+                fileInfos.ordinal |= 0x1;
+            }
+            else
+            {
+                fileInfos.offset = (u32)offset;
+            }
+
+            return fileInfos;
         }
 
         /// <summary>
@@ -374,18 +390,16 @@ namespace Alchemy
         /// Compute the file's block indices and add them to the igArchive's global block table.
         /// </summary>
         /// <param name="blockTables">igArchive's block tables</param>
-        public void BuildBlockTable(IgArchive.BlockTables blockTables)
+        public int BuildBlockTable(IgArchive.BlockTables blockTables)
         {
-            if (!IsCompressed()) {
-                _blockIndex = -1;
-                return;
-            }
+            if (!IsCompressed())
+                return -1;
 
             BlockSize blockSize = GetBlockSize();
             dynamic blockTable = GetBlockTable(blockTables, blockSize);
             uint flag = blockSize == BlockSize.Small ? 0x80u : blockSize == BlockSize.Medium ? 0x8000u : 0x80000000u;
 
-            BuildBlockTable(blockTable, flag);
+            return BuildBlockTable(blockTable, flag);
         }
 
         private int GetBlockCount()
@@ -426,9 +440,9 @@ namespace Alchemy
 
         private BlockSize GetBlockSize()
         {
-            if (_uncompressedSize <= (int)BlockSize.Small * _sectorSize)
+            if (_uncompressedSize <= (int)BlockSize.Small * IgArchive.SECTOR_SIZE)
                 return BlockSize.Small;
-            else if (_uncompressedSize <= (int)BlockSize.Medium * _sectorSize)
+            else if (_uncompressedSize <= (int)BlockSize.Medium * IgArchive.SECTOR_SIZE)
                 return BlockSize.Medium;
             else
                 return BlockSize.Large;
@@ -446,7 +460,7 @@ namespace Alchemy
         }
 
         // Store local blocks data from the igArchive's global block tables so that the file can be uncompressed later
-        private BlockData[] ReadBlockTable(Stream igArchiveStream, IgArchive.BlockTables blockTables, IgArchive.FileInfo fileInfo)
+        private BlockData[] ReadBlockTable(Stream igArchiveStream, IgArchive.BlockTables blockTables, int blockIndex)
         {
             if (!IsCompressed())
                 return [];
@@ -458,7 +472,7 @@ namespace Alchemy
 
             int mask = (int)blockSize;
             int shift = blockSize == BlockSize.Small ? 0x7 : blockSize == BlockSize.Medium ? 0xF : 0x1F;
-            int blockStartIndex = fileInfo.blockIndex & 0xFFFFFFF;
+            int blockStartIndex = blockIndex & 0xFFFFFFF;
             int lzma_header_size = GameVersion.GetLZMAHeaderSize();
 
             BlockData[] blocksData = new BlockData[blockCount];
@@ -467,7 +481,7 @@ namespace Alchemy
             for (int i = 0; i < blockCount; i++)
             {
                 int block = blockTable[blockStartIndex + i];
-                int blockOffset = (block & mask) * _sectorSize;
+                int blockOffset = (block & mask) * IgArchive.SECTOR_SIZE;
                 bool blockCompressed = (block >> shift) == 1;
                 
                 CompressionType compressionType = blockCompressed ? _compressionType : CompressionType.Uncompressed;
@@ -574,11 +588,11 @@ namespace Alchemy
             return (int)destinationStream.Position;
         }
 
-        private void BuildBlockTable<T>(List<T> blockTable, uint flag) where T : struct
+        private int BuildBlockTable<T>(List<T> blockTable, uint flag) where T : struct
         {
-            _blockIndex = ((int)_compressionType << 0x1C) | blockTable.Count;
-
+            int initialCount = blockTable.Count;
             uint blockIndex = 0;
+
             foreach (BlockData block in _blocksData)
             {
                 uint element = block.compressionType == CompressionType.LZMA ? flag : 0x0;
@@ -589,6 +603,8 @@ namespace Alchemy
             }
 
             blockTable.Add((T)Convert.ChangeType(blockIndex, typeof(T)));
+
+            return ((int)_compressionType << 0x1C) | initialCount;
         }
     }
 }

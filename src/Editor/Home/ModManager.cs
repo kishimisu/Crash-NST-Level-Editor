@@ -194,7 +194,7 @@ namespace NST
 
             IgArchive update = IgArchive.Open(updatePath);
 
-            return update.GetFiles().Any(f =>
+            return update.Files.Any(f =>
             {
                 string name = f.GetName(false).ToLower();
                 return name != "chunkinfos_pkg" && !name.EndsWith("_zoneinfo");
@@ -217,9 +217,9 @@ namespace NST
             {
                 IgArchive archive = IgArchive.Open(path);
 
-                foreach (IgArchiveFile file in archive.GetFiles())
+                foreach (IgArchiveFile file in archive.Files)
                 {
-                    files[file.GetPath()] = file;
+                    files[file.Path] = file;
                 }
             }
 

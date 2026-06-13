@@ -27,9 +27,9 @@ namespace NST
         /// </summary>
         private void BuildTree()
         {
-            List<IgArchiveFile> files = Renderer.Archive.GetFiles().ToList();
+            List<IgArchiveFile> files = Renderer.Archive.Files.ToList();
 
-            files.Sort((f1, f2) => f1.GetPath().CompareTo(f2.GetPath()));
+            files.Sort((f1, f2) => f1.Path.CompareTo(f2.Path));
 
             foreach (IgArchiveFile file in files)
             {
@@ -45,14 +45,14 @@ namespace NST
         /// <param name="sort">Whether to sort the tree when adding the file</param>
         public void AddFile(IgArchiveFile file, bool sort = true)
         {
-            string[] path = file.GetPath().Split('/');
+            string[] path = file.Path.Split('/');
             string nodeIdentifier = "";
 
             IgArchiveTreeNode? prev = null;
 
             for (int i = 0; i < path.Length; i++)
             {
-                if (i == path.Length - 1 && file.GetPath().EndsWith("/")) break;
+                if (i == path.Length - 1 && file.Path.EndsWith("/")) break;
 
                 string segment = path[i];
                 nodeIdentifier += segment + "/";
@@ -63,7 +63,7 @@ namespace NST
                 {
                     node = (i < path.Length - 1)
                         ? new (nodeIdentifier, folderNode: true) // Folder node
-                        : new (file.GetPath(), file); // Leaf node (file)
+                        : new (file.Path, file); // Leaf node (file)
                     
                     nodeIdentifier = node.NodePath;
 
@@ -103,7 +103,7 @@ namespace NST
             }
             else
             {
-                Console.WriteLine("Failed to remove file (not found): " + file.GetPath());
+                Console.WriteLine("Failed to remove file (not found): " + file.Path);
             }
         }
 
@@ -205,7 +205,7 @@ namespace NST
         {
             if (!ImGui.BeginDragDropSource()) return;
 
-            string payloadStr = node.File!.GetPath();
+            string payloadStr = node.File!.Path;
             byte[] payload = System.Text.Encoding.UTF8.GetBytes(payloadStr);
             IntPtr payloadPtr = Marshal.AllocHGlobal(payloadStr.Length);
             Marshal.Copy(payload, 0, payloadPtr, payloadStr.Length);
@@ -297,10 +297,10 @@ namespace NST
             // Drag from/to the same archive (move file)
             else
             {
-                string originalPath = file.GetPath();
+                string originalPath = file.Path;
                 string newPath = targetNode.NodePath + file.GetName();
                 
-                if (file.GetPath() == newPath) return;
+                if (file.Path == newPath) return;
 
                 file.SetPath(newPath);
                 RefreshFile(file);

@@ -654,7 +654,7 @@ namespace NST
 
                 if (modelFile != null && parentArchive != null)
                 {
-                    Console.WriteLine("Model file found: " + modelFile.GetPath());
+                    Console.WriteLine("Model file found: " + modelFile.Path);
                     explorer.ArchiveRenderer.AddFileWithDependencies(parentArchive, modelFile);
                 }
                 else

@@ -154,7 +154,7 @@ namespace NST
         /// <param name="openLevelEditor">Whether to open the level editor or archive renderer</param>
         public static IgArchiveRenderer OpenArchive(string path, bool openLevelEditor = false)
         {
-            IgArchiveRenderer? renderer = _archives.Find(a => a.Archive.GetPath() == path);
+            IgArchiveRenderer? renderer = _archives.Find(a => a.Archive.Path == path);
 
             if (renderer != null)
             {
@@ -195,7 +195,7 @@ namespace NST
             archiveRenderer.IsOpen = true;
 
             ImGui.SetWindowFocus(archiveRenderer.GetWindowName());
-            LocalStorage.AddRecentFile(archiveRenderer.Archive.GetPath());
+            LocalStorage.AddRecentFile(archiveRenderer.Archive.Path);
         }
 
         /// <summary>
@@ -215,7 +215,7 @@ namespace NST
             }
 
             LevelExplorer newEditor = new LevelExplorer(archiveRenderer, objToFocus, camPos, camLookAt);
-            LocalStorage.AddRecentFile(archiveRenderer.Archive.GetPath(), true);
+            LocalStorage.AddRecentFile(archiveRenderer.Archive.Path, true);
             _editors.Add(newEditor);
         }
 

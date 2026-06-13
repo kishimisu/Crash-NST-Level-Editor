@@ -49,6 +49,8 @@ namespace Alchemy
             return includeExtension ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
         }
 
+        public static string GetExtension(string path) => Path.GetExtension(path);
+
         public static void AddInfos(string name)
         {
             uint hash = ComputeHash(name);

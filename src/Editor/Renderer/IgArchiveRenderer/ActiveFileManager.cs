@@ -172,7 +172,7 @@ namespace NST
         {
             if (!_files.TryGetValue(file, out FileUpdateInfos? infos))
             {
-                infos = _files.FirstOrDefault(e => e.Key.GetPath() == file.GetPath()).Value;
+                infos = _files.FirstOrDefault(e => e.Key.Path == file.Path).Value;
             }
 
             if (infos != null)
