@@ -259,8 +259,6 @@ namespace NST
 
         public static void RemoveUnusedFiles(this IgArchiveRenderer renderer)
         {
-            ModalRenderer.ShowLoadingModal("Removing usused files...");
-
             Task.Run(() =>
             {
                 HashSet<IgArchiveFile> visited = [];
@@ -268,6 +266,29 @@ namespace NST
                 if (renderer.Archive.FindPackageFile() is IgArchiveFile pkg) visited.Add(pkg);
                 if (renderer.Archive.FindCollisionFile(".igz") is IgArchiveFile colIgz) visited.Add(colIgz);
                 if (renderer.Archive.FindCollisionFile(".hkx") is IgArchiveFile colHkx) visited.Add(colHkx);
+
+                var SimplifyName = (string str) =>
+                {
+                    int idx = str.LastIndexOf('!');
+                    if (idx == -1 || idx >= str.Length - 1) return str;
+
+                    str = str.Substring(idx + 1);
+                    str = str.Replace("{", "").Replace("}", "");
+
+                    idx = str.IndexOf('`');
+
+                    if (idx != -1)
+                    {
+                        str = str.Substring(0, idx);
+                    }
+
+                    if (!str.EndsWith('_'))
+                    {
+                        str = str.Substring(0, str.Length - 1);
+                    }
+
+                    return str;
+                };
 
                 var FindDeps = (IEnumerable<IgArchiveFile> files) =>
                 {
@@ -279,9 +300,17 @@ namespace NST
                     {
                         visited.Add(file);
 
+                        float progress = (float)visited.Count / renderer.Archive.GetFiles().Count;
+                        ModalRenderer.ShowLoadingModal($"Scanning files... ({visited.Count}/{renderer.Archive.GetFiles().Count})", progress);
+
                         if (!file.IsIGZ() || file.GetPath().StartsWith("textures/")) continue;
 
                         IgzFile igz = file.ToIgzFile();
+
+                        foreach (var d in igz.Dependencies)
+                        {
+                            strings.Add(d.path);
+                        }
 
                         foreach (var objects in igz.Objects)
                         {
@@ -308,28 +337,7 @@ namespace NST
 
                         string fileName = f.GetName(false).ToLowerInvariant();
 
-                        var SimplifyName = (string str) =>
-                        {
-                            int idx = str.LastIndexOf('!');
-                            if (idx == -1 || idx >= str.Length - 1) return str;
-
-                            str = str.Substring(idx + 1);
-                            str = str.Replace("{", "").Replace("}", "");
-
-                            idx = str.IndexOf('`');
-
-                            if (idx != -1)
-                            {
-                                str = str.Substring(0, idx);
-                            }
-
-                            if (!str.EndsWith('_'))
-                            {
-                                str = str.Substring(0, str.Length - 1);
-                            }
-
-                            return str;
-                        };
+                        if (fileName == "crash_death_behavior" || fileName == "coco_death_behavior") return true; // L300
 
                         fileName = SimplifyName(fileName);
 
@@ -343,7 +351,8 @@ namespace NST
                             fileName == SimplifyName(n)  ||
                             fileName.StartsWith(n + ",") ||
                             fileName == n.Replace("statemachine", "_behavior") ||
-                            fileName == n.Replace("hogrun", "run") + "_sub"
+                            fileName == "ai" + n.Replace("statemachine", "_behavior") || // L333
+                            fileName == "shared" + n.Replace("statemachine", "_behavior") // L300
                         );
                     });
                 };
@@ -370,7 +379,7 @@ namespace NST
                     }
                 }
 
-                // Console.WriteLine("Found " + visited.Count + "/" + renderer.Archive.GetFiles().Count + " dependencies");
+                ModalRenderer.CloseLoadingModal();
                 ModalRenderer.ShowMessageModal("Success", $"Removed {removedCount} files");
             });
         }

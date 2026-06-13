@@ -189,6 +189,8 @@ namespace NST
                         if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
                         if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) TrySaveArchive(saveAs: true);
                         if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(launchGame: true);
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
                         if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
                     }
                     else
@@ -196,9 +198,10 @@ namespace NST
                         if (ImGui.MenuItem("Save", "Ctrl+S")) customSaveMethod(false, false, false);
                         if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) customSaveMethod(true, false, false);
                         if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) customSaveMethod(false, true, false);
+                        ImGui.Separator();
+                        if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
                         if (ImGui.MenuItem("Compress and save")) customSaveMethod(false, false, true);
                     }
-                    if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
 
                     ImGui.Separator();
 
@@ -675,8 +678,6 @@ namespace NST
         /// </summary>
         public void TrySaveArchive(bool saveAs = false, bool launchGame = false, bool compress = false, bool fromLevelEditor = false, Action? preSaveCallback = null, Action? postSaveCallback = null)
         {
-            saveAs |= compress;
-            
             if (!fromLevelEditor && App.GetLevelExplorer(this) is LevelExplorer explorer)
             {
                 explorer.SaveArchive(saveAs, launchGame, compress);
