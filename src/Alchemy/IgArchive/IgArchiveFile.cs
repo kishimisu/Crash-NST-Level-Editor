@@ -50,7 +50,7 @@ namespace Alchemy
 
         public Stream? archiveStream = null;
         private string _archivePath;
-        private int _archiveOffset;
+        private long _archiveOffset;
 
         public string GetFullPath() => _fullPath;
         public string GetPath() => _path;
@@ -110,16 +110,14 @@ namespace Alchemy
 
         public void Setup(Stream igArchiveStream, string archivePath, IgArchive.BlockTables blockTables, IgArchive.FileInfo fileInfo)
         {
-            _uncompressedSize = fileInfo.uncompressedSize;
+            _archivePath = archivePath;
+            _archiveOffset = GetGlobalOffset(fileInfo);
 
-            // Get compression type (uncompressed or LZMA)
+            _uncompressedSize = fileInfo.uncompressedSize;
             _compressionType = GetCompressionType(fileInfo.blockIndex);
 
             // If compressed, extract blocks data for uncompression
             _blocksData = ReadBlockTable(igArchiveStream, blockTables, fileInfo);
-
-            _archivePath = archivePath;
-            _archiveOffset = fileInfo.offset;
         }
 
         /// <summary>
@@ -129,7 +127,7 @@ namespace Alchemy
         public void SetData(byte[] data)
         {
             _data = data;
-            _uncompressedSize = (int)data.Length;
+            _uncompressedSize = data.Length;
             _compressionType = CompressionType.Uncompressed;
             _blocksData = [];
         }
@@ -321,7 +319,7 @@ namespace Alchemy
                 int compressedBlockSize = CompressBlock(buffer, uncompressedBlockSize, packedData, packedData.Length, properties);
                 bool compressed = compressedBlockSize < 0x7800;
                 
-                blocksData[i].sourceOffset = compressedData.GetPosition();
+                blocksData[i].sourceOffset = (int)compressedData.Position;
                 blocksData[i].uncompressedSize = uncompressedBlockSize;
 
                 if (compressed)
@@ -393,6 +391,18 @@ namespace Alchemy
         private int GetBlockCount()
         {
             return (_uncompressedSize + 0x7FFF) >> 0xF;
+        }
+
+        private static long GetGlobalOffset(IgArchive.FileInfo fileInfo)
+        {
+            if ((fileInfo.ordinal & 1) == 0)
+            {
+                return fileInfo.offset;
+            }
+            else
+            {
+                return (long)uint.MaxValue + fileInfo.offset + 1;
+            }
         }
 
         private static CompressionType GetCompressionType(int blockIndex)
@@ -469,7 +479,7 @@ namespace Alchemy
                 if (compressionType == CompressionType.LZMA)
                 {
                     // Read compressed size from LZMA header
-                    igArchiveStream.Seek(fileInfo.offset + blockOffset, SeekOrigin.Begin);
+                    igArchiveStream.Seek(_archiveOffset + blockOffset, SeekOrigin.Begin);
                     igArchiveStream.ReadExactly(sizeBytes);
                     int compressedSize = lzma_header_size == 2 ? BitConverter.ToUInt16(sizeBytes) : BitConverter.ToInt32(sizeBytes);
                     compressedBlockSize = 5 + lzma_header_size + compressedSize;
@@ -561,7 +571,7 @@ namespace Alchemy
             encoder.WriteCoderProperties(new MemoryStream(properties));
             encoder.Code(sourceStream, destinationStream, -1, -1, null);
 
-            return destinationStream.GetPosition();
+            return (int)destinationStream.Position;
         }
 
         private void BuildBlockTable<T>(List<T> blockTable, uint flag) where T : struct

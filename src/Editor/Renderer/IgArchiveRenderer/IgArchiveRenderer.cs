@@ -211,6 +211,10 @@ namespace NST
                         {
                             App.OpenArchiveRenderer(this);
                         }
+                        else if (!fromLevelEditor && ImGui.MenuItem("Extract all files"))
+                        {
+                            ExtractAllFiles(Archive.GetFiles(), true);
+                        }
                         ImGui.Separator();
                         AudioPlayer.RenderAudioMenu();
                         if (ImGui.MenuItem("Rebuild package file", null, _rebuildPackageFile))
@@ -439,6 +443,22 @@ namespace NST
             {
                 string msg = $"    [ No preview available for {(extension == ".igz" ? "this file" : extension + " files")} ]";
                 ImGui.TextColored(new Vector4(1, 0.7f, 0, 1), msg);
+
+                if (extension == ".pak")
+                {
+                    ImGuiUtils.VerticalSpacing(10);
+
+                    if (ImGui.Button("Extract archive"))
+                    {
+                        ExtractFile(_selectedFile);
+                    }
+                    ImGui.SameLine();
+                    if (ImGui.Button("Extract all archives"))
+                    {
+                        List<IgArchiveFile> archives = Archive.GetFiles().Where(f => f.GetName().EndsWith(".pak")).ToList();
+                        ExtractAllFiles(archives);
+                    }
+                }
             }
         }
 
@@ -901,13 +921,40 @@ namespace NST
         /// <summary>
         /// Extract and save the content of a file to disk
         /// </summary>
-        private void ExtractFile(IgArchiveFile file)
+        private static void ExtractFile(IgArchiveFile file)
         {
             string? filePath = FileExplorer.SaveFile(FileExplorer.EXT_ALL, file.GetName());
 
             if (filePath != null)
             {
                 file.Save(filePath);
+            }
+        }
+
+        /// <summary>
+        /// Extract and save the content of a selection of files to disk
+        /// </summary>
+        private static void ExtractAllFiles(List<IgArchiveFile> files, bool createSubFolders = false)
+        {
+            string? folderPath = FileExplorer.SelectFolder();
+
+            if (folderPath != null)
+            {
+                foreach (var file in files)
+                {
+                    string newPath = createSubFolders
+                        ? Path.Combine(folderPath, file.GetPath())
+                        : Path.Combine(folderPath, file.GetName());
+
+                    string? directory = Path.GetDirectoryName(newPath);
+
+                    if (createSubFolders && directory != null && !Directory.Exists(directory))
+                    {
+                        Directory.CreateDirectory(directory);
+                    }
+
+                    file.Save(newPath);
+                }
             }
         }
 

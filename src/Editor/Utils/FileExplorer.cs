@@ -69,6 +69,26 @@ namespace NST
             return null;
         }
 
+        public static string? SelectFolder(string? initialDirectory = null)
+        {
+            using FolderBrowserDialog browseFolderDialog = new FolderBrowserDialog()
+            {
+                InitialDirectory = initialDirectory ?? LocalStorage.Get("last_save_path", "") ?? ""
+            };
+
+            if (browseFolderDialog.ShowDialog() == DialogResult.OK)
+            {
+                if (initialDirectory == null)
+                {
+                    LocalStorage.Set("last_save_path", browseFolderDialog.SelectedPath);
+                }
+
+                return browseFolderDialog.SelectedPath;
+            }
+
+            return null;
+        }
+
         private static string SanitizeFileName(string fileName)
         {
             string invalidChars = new string(Path.GetInvalidFileNameChars());

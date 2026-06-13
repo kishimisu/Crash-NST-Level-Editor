@@ -10,6 +10,11 @@ namespace Alchemy
             reader.BaseStream.Seek(offset, origin);
         }
 
+        public static void Seek(this BinaryReader reader, ulong offset, SeekOrigin origin = SeekOrigin.Begin)
+        {
+            reader.BaseStream.Seek((long)offset, origin);
+        }
+
         public static string ReadNullTerminatedString(this BinaryReader reader)
         {
             var bytes = new List<byte>();
@@ -103,8 +108,6 @@ namespace Alchemy
 
     public static class MemoryStreamExtensions
     {
-        public static int GetPosition(this MemoryStream stream) => (int)stream.Position;
-
         public static void Align(this MemoryStream stream, int alignment) 
         {
             stream.Position = (stream.Position + alignment - 1) & ~(alignment - 1);

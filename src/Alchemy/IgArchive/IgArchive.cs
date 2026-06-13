@@ -58,7 +58,7 @@ namespace Alchemy
 
         public struct FileInfo
         {
-            public i32 offset;
+            public u32 offset;
             public i32 ordinal;
             public i32 uncompressedSize;
             public i32 blockIndex; // also stores compression
@@ -175,11 +175,12 @@ namespace Alchemy
             using BinaryWriter fileWriter = new BinaryWriter(fileStream);
 
             FileInfo[] fileInfos = new FileInfo[_files.Count];
+            long[] fileOffsets = new long[_files.Count];
 
             // Dump file data
             for (int i = 0; i < _files.Count; i++)
             {
-                fileInfos[i].offset = fileWriter.GetPosition();
+                fileOffsets[i] = fileWriter.BaseStream.Position;
 
                 if (compress && !_files[i].SkipCompression())
                 {
@@ -208,7 +209,19 @@ namespace Alchemy
             for (int i = 0; i < _files.Count; i++)
             {
                 fileInfos[i].ordinal = (i - 1) << 0x8;
-                fileInfos[i].offset += writer.GetPosition();
+
+                long offset = fileOffsets[i] + writer.BaseStream.Position;
+
+                if (offset > uint.MaxValue)
+                {
+                    fileInfos[i].offset = (u32)(offset - uint.MaxValue - 1);
+                    fileInfos[i].ordinal |= 0x1;
+                }
+                else
+                {
+                    fileInfos[i].offset = (u32)offset;
+                }
+
                 fileInfos[i].blockIndex = _files[i].GetBlockIndex();
                 fileInfos[i].uncompressedSize = _files[i].GetUncompressedSize();
             }
@@ -414,7 +427,7 @@ namespace Alchemy
 
         private static List<(string, string)> ParseFilePaths(IgArchiveHeader header, BinaryReader reader)
         {   
-            reader.Seek((int)header.pathTableOffset);
+            reader.Seek(header.pathTableOffset);
 
             u32[] filePathOffsets = reader.ReadArray<u32>((int)header.fileCount);
 
@@ -422,7 +435,7 @@ namespace Alchemy
 
             for (int i = 0; i < header.fileCount; i++)
             {
-                int offset = (int)header.pathTableOffset + (int)filePathOffsets[i];
+                ulong offset = header.pathTableOffset + filePathOffsets[i];
                 reader.Seek(offset);
 
                 string fullPath = reader.ReadNullTerminatedString();
