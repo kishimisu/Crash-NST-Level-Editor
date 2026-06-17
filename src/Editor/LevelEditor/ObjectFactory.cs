@@ -1460,7 +1460,7 @@ namespace NST
 
         public static (CZoneInfo, igLocalizedInfo) CreateZoneInfo(string levelIdentifier, EGameYear crashMode)
         {
-            string levelName = Path.GetFileNameWithoutExtension(levelIdentifier);
+            string levelName = NamespaceUtils.GetFileName(levelIdentifier, false);
 
             igLocalizedInfo localizedInfo = new igLocalizedInfo() { ObjectName = "localizationMarker" };
 

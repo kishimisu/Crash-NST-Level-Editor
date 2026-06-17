@@ -1,3 +1,4 @@
+using Alchemy;
 using System.Text.Json;
 
 namespace NST
@@ -147,7 +148,7 @@ namespace NST
 
             if (paths.Count > 0)
             {
-                string? folder = Path.GetDirectoryName(paths[0]);
+                string? folder = NamespaceUtils.GetDirectoryName(paths[0]);
 
                 if (folder != null)
                 {

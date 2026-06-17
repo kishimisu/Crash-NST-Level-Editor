@@ -149,7 +149,7 @@ namespace NST
             ImGui.SameLine();
             ImGui.SetNextItemWidth(-1);
 
-            string displayName = string.IsNullOrEmpty(component._fileName) ? "(null)" : Path.GetFileNameWithoutExtension(component._fileName);
+            string displayName = string.IsNullOrEmpty(component._fileName) ? "(null)" : NamespaceUtils.GetFileName(component._fileName, false);
 
             ImGuiUtils.RenderComboWithSearch("##model" + manager.Entity.Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, firstOption: "(null)", callback: (index, name) =>
             {
@@ -1019,7 +1019,7 @@ namespace NST
                     return;
                 }
 
-                string soundFileName = Path.GetFileNameWithoutExtension(SubSound._fileName);
+                string soundFileName = NamespaceUtils.GetFileName(SubSound._fileName, false);
 
                 byte[]? audioData = GetAudioData(explorer, soundFileName);
 

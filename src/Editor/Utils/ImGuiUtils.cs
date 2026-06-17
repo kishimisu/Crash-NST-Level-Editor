@@ -155,7 +155,7 @@ namespace NST
                     _comboSearches[label] = comboSearch;
                 }
 
-                string searchLower = comboSearch.ToLower();
+                string searchLower = comboSearch.ToLowerInvariant();
 
                 if (firstOption != null && ImGui.Selectable(firstOption))
                 {
@@ -166,7 +166,7 @@ namespace NST
                 {
                     string name = options[i];
 
-                    if (!name.ToLower().Contains(searchLower)) continue;
+                    if (!name.Contains(searchLower, StringComparison.InvariantCultureIgnoreCase)) continue;
 
                     if (ImGui.Selectable(name))
                     {
@@ -201,7 +201,7 @@ namespace NST
                     _comboSearches[label] = comboSearch;
                 }
 
-                string searchLower = comboSearch.ToLower();
+                string searchLower = comboSearch.ToLowerInvariant();
 
                 if (ImGui.BeginTable(label, 3, ImGuiTableFlags.BordersInner | ImGuiTableFlags.Reorderable))
                 {

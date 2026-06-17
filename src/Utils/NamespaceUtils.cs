@@ -21,6 +21,17 @@ namespace Alchemy
     {
         private static Dictionary<uint, NamespaceInfos>? _namespaceInfos;
 
+        public static string GetExtension(string path) => Path.GetExtension(path);
+        public static string? GetDirectoryName(string path) => Path.GetDirectoryName(path);
+
+        /// <summary>
+        /// Extracts the name of a file from its path, optionally including the extension
+        /// </summary>
+        public static string GetFileName(string path, bool includeExtension = true)
+        {
+            return includeExtension ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
+        }
+
         /// <summary>
         /// Compute the hash of a string using using the FNV-1a algorithm
         /// </summary>
@@ -40,17 +51,10 @@ namespace Alchemy
 
             return basis;
         }
-        
+
         /// <summary>
-        /// Extracts the name of a file from its path, optionally including the extension
+        /// Add a new entry to the namespace info cache
         /// </summary>
-        public static string GetFileName(string path, bool includeExtension = true)
-        {
-            return includeExtension ? Path.GetFileName(path) : Path.GetFileNameWithoutExtension(path);
-        }
-
-        public static string GetExtension(string path) => Path.GetExtension(path);
-
         public static void AddInfos(string name)
         {
             uint hash = ComputeHash(name);

@@ -196,7 +196,7 @@ namespace NST
 
             return update.Files.Any(f =>
             {
-                string name = f.GetName(false).ToLower();
+                string name = f.GetName(false).ToLowerInvariant();
                 return name != "chunkinfos_pkg" && !name.EndsWith("_zoneinfo");
             });
         }
@@ -302,7 +302,7 @@ namespace NST
         /// </summary>
         private void OnClickLocateMod(string path)
         {
-            List<string> files = FileExplorer.OpenFiles(FileExplorer.EXT_ARCHIVES, false, Path.GetDirectoryName(path));
+            List<string> files = FileExplorer.OpenFiles(FileExplorer.EXT_ARCHIVES, false, NamespaceUtils.GetDirectoryName(path));
             if (files.Count != 1) return;
 
             string filePath = files[0];
@@ -486,7 +486,7 @@ namespace NST
         private void RenderMod(int i)
         {
             string path = _modPaths[i];
-            string name = Path.GetFileNameWithoutExtension(path);
+            string name = NamespaceUtils.GetFileName(path, false);
             bool isModEnabled = _enabledMods.Contains(path);
             bool isModMissing = _missingMods.Contains(path);
 

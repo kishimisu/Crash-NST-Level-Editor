@@ -53,7 +53,7 @@ namespace Alchemy
         {
             if (newNamespace != null)
             {
-                string currentNamespace = Path.GetFileNameWithoutExtension(_path);
+                string currentNamespace = NamespaceUtils.GetFileName(_path, false);
                 ReplaceHandlesNamespace(currentNamespace, newNamespace);
             }
 
@@ -200,7 +200,7 @@ namespace Alchemy
             var props = new CloneProperties(source, this, mode, clones, forceClone, GameVersion);
             T clone = (T)obj.Clone(props);
 
-            string srcNamespace = source.GetName(false).ToLower();
+            string srcNamespace = source.GetName(false).ToLowerInvariant();
             string dstNamespace = GetName(false);
 
             Dictionary<igObject, igObject> newClones = [];
@@ -246,7 +246,7 @@ namespace Alchemy
                     // Update handles
                     foreach (var handle in dst.GetHandles(GameVersion))
                     {
-                        if (handle.namespaceName.ToLower() != srcNamespace) continue;
+                        if (!handle.namespaceName.Equals(srcNamespace, StringComparison.InvariantCultureIgnoreCase)) continue;
 
                         // Console.WriteLine($"Updating handle namespace: {handle} => {GetName(false).ToLower()}");
                         handle.namespaceName = dstNamespace;
@@ -265,7 +265,7 @@ namespace Alchemy
 
                 foreach ((NamedReference srcHandle, NamedReference dstHandle) in srcHandles.Zip(dstHandles))
                 {
-                    if (srcHandle.namespaceName.ToLower() != srcNamespace) continue;
+                    if (!srcHandle.namespaceName.Equals(srcNamespace, StringComparison.InvariantCultureIgnoreCase)) continue;
 
                     igObject? srcObject = source.FindObject(srcHandle);
 
@@ -318,7 +318,7 @@ namespace Alchemy
 
             HashSet<string> result = deps
                 .Where(d => !string.IsNullOrEmpty(d))
-                .Select(d => Path.GetFileNameWithoutExtension(d).ToLowerInvariant())
+                .Select(d => NamespaceUtils.GetFileName(d, false).ToLowerInvariant())
                 .ToHashSet();
 
             result.Remove(namespaceName);
@@ -340,7 +340,7 @@ namespace Alchemy
 
             return deps
                 .Where(d => !string.IsNullOrEmpty(d))
-                .Select(d => Path.GetFileNameWithoutExtension(d).ToLowerInvariant())
+                .Select(d => NamespaceUtils.GetFileName(d, false).ToLowerInvariant())
                 .ToHashSet();
         }
 

@@ -18,8 +18,8 @@ namespace NST
             IsFolder = folderNode;
 
             Name = path.EndsWith("/") 
-                ? Path.GetFileName(path.Substring(0, path.Length - 1))
-                : Path.GetFileName(path);
+                ? NamespaceUtils.GetFileName(path.Substring(0, path.Length - 1))
+                : NamespaceUtils.GetFileName(path);
 
             _uuid = ImGuiUtils.Uuid();
         }

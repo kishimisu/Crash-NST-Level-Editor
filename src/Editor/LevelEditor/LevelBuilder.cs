@@ -243,7 +243,7 @@ namespace NST
 
             string levelPath = Directory
                 .GetFiles(LocalStorage.ArchivePath)
-                .First(f => Path.GetFileName(f).ToLowerInvariant() == $"{levelName}.pak");
+                .First(f => NamespaceUtils.GetFileName(f).Equals($"{levelName}.pak", StringComparison.InvariantCultureIgnoreCase));
 
             // Load source archive
 
@@ -477,14 +477,14 @@ namespace NST
                 
                 string musicLevelPath = Directory
                     .GetFiles(LocalStorage.ArchivePath)
-                    .First(f => Path.GetFileName(f).ToLowerInvariant() == $"{musicLevelName}.pak");
+                    .First(f => NamespaceUtils.GetFileName(f).Equals($"{musicLevelName}.pak", StringComparison.InvariantCultureIgnoreCase));
 
                 sourceMusicArchive = IgArchive.Open(musicLevelPath);
             }
 
             var CreateMusicFromFile = (string identifier) =>
             {
-                IgArchiveFile? sourceMusicFile = sourceMusicArchive.Files.Find(f => f.Path.StartsWith("maps/") && f.GetName().ToLowerInvariant().Contains(identifier));
+                IgArchiveFile? sourceMusicFile = sourceMusicArchive.Files.Find(f => f.Path.StartsWith("maps/") && f.GetName().Contains(identifier, StringComparison.InvariantCultureIgnoreCase));
                 if (sourceMusicFile == null) return false;
 
                 IgzFile sourceMusicIgz = sourceMusicFile.ToIgzFile();
@@ -499,7 +499,7 @@ namespace NST
                 }
                 
                 // Special case for L101, L222 & L224
-                var musicSettings = (CGameSoundMusicSettings?)sourceMusicIgz.Objects.Find(e => e is CGameSoundMusicSettings s && s.ObjectName != null && s._nextStream.Reference != null && (s.ObjectName.ToLowerInvariant().Contains("first") || s.ObjectName.ToLowerInvariant().Contains("onstart")));
+                var musicSettings = (CGameSoundMusicSettings?)sourceMusicIgz.Objects.Find(e => e is CGameSoundMusicSettings s && s.ObjectName != null && s._nextStream.Reference != null && (s.ObjectName.Contains("first", StringComparison.InvariantCultureIgnoreCase) || s.ObjectName.Contains("onstart", StringComparison.InvariantCultureIgnoreCase)));
                 if (musicSettings != null)
                 {
                     IgArchiveFile startMusicVSC = modelArchive.FindFile("common_OnStartMusic_c", FileSearchType.Name)!;

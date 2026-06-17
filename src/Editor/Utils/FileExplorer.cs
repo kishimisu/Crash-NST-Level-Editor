@@ -1,3 +1,5 @@
+using Alchemy;
+
 namespace NST
 {
     /// <summary>
@@ -28,7 +30,7 @@ namespace NST
                 {
                     if (initialDirectory == null)
                     {
-                        string? path = Path.GetDirectoryName(openFileDialog.FileNames[0]);
+                        string? path = NamespaceUtils.GetDirectoryName(openFileDialog.FileNames[0]);
                         if (path != null) LocalStorage.Set("last_open_path", path);
                     }
                     return openFileDialog.FileNames.ToList();
@@ -37,7 +39,7 @@ namespace NST
                 {
                     if (initialDirectory == null)
                     {
-                        string? path = Path.GetDirectoryName(openFileDialog.FileName);
+                        string? path = NamespaceUtils.GetDirectoryName(openFileDialog.FileName);
                         if (path != null) LocalStorage.Set("last_open_path", path);
                     }
                     return [openFileDialog.FileName];
@@ -60,7 +62,7 @@ namespace NST
             {
                 if (initialDirectory == null)
                 {
-                    string? path = Path.GetDirectoryName(saveFileDialog.FileName);
+                    string? path = NamespaceUtils.GetDirectoryName(saveFileDialog.FileName);
                     if (path != null) LocalStorage.Set("last_save_path", path);
                 }
                 return saveFileDialog.FileName;

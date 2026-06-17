@@ -105,7 +105,7 @@ namespace NST
 
         private void SetLayer()
         {
-            string? modelName = _model?.Name.ToLower();
+            string? modelName = _model?.Name.ToLowerInvariant();
 
             if (modelName == null)
             {
@@ -640,7 +640,7 @@ namespace NST
 
                 if (modelName != null)
                 {
-                    modelName = Path.GetFileNameWithoutExtension(modelName).ToLower();
+                    modelName = NamespaceUtils.GetFileName(modelName, false).ToLowerInvariant();
 
                     if (!LevelExplorer.CachedModels.TryGetValue(modelName, out model))
                     {

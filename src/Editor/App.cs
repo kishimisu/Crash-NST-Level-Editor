@@ -120,7 +120,7 @@ namespace NST
 
                 foreach (string path in recent.ToList())
                 {
-                    if (ImGui.MenuItem(Path.GetFileName(path)))
+                    if (ImGui.MenuItem(NamespaceUtils.GetFileName(path)))
                     {
                         try
                         {
@@ -343,7 +343,7 @@ namespace NST
 
             try 
             {
-                return AlchemyUtils.FindFileInArchives(Path.GetFileNameWithoutExtension(name), out archive);
+                return AlchemyUtils.FindFileInArchives(NamespaceUtils.GetFileName(name, false), out archive);
             }
             catch (Exception e)
             {

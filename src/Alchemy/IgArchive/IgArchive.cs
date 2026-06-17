@@ -377,7 +377,10 @@ namespace Alchemy
             IgArchiveFile? packageFile = FindPackageFile();
             if (packageFile == null) return null;
 
-            string? levelName = System.IO.Path.GetFileName(System.IO.Path.GetDirectoryName(packageFile.Path));
+            string? dirName = NamespaceUtils.GetDirectoryName(packageFile.Path);
+            if (dirName == null) return null;
+
+            string? levelName = NamespaceUtils.GetFileName(dirName);
             if (levelName == null) return null;
             
             return FindFile(levelName, FileSearchType.Name, FileSearchParams.MapIgz);

@@ -420,7 +420,7 @@ namespace NST
                 return;
             }
 
-            string extension = Path.GetExtension(_selectedFile.GetName());
+            string extension = NamespaceUtils.GetExtension(_selectedFile.GetName());
 
             ImGui.TableNextColumn();
             ImGui.Text(_selectedFile.GetName());
@@ -944,7 +944,7 @@ namespace NST
                         ? Path.Combine(folderPath, file.Path)
                         : Path.Combine(folderPath, file.GetName());
 
-                    string? directory = Path.GetDirectoryName(newPath);
+                    string? directory = NamespaceUtils.GetDirectoryName(newPath);
 
                     if (createSubFolders && directory != null && !Directory.Exists(directory))
                     {

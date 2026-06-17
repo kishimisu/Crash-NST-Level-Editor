@@ -306,7 +306,7 @@ namespace NST
         public IgzRenderer? GetOrCreateRenderer(NamedReference reference, IgArchiveRenderer archiveRenderer)
         {
             string namespaceName = reference.namespaceName.ToLowerInvariant();
-            FileUpdateInfos? infos = _files.Values.FirstOrDefault(f => f.file.GetName(false).ToLowerInvariant() == namespaceName);
+            FileUpdateInfos? infos = _files.Values.FirstOrDefault(f => f.file.GetName(false).Equals(namespaceName, StringComparison.InvariantCultureIgnoreCase));
 
             if (infos == null) 
             {

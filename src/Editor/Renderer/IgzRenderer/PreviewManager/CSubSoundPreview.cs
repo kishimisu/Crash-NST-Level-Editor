@@ -98,15 +98,15 @@ namespace NST
 
         public void LoadAudio(AudioPlayer audioPlayer, bool autoPlay)
         {
-            string? fileName = Path.GetFileNameWithoutExtension(_subSoundObject._fileName);
-
             audioPlayer.ErrorLoadingFile = true;
 
-            if (fileName == null)
+            if (_subSoundObject._fileName == null)
             {
                 Console.Error.WriteLine($"Warning: Could not load audio, file name is null. ({_subSoundObject.ObjectName})");
                 return;
             }
+
+            string fileName = NamespaceUtils.GetFileName(_subSoundObject._fileName, false);
 
             _audioFile = _archiveRenderer.Archive.FindFile(fileName + ",", FileSearchType.NameStartsWith);
 

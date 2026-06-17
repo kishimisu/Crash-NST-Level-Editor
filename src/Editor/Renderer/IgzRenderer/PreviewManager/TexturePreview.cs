@@ -169,7 +169,7 @@ namespace NST
             }
 
             string fileName = (image._name != null)
-                ? Path.GetFileNameWithoutExtension(image._name) + ".png"
+                ? NamespaceUtils.GetFileName(image._name, false) + ".png"
                 : "image.png";
 
             string? filePath = FileExplorer.SaveFile(FileExplorer.EXT_IMAGES, fileName);

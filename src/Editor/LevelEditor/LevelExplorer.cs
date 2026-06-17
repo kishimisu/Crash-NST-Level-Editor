@@ -415,7 +415,7 @@ namespace NST
                     if (obj is not igEntity entity) continue;
 
                     string? modelPath = entity.GetModelName(igz, this);
-                    string? modelName = Path.GetFileNameWithoutExtension(modelPath);
+                    string? modelName = modelPath == null ? null : NamespaceUtils.GetFileName(modelPath, false);
 
                     NSTEntity entity3D = new NSTEntity(entity, mapFile);
 
@@ -1682,7 +1682,7 @@ namespace NST
             if (existing != null) return existing.GetName(false);
 
             string path = Archive.FindMainMapFile()!.Path.Replace(".igz", $"{identifier}.igz");
-            return Path.GetFileNameWithoutExtension(path);
+            return NamespaceUtils.GetFileName(path, false);
         }
 
         public bool GetOrCreateIgzFile(string fileIdentifier, out IgArchiveFile file, out IgzFile igz)
@@ -1716,7 +1716,7 @@ namespace NST
 
         public bool GetOrCreateExternalIgzFile(string path, out IgArchiveFile file, out IgzFile igz)
         {
-            if (Path.GetFileNameWithoutExtension(path).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
+            if (NamespaceUtils.GetFileName(path, false).Contains("camera", StringComparison.InvariantCultureIgnoreCase))
             {
                 return GetOrCreateIgzFile("Camera", out file, out igz);
             }
@@ -1808,7 +1808,7 @@ namespace NST
                 NSTEntity entity = new NSTEntity(cloneEntity, destFile);
 
                 string? modelPath = cloneEntity.GetModelName(destIgz, this);
-                string? modelName = Path.GetFileNameWithoutExtension(modelPath);
+                string? modelName = modelPath == null ? null : NamespaceUtils.GetFileName(modelPath, false);
 
                 if (modelPath != null && modelName != null && !modelNames.ContainsKey(modelName)) {
                     modelNames.Add(modelName, modelPath);

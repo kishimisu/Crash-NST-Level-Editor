@@ -130,9 +130,9 @@ namespace NST
 
             foreach (string path in files.ToList())
             {
-                string? dirPath = Path.GetDirectoryName(path);
-                string? parentFolderName = Path.GetFileName(dirPath);
-                string name = parentFolderName + "/" + Path.GetFileName(path);
+                string? dirPath = NamespaceUtils.GetDirectoryName(path);
+                string? parentFolderName = dirPath == null ? null : NamespaceUtils.GetFileName(dirPath);
+                string name = parentFolderName + "/" + NamespaceUtils.GetFileName(path);
                 
                 ImGui.SetNextItemAllowOverlap();
                 bool isClicked = ImGui.Selectable($"{name}##{path}{isLevel}");
