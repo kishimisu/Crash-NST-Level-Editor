@@ -79,13 +79,25 @@ namespace NST
                 if (ImGui.MenuItem("New mod")) OnClickNew();
                 if (ImGui.MenuItem("Open archive")) OnClickOpen();
                 RenderOpenRecent(true);
+
                 ImGui.Separator();
+
                 if (ImGui.MenuItem("Play custom level")) OnClickPlayCustom();
                 if (ImGui.MenuItem("Open level editor")) OnClickOpen(true);
                 RenderOpenRecent(true, true);
+
                 ImGui.Separator();
+
                 if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
-                // if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
+
+                if (LocalStorage.GamePath?.Contains("Steam") == true && 
+                    ImGui.MenuItem("Skip steam popup", null, LocalStorage.SkipSteamPopup))
+                {
+                    LocalStorage.SkipSteamPopup = !LocalStorage.SkipSteamPopup;
+                    LocalStorage.Set("skip_steam_popup", LocalStorage.SkipSteamPopup);
+                }
+
+                if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
                 if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                 ImGui.EndMenu();
             }

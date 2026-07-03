@@ -23,6 +23,8 @@ namespace NST
         private static string _storageFilePath = ""; // Path to the main local storage file
         public static string AutoBackupSize { get; private set; } = "";
 
+        public static bool SkipSteamPopup { get; set; } = false;
+
         /// <summary>
         /// Initialize the local storage.
         /// Checks for the game executable and creates the local storage folder if it doesn't exist
@@ -53,6 +55,11 @@ namespace NST
             {
                 GamePath = null;
                 Remove("game_path");
+            }
+
+            if (GamePath != null)
+            {
+                SkipSteamPopup = Get("skip_steam_popup", false);
             }
 
             // Compute the size of the auto-backup folder

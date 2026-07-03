@@ -308,12 +308,13 @@ namespace NST
                 bool hasScale = (worldScale - THREE.Vector3.One()).LengthSq() > 1e-3f;
 
                 // Child template scale overrides parent spawner scale
-                NSTEntity? childTemplate = null;
-                if (hasScale)
+                NSTEntity? childTemplate = entity3D.GetChildTemplate();
+                if (childTemplate != null)
                 {
-                    childTemplate = entity3D.GetChildTemplate();
-                    
-                    if (childTemplate != null)
+                    var templateScale = childTemplate.Object._transform?._nonUniformPersistentParentSpaceScale;
+                    var scale = templateScale == null ? null : new THREE.Vector3(templateScale._x, templateScale._y, templateScale._z);
+
+                    if (scale == null && hasScale || scale != null && (worldScale - scale).LengthSq() > 1e-3f)
                     {
                         childTemplate = entity3D.MakeChildTemplateUnique(_explorer, childTemplate);
 

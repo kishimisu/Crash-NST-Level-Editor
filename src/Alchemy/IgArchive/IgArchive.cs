@@ -369,7 +369,11 @@ namespace Alchemy
 
         public IgArchiveFile? FindPackageFile()
         {
-            return Files.Find(f => f.Path.EndsWith("_pkg.igz"));
+            var pkgs = Files.FindAll(f => f.Path.EndsWith("_pkg.igz"));
+
+            if (pkgs.Count != 1) return null;
+
+            return pkgs[0];
         }
 
         public IgArchiveFile? FindMainMapFile()
