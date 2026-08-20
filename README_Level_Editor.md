@@ -2,7 +2,7 @@
 
 - [New Level](#new-level)
 - [Level Editor](#level-editor)
-- [Controls/shortcuts](#controls)
+- [Controls/gizmos](#controls)
 - [Create new objects](#create-new-objects)
 - [Object properties](#object-properties)
 ---
@@ -160,7 +160,27 @@ This is where you can move around in the level, select one or multiple objects, 
 
 ### Controls
 
-![Controls](assets/readme/level_editor/controls.jpg)
+![Controls](assets/readme/level_editor/controls.png)
+
+### Gizmos
+
+When selecting one or multiple objects, you can use the 3D gizmos to translate, rotate and scale the selection.
+
+<img src="assets/readme/level_editor/gizmos.jpg" alt="Gizmos" height="300"/>
+
+#### Shortcuts
+- Ctrl + E: translate mode
+- Ctrl + R: rotate mode
+- Ctrl + T: scale mode
+- Ctrl + G: toggle world/object space (see below)
+
+#### World/Object space
+- "World space" will align the gizmos so that the "up" arrow points to the sky, no matter the current rotation of the object.
+- "Object space" will align the gizmos so that the "up" arrow has the same rotation as the object.
+
+Note: for technical reasons, scaling is always done in object space
+
+<img src="assets/readme/level_editor/space.jpg" alt="Space" height="300"/>
 
 ### Create new objects
 

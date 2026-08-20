@@ -97,7 +97,7 @@ namespace NST
                     LocalStorage.Set("skip_steam_popup", LocalStorage.SkipSteamPopup);
                 }
 
-                if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
+                // if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
                 if (ImGui.MenuItem("Exit")) Environment.Exit(0);
                 ImGui.EndMenu();
             }
