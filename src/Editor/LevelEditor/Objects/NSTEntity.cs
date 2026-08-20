@@ -263,16 +263,22 @@ namespace NST
                 }
                 else if (component is CVisualDataBoxComponentData box)
                 {
-                    THREE.Vector3 scale = box._dimensions.ToVector3();
+                    THREE.Vector3 parentScale = new THREE.Vector3(); 
+                    ObjectToWorld().Decompose(new(), new(), parentScale);
 
-                    SetupBoxGizmo(group, box, new THREE.Vector3(), new THREE.Euler(), scale, focused, LevelExplorer.CameraLayer.VisualBox);
+                    THREE.Vector3 scale = parentScale * box._dimensions.ToVector3();
+
+                    SetupBoxGizmo(group, box, new(), new(), scale, focused, LevelExplorer.CameraLayer.VisualBox);
                 }
                 else if (component is CBoxLightComponentData boxLight)
                 {
-                    THREE.Color color = new THREE.Color(boxLight._color._x, boxLight._color._y, boxLight._color._z);
-                    THREE.Vector3 scale = boxLight._dimensions.ToVector3();
+                    THREE.Vector3 parentScale = new THREE.Vector3(); 
+                    ObjectToWorld().Decompose(new(), new(), parentScale);
 
-                    SetupBoxGizmo(group, boxLight, new THREE.Vector3(), new THREE.Euler(), scale, true, LevelExplorer.CameraLayer.BoxLight, color);
+                    THREE.Color color = new THREE.Color(boxLight._color._x, boxLight._color._y, boxLight._color._z);
+                    THREE.Vector3 scale = parentScale * boxLight._dimensions.ToVector3();
+
+                    SetupBoxGizmo(group, boxLight, new(), new(), scale, true, LevelExplorer.CameraLayer.BoxLight, color);
                 }
                 else if (component is CTintSphereComponentData tintSphere)
                 {
@@ -306,60 +312,53 @@ namespace NST
 
         private void SetupBoxGizmo(List<THREE.Object3D> group, igComponentData component, THREE.Vector3 position, THREE.Euler rotation, THREE.Vector3 scale, bool focused, LevelExplorer.CameraLayer layer, THREE.Color? color = null)
         {
-            THREE.Vector3 parentScale = new THREE.Vector3();
-            ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
-
-            THREE.Matrix4 localMatrix = new THREE.Matrix4().Compose(position / parentScale, new THREE.Quaternion().SetFromEuler(rotation), scale / parentScale);
-
-            THREE.Vector3 min = THREE.Vector3.One() * -0.5f;
-            THREE.Vector3 max = THREE.Vector3.One() * 0.5f;
+            var localMatrix = new THREE.Matrix4().Compose(position, new THREE.Quaternion().SetFromEuler(rotation), scale);
+            var min = THREE.Vector3.One() * -0.5f;
+            var max = THREE.Vector3.One() * 0.5f;
 
             color ??= MathUtils.FromImGuiColor(component.GetType().GetUniqueColor());
 
             THREE.Object3D box3D = CreateBoxHelper(min, max, color.Value, focused);
-            box3D.ApplyMatrix4(localMatrix);
+
+            box3D.ApplyMatrix4(ObjectToWorld().ResetScale() * localMatrix);
+
+            box3D.Traverse(e => 
+            {
+                e.Layers.Set((int)layer);
+                e.UserData["component"] = component;
+            });
 
             Components ??= new ComponentManager(this);
-            Components.CreateObject3D(component, box3D);
+            Components.AddGizmo(component, box3D);
 
-            box3D.Traverse(e => e.Layers.Set((int)layer));
-            if (IsSpawned)
-            {
-                box3D.ApplyMatrix4(ObjectToWorld());
-                group.Add(box3D);
-            }
+            if (IsSpawned) group.Add(box3D);
         }
 
-        private THREE.Object3D SetupSphereGizmo(List<THREE.Object3D> group, igComponentData component, float radius, LevelExplorer.CameraLayer layer, THREE.Color color)
+        private void SetupSphereGizmo(List<THREE.Object3D> group, igComponentData component, float radius, LevelExplorer.CameraLayer layer, THREE.Color color)
         {
-            THREE.SphereGeometry geo = new THREE.SphereGeometry(1, 16, 16);
-            THREE.SphereGeometry geoWire = new THREE.SphereGeometry(1, 8, 8);
-            THREE.MeshBasicMaterial mat = new THREE.MeshBasicMaterial() { Transparent = true, Opacity = 0.35f, Color = color };
-            THREE.MeshBasicMaterial matWire = new THREE.MeshBasicMaterial() { Wireframe = true, Color = color };
+            var geo = new THREE.SphereGeometry(1, 16, 16);
+            var geoWire = new THREE.SphereGeometry(1, 8, 8);
+            var mat = new THREE.MeshBasicMaterial() { Transparent = true, Opacity = 0.35f, Color = color };
+            var matWire = new THREE.MeshBasicMaterial() { Wireframe = true, Color = color };
 
-            THREE.Mesh mesh = new THREE.Mesh(geo, mat)
+            var mesh = new THREE.Mesh(geo, mat)
             {
                 new THREE.Mesh(geoWire, matWire)
             };
 
-            mesh.Scale.Set(radius, radius, radius);
+            mesh.ApplyMatrix4(ObjectToWorld() * new THREE.Matrix4().MakeScale(radius, radius, radius));
 
             mesh.Traverse(e =>
             {
                 e.Layers.Set((int)layer);
                 e.UserData["entity"] = this;
+                e.UserData["component"] = component;
             });
 
-            if (IsSpawned)
-            {
-                mesh.ApplyMatrix4(ObjectToWorld());
-                group.Add(mesh);
-            }
-
             Components ??= new ComponentManager(this);
-            Components.CreateObject3D(component, mesh);
+            Components.AddGizmo(component, mesh);
 
-            return mesh;
+            if (IsSpawned) group.Add(mesh);
         }
 
         public NSTWaypoint AddWaypoint(CWaypoint waypoint, LevelExplorer explorer)
@@ -493,7 +492,7 @@ namespace NST
             return Children.OfType<NSTEntity>().FirstOrDefault(c => c.Object.ObjectName == name);
         }
 
-        private IEnumerable<NSTEntity> GetParentSpawners()
+        public IEnumerable<NSTEntity> GetParentSpawners()
         {
             if (IsSpawned || Object.GetType() == typeof(igEntity)) return [];
 
@@ -625,7 +624,16 @@ namespace NST
         /// </summary>
         public NSTEntity MakeChildTemplateUnique(LevelExplorer explorer, NSTEntity childTemplate)
         {
-            if (Components == null || childTemplate.GetParentSpawners().Count() <= 1) return childTemplate;
+            if (childTemplate.GetParentSpawners().Count() <= 1) return childTemplate;
+            if (!Object.TryGetComponent(out common_Spawner_TemplateData? _)) return childTemplate;
+
+            Components ??= new ComponentManager(this);
+
+            if (!Components.IsSetup)
+            {
+                Components.SetupComponents(explorer);
+            }
+            
             if (Components.GetComponent<common_Spawner_TemplateData>() is not NSTComponent component) return childTemplate;
 
             Components.MakeUnique(component);
@@ -640,6 +648,8 @@ namespace NST
             uniqueTemplate.Parents.Add(this);
 
             Object.GetComponent<common_Spawner_TemplateData>()!._EntityToSpawn.Reference!.objectName = uniqueTemplate.Object.ObjectName!;
+
+            explorer.InstanceManager.RegisterNew([ uniqueTemplate ]);
 
             return uniqueTemplate;
         }
@@ -679,23 +689,35 @@ namespace NST
 
             ImGui.Spacing();
 
-            igEntityTransform transform = Object._transform ?? new igEntityTransform() { MemoryPool = Object.MemoryPool.WithAlignment(16) };
+            igEntityTransform transform = new igEntityTransform() { MemoryPool = Object.MemoryPool.WithAlignment(16) };
             THREE.Vector3 previousPosition = Object._parentSpacePosition.ToVector3();
+            THREE.Euler previousRotation = new THREE.Euler(0, 0, 0);
+            THREE.Vector3 previousScale = new THREE.Vector3(1, 1, 1);
+
+            if (Object._transform != null)
+            {
+                transform = Object._transform;
+                previousRotation = transform._parentSpaceRotation.ToEuler();
+                previousScale = transform._nonUniformPersistentParentSpaceScale.ToVector3();
+            }
 
             // Render position input
 
-            if (RenderVector3("Position", ref Object._parentSpacePosition))
+            if (RenderVector3("Position", ref Object._parentSpacePosition, out bool onRelease))
             {
                 explorer.ArchiveRenderer.SetEntityUpdated(this);
+                explorer.SelectionManager.TranslateSelectionFromGUI(previousPosition, Object._parentSpacePosition.ToVector3());
+            }
 
-                explorer.SelectionManager._selectionContainer.Position += Object._parentSpacePosition.ToVector3() - previousPosition;
-                explorer.RenderNextFrame = true;
+            if (onRelease)
+            {
+                explorer.SelectionManager.ApplyChanges("translate");
             }
 
             // Render rotation input
 
             igVec3fMetaField rotationDegrees = transform._parentSpaceRotation.Mul(THREE.MathUtils.RAD2DEG);
-            if (RenderVector3("Rotation", ref rotationDegrees, 0.1f))
+            if (RenderVector3("Rotation", ref rotationDegrees, out onRelease, 0.1f))
             {
                 rotationDegrees._x = (float)(Math.Truncate((decimal)rotationDegrees._x * 10) / 10) % 360f;
                 rotationDegrees._y = (float)(Math.Truncate((decimal)rotationDegrees._y * 10) / 10) % 360f;
@@ -710,14 +732,12 @@ namespace NST
 
                 Object._transform._parentSpaceRotation = rotationDegrees.Mul(THREE.MathUtils.DEG2RAD);
 
-                if (Object3D != null)
-                {
-                    var localRotation = new THREE.Quaternion().SetFromEuler(Object._transform._parentSpaceRotation.ToEuler());
-                    var parentRotation = new THREE.Quaternion().Copy(Object3D.Parent.Quaternion);
-                    Object3D.Quaternion.Copy(parentRotation.Invert().Multiply(localRotation));
-                }
+                explorer.SelectionManager.RotateSelectionFromGUI(previousRotation, Object._transform._parentSpaceRotation.ToEuler());
+            }
 
-                explorer.RenderNextFrame = true;
+            if (onRelease)
+            {
+                explorer.SelectionManager.ApplyChanges("rotate");
             }
 
             // Render scale input
@@ -726,7 +746,9 @@ namespace NST
             {
                 var scale = childTemplate.Object._transform?._nonUniformPersistentParentSpaceScale ?? new igVec3fMetaField(1, 1, 1);
 
-                if (RenderVector3("Scale   ", ref scale, 0.01f))
+                previousScale.Copy(scale.ToVector3());
+
+                if (RenderVector3("Scale   ", ref scale, out onRelease, 0.01f))
                 {
                     childTemplate = MakeChildTemplateUnique(explorer, childTemplate);
 
@@ -739,20 +761,23 @@ namespace NST
 
                     childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = scale;
 
-                    Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
-                    childTemplate.Object3D?.Scale.Copy(childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3());
-                    explorer.RenderNextFrame = true;
-                    explorer.OnStartScaling(this);
+                    explorer.SelectionManager.ScaleSelectionFromGUI(previousScale, scale.ToVector3(), this);
+                }
+
+                if (onRelease && childTemplate.Object._transform != null)
+                {
+                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._x /= explorer.SelectionManager.SelectionContainer.Scale.X;
+                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._y /= explorer.SelectionManager.SelectionContainer.Scale.Y;
+                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._z /= explorer.SelectionManager.SelectionContainer.Scale.Z;
+                    explorer.SelectionManager.ApplyChanges("scale");
                 }
             }
             else
             {
                 bool disableScale = Object is CScriptTriggerEntity || Object is CDynamicClipEntity;
                 if (disableScale) ImGui.BeginDisabled();
-                if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, 0.01f))
+                if (RenderVector3("Scale   ", ref transform._nonUniformPersistentParentSpaceScale, out onRelease, 0.01f))
                 {
-                    explorer.InstanceManager.RefreshInstances(GetParentSpawners().Cast<NSTObject>().ToList());
-
                     if (Object._transform == null)
                     {
                         Object._transform = transform;
@@ -760,10 +785,17 @@ namespace NST
                     }
                     explorer.ArchiveRenderer.SetEntityUpdated(this);
 
-                    Object3D?.Scale.Copy(transform._nonUniformPersistentParentSpaceScale.ToVector3());
-                    explorer.RenderNextFrame = true;
+                    explorer.SelectionManager.ScaleSelectionFromGUI(previousScale, transform._nonUniformPersistentParentSpaceScale.ToVector3(), this);
                 }
                 if (disableScale) ImGui.EndDisabled();
+
+                if (onRelease)
+                {
+                    transform._nonUniformPersistentParentSpaceScale._x /= explorer.SelectionManager.SelectionContainer.Scale.X;
+                    transform._nonUniformPersistentParentSpaceScale._y /= explorer.SelectionManager.SelectionContainer.Scale.Y;
+                    transform._nonUniformPersistentParentSpaceScale._z /= explorer.SelectionManager.SelectionContainer.Scale.Z;
+                    explorer.SelectionManager.ApplyChanges("scale");
+                }
             }
 
             // Render bounds min/max

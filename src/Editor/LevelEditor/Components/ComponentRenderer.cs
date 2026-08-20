@@ -192,6 +192,7 @@ namespace NST
             }
 
             if (!hasCollision) ImGui.EndDisabled();
+            if (!hasCollision) ImGui.SetItemTooltip("This object has no collision data");
         }
 
         private static void RenderComponent(CStaticComponentData component, NSTComponent manager)
@@ -689,7 +690,7 @@ namespace NST
             }
 
             THREE.Vector3? scale = updated ? component._dimensions.ToVector3() : null;
-            manager.Manager.UpdateBox3D(component, scale: scale);
+            manager.Manager.UpdateGizmo(component, scale: scale);
         }
 
         private static void RenderComponent(common_CameraDistanceFadeEntityData component, NSTComponent manager)
@@ -792,14 +793,14 @@ namespace NST
 
             if (!updated)
             {
-                manager.Manager.UpdateBox3D(component);
+                manager.Manager.UpdateGizmo(component);
             }
             else
             {
                 THREE.Vector3 position = component._offset.ToVector3();
                 THREE.Euler rotation = component._rotation.Mul(THREE.MathUtils.DEG2RAD).ToEuler();
                 THREE.Vector3 scale = component._dimensions.ToVector3();
-                manager.Manager.UpdateBox3D(component, position, rotation, scale);
+                manager.Manager.UpdateGizmo(component, position, rotation, scale, useParentScale: false);
             }
         }
 
@@ -1297,7 +1298,7 @@ namespace NST
                     explorer.ArchiveRenderer.SetObjectUpdated(infos.SoundBankFile, infos.Sound);
                 }
 
-                manager.Manager.UpdateBox3D(component, scale: scale);
+                manager.Manager.UpdateGizmo(component, scale: scale, useParentScale: false);
 
                 if (RenderString("Sound file:", ref infos.SubSound._fileName!))
                 {
@@ -1331,7 +1332,7 @@ namespace NST
             RenderCheckbox("Depth blending enabled: ", ref component._depthBlendingEnabled, component, manager);
             RenderFloat("Depth blending softness:", ref component._depthBlendingSoftness, component, manager);
 
-            manager.Manager.UpdateBox3D(component, scale: THREE.Vector3.One() * component._radius, color: component._color.ToVector3(), useParentScale: false);
+            manager.Manager.UpdateGizmo(component, scale: THREE.Vector3.One() * component._radius, color: component._color.ToVector3());
         }
 
         private static void RenderComponent(CPointLightComponentData component, NSTComponent manager)
@@ -1344,7 +1345,7 @@ namespace NST
             RenderCheckbox("Distance cull:  ", ref component._distanceCull, component, manager);
 
             var color = new THREE.Vector3(component._color._x, component._color._y, component._color._z);
-            manager.Manager.UpdateBox3D(component, scale: THREE.Vector3.One() * component._radius, color: color, useParentScale: false);
+            manager.Manager.UpdateGizmo(component, scale: THREE.Vector3.One() * component._radius, color: color);
         }
 
         private static void RenderComponent(CBoxLightComponentData component, NSTComponent manager)
@@ -1363,7 +1364,7 @@ namespace NST
             RenderCheckbox("Distance cull:   ", ref component._distanceCull, component, manager);
 
             THREE.Vector3? scale = updated ? component._dimensions.ToVector3() : null;
-            manager.Manager.UpdateBox3D(component, scale: scale);
+            manager.Manager.UpdateGizmo(component, scale: scale);
         }
 
 #endregion
@@ -1609,7 +1610,7 @@ namespace NST
                 metaField.Reference = value;
                 manager.SetUpdated(true);
                 
-            }, fileNamespace, skipIfNotFound, defaultOpen, readOnly);
+            }, manager, fileNamespace, skipIfNotFound, defaultOpen, readOnly);
         }
 
         public static NSTObject? RenderObjectReference(
@@ -1618,6 +1619,7 @@ namespace NST
             Type type,
             LevelExplorer explorer,
             Action<NamedReference?> callback,
+            NSTComponent? component = null,
             string? fileNamespace = null,
             bool skipIfNotFound = false,
             bool defaultOpen = false,
@@ -1761,6 +1763,11 @@ namespace NST
 
             if (open)
             {
+                if (component != null && obj is NSTEntity e)
+                {
+                    component.Manager.CurrentlyExpandedChildren.Add(e);
+                }
+
                 ImGui.PushStyleColor(ImGuiCol.ChildBg, new System.Numerics.Vector4(0.1f, 0.12f, 0.2f, 1.0f));
                 if (ImGui.BeginChild("ObjectChild##" + obj.GetObject().ObjectName + label, System.Numerics.Vector2.Zero, ImGuiChildFlags.Border | ImGuiChildFlags.AutoResizeY))
                 {

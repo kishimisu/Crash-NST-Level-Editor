@@ -23,6 +23,7 @@ namespace NST
 
         public InstancedMeshManager InstanceManager { get; private set; }
         public SelectionManager SelectionManager { get; private set; }
+        public UndoManager UndoManager { get; private set; }
         public ActiveFileManager FileManager => ArchiveRenderer.FileManager;
 
         public THREE.Camera Camera => _camera;
@@ -104,7 +105,6 @@ namespace NST
         private bool _isDragging = false;
         private bool _clickedInsideScene = false;
         private bool _shouldOpenContextMenu = false;
-        private bool _refreshSelectionOnMouseUp = false;
         private static int _maxTextureSize = 512;
 
         private float _gizmoTranslationSnap = 80;
@@ -242,11 +242,6 @@ namespace NST
                         _fpsControls?.ResetMousePos();
                     }
                 }
-                else if (_refreshSelectionOnMouseUp)
-                {
-                    SelectionManager.UpdateSelection(SelectionManager._selection.ToList());
-                    _refreshSelectionOnMouseUp = false;
-                }
 
                 _outlinePass.showCenterDot = false;
                 _clickedInsideScene = false;
@@ -303,6 +298,8 @@ namespace NST
 
             SelectionManager = new SelectionManager(InstanceManager.RootObject, _gizmos, _outlinePass, this);
 
+            UndoManager = new UndoManager(this);
+
             _selectionBox = new SelectionBox(this, _camera, InstanceManager.RootObject);
 
             _selectionBox.OnSelect += () =>
@@ -328,7 +325,7 @@ namespace NST
                     var allObjects = objects.SelectMany(e => InstanceManager.Select(e)).ToList();
                     bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
 
-                    SelectionManager.UpdateSelection(allObjects, newSelection);
+                    SelectionManager.UpdateSelection(allObjects, newSelection, true);
 
                     if (allObjects.Count > 0)
                     {
@@ -742,14 +739,14 @@ namespace NST
 
                 if (moveSelection)
                 {
-                    SelectionManager._selectionContainer.Position.Copy(spawnPoint);
-                    SelectionManager.ApplyChanges(ArchiveRenderer);
+                    SelectionManager.SelectionContainer.Position.Copy(spawnPoint);
+                    SelectionManager.ApplyChanges();
                     return;
                 }
             }
 
             // Paste selection
-            SelectionManager.Paste(ArchiveRenderer, FileManager, spawnPoint, (NSTObject? newObject) =>
+            SelectionManager.Paste(spawnPoint, (NSTObject? newObject) =>
             {
                 _treeView.RebuildTree(InstanceManager.AllObjects);
 
@@ -882,19 +879,19 @@ namespace NST
             }
 
             // Update selection
-            if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineControlPoint scp)
+            if (splines.Count > 0 && SelectionManager.Selection[0] is NSTSplineControlPoint scp)
             {
                 SelectionManager.UpdateSelection([scp.Parent.Parent], true);
             }
-            else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineRotationKeyFrame kf)
+            else if (splines.Count > 0 && SelectionManager.Selection[0] is NSTSplineRotationKeyFrame kf)
             {
                 SelectionManager.UpdateSelection([kf.Parent.Parent], true);
             }
-            else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineVelocityKeyFrame vkf)
+            else if (splines.Count > 0 && SelectionManager.Selection[0] is NSTSplineVelocityKeyFrame vkf)
             {
                 SelectionManager.UpdateSelection([vkf.Parent.Parent], true);
             }
-            else if (splines.Count > 0 && SelectionManager._selection[0] is NSTSplineMarker marker)
+            else if (splines.Count > 0 && SelectionManager.Selection[0] is NSTSplineMarker marker)
             {
                 SelectionManager.UpdateSelection([marker.Parent.Parent], true);
             }
@@ -1054,6 +1051,11 @@ namespace NST
                         Resize((int)canvasSize.X, (int)canvasSize.Y);
                     }
 
+                    if (_gizmos.mode != "scale")
+                    {
+                        SelectionManager.ResetScaleTransform();
+                    }
+
                     base.Render(deltaTime);
 
                     if (RebuildState == RebuildStatus.None)
@@ -1086,6 +1088,7 @@ namespace NST
 
                     ImGui.SetCursorPos(startPos);
                     RenderCameraLayers();
+                    RenderNotification();
 
                     if (_shouldOpenContextMenu)
                     {
@@ -1098,9 +1101,9 @@ namespace NST
 
                     if (ImGui.BeginChild("ObjectProperties" + GetHashCode()))
                     {
-                        if (SelectionManager._selection.Count > 0)
+                        if (SelectionManager.Selection.Count > 0)
                         {
-                            SelectionManager._selection[0].Render(this);
+                            SelectionManager.Selection[0].Render(this);
                         }
                     }
                     ImGui.EndChild();
@@ -1196,14 +1199,56 @@ namespace NST
                 _gizmos.mode = "scale";
                 RenderNextFrame = true;
             }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.G))
+            {
+                _gizmos.space = _gizmos.space == "world" ? "local" : "world";
+                RenderNextFrame = true;
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.Z))
+            {
+                if (LocalStorage.Get("first_undo", true))
+                {
+                    string message = "You're about to use the undo/redo feature for the first time.\n\n";
+                    message += "Here's what you can undo:\n\n";
+                    message += "- selecting, moving, rotating & scaling objects\n\n";
+                    message += "Here's what you CAN'T undo:\n\n";
+                    message += "- copy/pasting objects\n";
+                    message += "- creating new objects\n";
+                    message += "- deleting objects\n";
+                    message += "- editing components\n";
+
+                    ModalRenderer.ShowConfirmationModal(
+                        message,
+                        () =>
+                        {
+                            LocalStorage.Set("first_undo", false);
+                            UndoManager.Undo();
+                        },
+                        () =>
+                        {
+                            UndoManager.Undo();
+                        },
+                        "Don't show",
+                        "OK"
+                    );
+                }
+                else
+                {
+                    UndoManager.Undo();
+                }
+            }
+            else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.ModShift | ImGuiKey.Z))
+            {
+                UndoManager.Redo();
+            }
             else if (ImGui.GetIO().WantCaptureKeyboard) return;
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
-                RemoveObjects(SelectionManager._selection, true, true);
+                RemoveObjects(SelectionManager.Selection, true, true);
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
             {
-                if (SelectionManager._selection.Count > 0)
+                if (SelectionManager.Selection.Count > 0)
                 {
                     SelectionManager.ClearSelection(true);
                     RenderNextFrame = true;
@@ -1434,6 +1479,9 @@ namespace NST
                 ImGui.BulletText("Ctrl + E: translate mode");
                 ImGui.BulletText("Ctrl + R: rotate mode");
                 ImGui.BulletText("Ctrl + T: scale mode");
+                ImGui.BulletText("Ctrl + G: toggle world/object space");
+                ImGui.BulletText("Ctrl + Z: undo action");
+                ImGui.BulletText("Ctrl+Shift + Z: redo action");
                 ImGui.BulletText("Hold Shift: align to grid");
                 ImGuiUtils.ColoredSeparator("Save & launch", controlsColor);
                 ImGui.BulletText("Ctrl + S: save level");
@@ -1449,6 +1497,8 @@ namespace NST
         private void RenderCameraLayers()
         {
             ImGui.PushStyleColor(ImGuiCol.ChildBg, 0x99000000);
+
+            // RenderGizmoButtons();
 
             var flags = ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY;
             if (_cameraLayersOpen) flags |= ImGuiChildFlags.AlwaysUseWindowPadding;
@@ -1495,6 +1545,89 @@ namespace NST
             }
             ImGui.EndChild();
             ImGui.PopStyleColor();
+        }
+
+        private void RenderGizmoButtons()
+        {
+            if (ImGui.BeginChild("GizmoButtons" + GetHashCode(), new System.Numerics.Vector2(0, 0), ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY))
+            {
+                var atlas = ImGui.GetIO().Fonts;
+                if (RenderButton(atlas, "Translate", 192, 65, 22, 14, _gizmos.mode == "translate")) _gizmos.mode = "translate";
+                if (RenderButton(atlas, "Rotate", 471, 67, 21, 14, _gizmos.mode == "rotate")) _gizmos.mode = "rotate";
+                if (RenderButton(atlas, "Scale", 51, 67, 19, 13, _gizmos.mode == "scale")) _gizmos.mode = "scale";
+                ImGui.SameLine(); ImGui.Dummy(new (2.0f, 0.0f));
+                if (RenderButton(atlas, "World space", 84, 66, 22, 14, _gizmos.space == "world")) _gizmos.space = "world";
+                if (RenderButton(atlas, "Object space", 404, 66, 22, 14, _gizmos.space == "local")) _gizmos.space = "local";
+                ImGui.SameLine(); ImGui.Dummy(new (2.0f, 0.0f));
+            }
+            ImGui.EndChild();
+        }
+
+        private bool RenderButton(ImFontAtlasPtr atlas, string tooltip, float x, float y, float w, float h, bool active = false, float size = 16.0f)
+        {
+            if (active) ImGui.BeginDisabled();
+
+            ImGui.SameLine();
+            ImGui.PushStyleVar(ImGuiStyleVar.FramePadding, new System.Numerics.Vector2(1, 1));
+
+            var uv0 = new System.Numerics.Vector2(x / atlas.TexWidth, y / atlas.TexHeight);
+            var uv1 = new System.Numerics.Vector2((x + w) / atlas.TexWidth, (y + h) / atlas.TexHeight);
+
+            bool clicked = ImGui.ImageButton("##" + tooltip, atlas.TexID, new(size, size), uv0, uv1);
+
+            ImGui.PopStyleVar();
+
+            if (active) ImGui.EndDisabled();
+            if (clicked) RenderNextFrame = true;
+
+            ImGui.SetItemTooltip(tooltip);
+
+            return clicked;
+        }
+
+        private string? _notificationText = null;
+        private DateTime _notificationTime = DateTime.MinValue;
+        
+        public void Notify(string text)
+        {
+            _notificationText = text;
+            _notificationTime = DateTime.Now;
+        }
+        
+        private void RenderNotification()
+        {
+            if (_notificationText == null || (DateTime.Now - _notificationTime).TotalSeconds > 2.0f)
+                return;
+
+            var padding = new System.Numerics.Vector2(10, 10);
+            var margin = 4f;
+
+            var textSize = ImGui.CalcTextSize(_notificationText);
+            var windowSize = textSize + padding * 2;
+
+            var pos = new System.Numerics.Vector2(
+                _renderBounds.X + _renderBounds.Z - windowSize.X - margin,
+                _renderBounds.Y + margin
+            );
+
+            ImGui.SetNextWindowPos(pos, ImGuiCond.Always);
+            ImGui.SetNextWindowSize(windowSize, ImGuiCond.Always);
+
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowRounding, 4f);
+            ImGui.PushStyleVar(ImGuiStyleVar.WindowPadding, padding);
+
+            ImGui.PushStyleColor(ImGuiCol.ChildBg, new System.Numerics.Vector4(0.08f, 0.08f, 0.08f, 0.95f));
+            ImGui.PushStyleColor(ImGuiCol.Border, new System.Numerics.Vector4(0.25f, 0.25f, 0.25f, 1f));
+
+            var flags = ImGuiWindowFlags.NoDecoration | ImGuiWindowFlags.NoMove | ImGuiWindowFlags.NoSavedSettings | 
+                        ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoFocusOnAppearing | ImGuiWindowFlags.NoNav;
+
+            ImGui.Begin($"##notif" + _notificationTime.Ticks, flags);
+            ImGui.Text(_notificationText);
+            ImGui.End();
+
+            ImGui.PopStyleColor(2);
+            ImGui.PopStyleVar(2);
         }
 
         private void UpdateActiveLayers(THREE.Layers layers)
@@ -1565,10 +1698,10 @@ namespace NST
             RenderNextFrame = true;
         }
 
-        public void SelectObject(NSTObject obj, bool selectInTree = false, bool fromTree = false)
+        public void SelectObject(NSTObject obj, bool selectInTree = false, bool fromTree = false, bool updateHistory = true)
         {
             List<NSTObject> selected = InstanceManager.Select(obj, fromTree);
-            SelectionManager.UpdateSelection(selected, !fromTree || !ImGui.IsKeyDown(ImGuiKey.LeftShift));
+            SelectionManager.UpdateSelection(selected, !fromTree || !ImGui.IsKeyDown(ImGuiKey.LeftShift), updateHistory);
             if (selectInTree) _treeView.SelectObject(obj);
             RenderNextFrame = true;
         }
@@ -1636,7 +1769,7 @@ namespace NST
                 
                 if (hitEntities.Count == 0) continue;
 
-                if (SelectionManager._selection.Count == 1 && SelectionManager._selection[0] == hitEntities[0]) continue;
+                if (SelectionManager.Selection.Count == 1 && SelectionManager.Selection[0] == hitEntities[0]) continue;
                 
                 if (hitEntities[0] is NSTEntity e && e.Object is CScriptTriggerEntity)
                 {
@@ -1666,7 +1799,7 @@ namespace NST
 
             bool newSelection = !ImGui.IsKeyDown(ImGuiKey.LeftShift);
 
-            SelectionManager.UpdateSelection(hitEntities, newSelection);
+            SelectionManager.UpdateSelection(hitEntities, newSelection, true);
 
             _treeView.SelectObject(hitEntities[0]);
         }
@@ -1840,16 +1973,16 @@ namespace NST
 
             NSTObject? selected = allObjects[0];
             
-            SelectObject(selected, true);
+            SelectObject(selected, true, updateHistory: false);
 
             if (addToSelection == true)
             {
                 SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e != selected && e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
 
-            SelectionManager._selectionContainer.Position = GetIntersectionPoint(camDistance * 2);
-            if (offsetZ != null) SelectionManager._selectionContainer.Position.Z += offsetZ.Value;
-            SelectionManager.ApplyChanges(ArchiveRenderer);
+            SelectionManager.SelectionContainer.Position = GetIntersectionPoint(camDistance * 2);
+            if (offsetZ != null) SelectionManager.SelectionContainer.Position.Z += offsetZ.Value;
+            SelectionManager.ApplyChanges();
 
             return allObjects;
         }
@@ -1860,8 +1993,8 @@ namespace NST
             InstanceManager.RefreshInstances(InstanceManager.AllObjects);
 
             SelectionManager.UpdateSelection(selection);
-            SelectionManager._selectionContainer.Position = GetIntersectionPoint(camDistance * 2);
-            SelectionManager.ApplyChanges(ArchiveRenderer);
+            SelectionManager.SelectionContainer.Position = GetIntersectionPoint(camDistance * 2);
+            SelectionManager.ApplyChanges();
             
             _treeView.RebuildTree(InstanceManager.AllObjects);
         }
@@ -1877,19 +2010,9 @@ namespace NST
         {
             _treeView.AllNodes.ForEach(n => n.NextOpen = NextOpenState.ForceClose);
 
-            if (SelectionManager._selection.Count > 0)
+            if (SelectionManager.Selection.Count > 0)
             {
-                _treeView.SelectObject(SelectionManager._selection[0]);
-            }
-        }
-
-        public void OnStartScaling(NSTEntity entity)
-        {
-            if (!_refreshSelectionOnMouseUp && entity.Spline?.Object3D != null && entity.Object3D?.Children.Contains(entity.Spline.Object3D) == true)
-            {
-                entity.Object3D.Remove(entity.Spline.Object3D);
-                entity.Spline.Object3D = null;
-                _refreshSelectionOnMouseUp = true;
+                _treeView.SelectObject(SelectionManager.Selection[0]);
             }
         }
 

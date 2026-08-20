@@ -46,6 +46,7 @@ namespace NST
             typeof(Hazard_Crushing_Block_ManagerData),
             typeof(Egypt_Crushing_Block_Manager_BehaviorData),
             typeof(common_BabyT_SpawnManagerData),
+            typeof(Hazard_HavokBased_Chase_BehaviorData)
         ];
         private static readonly HashSet<Type> _componentsWithoutModel = 
         [

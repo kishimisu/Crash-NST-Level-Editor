@@ -22,7 +22,8 @@ namespace NST
         private static LevelExplorer? _copyEntityExplorer = null;
 
         public Dictionary<string, THREE.Object3D> Gizmos { get; private set; } = [];
-        public Dictionary<igComponentData, THREE.Vector3> DefaultSizes { get; }= [];
+        public Dictionary<igComponentData, THREE.Vector3> DefaultSizes { get; } = [];
+        public HashSet<NSTEntity> CurrentlyExpandedChildren { get; } = [];
 
         private static readonly HashSet<Type> _autoFocusComponents = 
         [
@@ -35,6 +36,7 @@ namespace NST
             typeof(Egypt_Hazard_FloodWater_BehaviorData)
         ];
 
+        public bool IsSetup => _components != null;
         public int Count => _components.Count;
         public string GetID() => _uuid.ToString();
         public NSTComponent? GetComponent<T>() where T : igComponentData => _components.Find(c => c.Object is T);
@@ -141,6 +143,17 @@ namespace NST
             }
         }
 
+        public void SelectComponent(igComponentData component)
+        {
+            NSTComponent? c = _components?.Find(c => c.Object == component);
+
+            if (c != null)
+            {
+                _selection.Clear();
+                _selection.Add(c);
+            }
+        }
+
         public void RenderComponents(LevelExplorer explorer)
         {
             _components ??= SetupComponents(explorer);
@@ -155,7 +168,7 @@ namespace NST
 
             if (ImGui.BeginChild("##components", System.Numerics.Vector2.Zero, ImGuiChildFlags.AutoResizeY))
             {
-                ImGuiMultiSelectIOPtr io = ImGui.BeginMultiSelect(ImGuiMultiSelectFlags.ClearOnEscape | ImGuiMultiSelectFlags.ClearOnClickVoid | ImGuiMultiSelectFlags.BoxSelect1d);
+                ImGuiMultiSelectIOPtr io = ImGui.BeginMultiSelect(ImGuiMultiSelectFlags.ClearOnClickVoid | ImGuiMultiSelectFlags.BoxSelect1d);
                 ApplyMultiSelectRequests(io);
 
                 for (int i = 0; i < _components.Count; i++)
@@ -491,18 +504,7 @@ namespace NST
                 {
                     if (!req.Selected)
                     {
-                        if (Entity.Object3D != null)
-                        {
-                            foreach ((var key, var obj3D) in Gizmos)
-                            {
-                                if (Entity.Object3D.Children.Contains(obj3D))
-                                {
-                                    Entity.Object3D.Remove(obj3D);
-                                    Explorer.RenderNextFrame = true;
-                                }
-                            }
-                        }
-
+                        RevertGizmos();
                         _selection.Clear();
                         continue;
                     }
@@ -528,7 +530,7 @@ namespace NST
             }
         }
 
-        public void CreateObject3D(igComponentData component, THREE.Object3D object3D)
+        public void AddGizmo(igComponentData component, THREE.Object3D object3D)
         {
             string key = component.ObjectName ?? component.GetType().Name;
 
@@ -540,31 +542,43 @@ namespace NST
             Gizmos[key] = object3D;
         }
 
-        public void UpdateBox3D(igComponentData component, THREE.Vector3? position = null, THREE.Euler? rotation = null, THREE.Vector3? scale = null, THREE.Vector3? color = null, bool useParentScale = true, bool updateLayer = true)
+        public THREE.Object3D? GetGizmo(igComponentData component)
         {
             string key = component.ObjectName ?? component.GetType().Name;
+
+            if (Gizmos.TryGetValue(key, out THREE.Object3D? obj3D))
+            {
+                return obj3D;
+            }
+
+            return null;
+        }
+
+        public void UpdateGizmo(igComponentData component, THREE.Vector3? position = null, THREE.Euler? rotation = null, THREE.Vector3? scale = null, THREE.Vector3? color = null, bool useParentScale = true, bool updateLayer = true)
+        {
+            string key = component.ObjectName ?? component.GetType().Name;
+            
             if (!Gizmos.TryGetValue(key, out THREE.Object3D? obj3D))
             {
                 return;
             }
 
-            var exists = Entity.Object3D?.Children.Contains(obj3D);
-
             if (updateLayer)
             {
                 obj3D.Traverse(e => 
                 {
-                    if ((e.Layers.Mask & (int)LevelExplorer.CameraLayer.TriggersOn) == 0)
+                    if (((e.Layers.Mask >> (int)LevelExplorer.CameraLayer.TriggersOn) & 1) == 0)
                     {
+                        e.UserData["originalLayer"] = e.Layers.Mask;
                         e.Layers.Set((int)LevelExplorer.CameraLayer.TriggersOn);
                         Explorer.RenderNextFrame = true;
                     }
                 });
             }
 
-            if (exists == false && Entity.Object3D != null)
+            if (Entity.Object3D != null && obj3D.Parent == null)
             {
-                Entity.Object3D.Add(obj3D);
+                Entity.Object3D.Attach(obj3D);
                 Explorer.RenderNextFrame = true;
             }
             
@@ -576,9 +590,9 @@ namespace NST
 
                 THREE.Vector3 parentScale = new THREE.Vector3(1, 1, 1);
 
-                if (useParentScale)
+                if (!useParentScale)
                 {
-                    Entity.ObjectToWorld().Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
+                    Entity.ObjectToWorld(true).Decompose(new THREE.Vector3(), new THREE.Quaternion(), parentScale);
                 }
 
                 obj3D.Position.Copy(position / parentScale);
@@ -595,6 +609,31 @@ namespace NST
                         e.Material.Color = new THREE.Color(color.X, color.Y, color.Z);
                 });
             }
+        }
+
+        public void RevertGizmos()
+        {
+            foreach ((var key, var obj3D) in Gizmos)
+            {
+                if (obj3D.UserData.TryGetValue("originalLayer", out object? originalLayer))
+                {
+                    obj3D.Traverse(e => 
+                    {
+                        e.UserData.Remove("originalLayer");
+                        e.Layers.Mask = (int)originalLayer;
+                    });
+                    Explorer.RenderNextFrame = true;
+                }
+            }
+
+            if (CurrentlyExpandedChildren.Count == 0) return;
+
+            foreach (var child in CurrentlyExpandedChildren)
+            {
+                child.Components?.RevertGizmos();
+            }
+
+            CurrentlyExpandedChildren.Clear();
         }
     }
 }

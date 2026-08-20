@@ -30,7 +30,7 @@ namespace NST
         private bool _isMarkerListOpen = false;
 
         public override THREE.Vector3 GetPosition() => Parent.Position;
-        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld();
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld().ResetScale();
 
         public NSTSpline(NSTEntity parent, igSpline2 spline)
         {
@@ -159,7 +159,7 @@ namespace NST
                 }
             }
 
-            lineMesh.ApplyMatrix4(Parent.ObjectToWorld());
+            lineMesh.ApplyMatrix4(ObjectToWorld());
 
             if (!selected && !_controlPoints.Any(e => e.Object3D != null))
             {
@@ -508,49 +508,64 @@ namespace NST
         {
             RefreshDistances(explorer);
             ComputeDistances(explorer, true);
-
-            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, point.Object);
-
             RefreshSpline();
-            explorer.RenderNextFrame = true;
 
-            if (explorer.SelectionManager._selection.Count == 0) return;
-            
+            if (!point.IsSelected)
+            {
+                explorer.SelectionManager.UpdateSelection([point], true, true);
+            }
+
             // Multi-select translation
-            if (point.IsSelected)
             {
                 THREE.Vector3 offset = point.Object._position.ToVector3() - previousPosition;
 
-                foreach (NSTObject obj in explorer.SelectionManager._selection)
+                HashSet<NSTSpline> splines = [];
+
+                foreach (NSTObject obj in explorer.SelectionManager.Selection)
                 {
-                    if (obj is not NSTSplineControlPoint cp || cp.Parent != this || cp == point) continue;
+                    if (obj is not NSTSplineControlPoint cp || cp == point) continue;
 
                     cp.Object._position._x += offset.X;
                     cp.Object._position._y += offset.Y;
                     cp.Object._position._z += offset.Z;
+
+                    if (cp.Parent != this)
+                    {
+                        splines.Add(cp.Parent);
+                    }
+                }
+
+                foreach (var spline in splines)
+                {
+                    spline.RefreshDistances(explorer);
+                    spline.ComputeDistances();
+                    spline.RefreshSpline();
                 }
             }
 
             // Refresh 3D selection
-            if (explorer.SelectionManager._selection[0] is NSTSplineControlPoint root && root.Parent == this)
+            if (explorer.SelectionManager.Selection[0] is NSTSplineControlPoint root && root.Parent == this)
             {
-                explorer.SelectionManager._selectionContainer.Position.Copy(root.Object._position.ToVector3().ApplyMatrix4(Parent.ObjectToWorld()));
+                explorer.SelectionManager.SelectionContainer.Position.Copy(root.Object._position.ToVector3().ApplyMatrix4(ObjectToWorld()));
             }
+            
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, point.Object);
+            explorer.RenderNextFrame = true;
         }
 
         private void RefreshRotationKeyFrame(NSTSplineRotationKeyFrame keyframe, THREE.Vector3 previousRotation, LevelExplorer explorer)
         {
-            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, keyframe.Object);
-
             RefreshSpline();
-            explorer.RenderNextFrame = true;
 
-            if (explorer.SelectionManager._selection.Count == 0 || !keyframe.IsSelected) return;
+            if (!keyframe.IsSelected)
+            {
+                explorer.SelectionManager.UpdateSelection([keyframe], true, true);
+            }
 
             THREE.Vector3 offset = keyframe.Object._value.ToVector3() - previousRotation;
 
             // Multi-select rotation
-            foreach (NSTObject obj in explorer.SelectionManager._selection)
+            foreach (NSTObject obj in explorer.SelectionManager.Selection)
             {
                 if (obj is not NSTSplineRotationKeyFrame kf || kf.Parent != this || kf == keyframe) continue;
 
@@ -559,37 +574,48 @@ namespace NST
                 kf.Object._value._z += offset.Z;
             }
 
-            explorer.SelectionManager.UpdateSelection(explorer.SelectionManager._selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == this).ToList());
+            explorer.SelectionManager.UpdateSelection(explorer.SelectionManager.Selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == this).ToList());
+            
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, keyframe.Object);
+            explorer.RenderNextFrame = true;
         }
 
         private void RefreshVelocity(NSTSplineVelocityKeyFrame vel, LevelExplorer explorer)
         {
-            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, vel.Object);
-
             ComputeDistances(explorer, true);
             RefreshSpline();
-            explorer.RenderNextFrame = true;
 
-            if (explorer.SelectionManager._selection.Count == 0 || !vel.IsSelected) return;
-            if (explorer.SelectionManager._selection[0] is NSTSplineVelocityKeyFrame root && root.Parent == this)
+            if (!vel.IsSelected)
+            {
+                explorer.SelectionManager.UpdateSelection([vel], true, true);
+            }
+
+            if (explorer.SelectionManager.Selection[0] is NSTSplineVelocityKeyFrame root && root.Parent == this)
             {
                 explorer.SelectionManager.UpdateSelection([root]);
             }
+
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, vel.Object);
+            explorer.RenderNextFrame = true;
         }
 
         private void RefreshMarker(NSTSplineMarker marker, LevelExplorer explorer)
         {
-            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, marker.Object);
-
             ComputeDistances(explorer, true);
             RefreshSpline();
-            explorer.RenderNextFrame = true;
 
-            if (explorer.SelectionManager._selection.Count == 0 || !marker.IsSelected) return;
-            if (explorer.SelectionManager._selection[0] is NSTSplineMarker root && root.Parent == this)
+            if (!marker.IsSelected)
+            {
+                explorer.SelectionManager.UpdateSelection([marker], true, true);
+            }
+
+            if (explorer.SelectionManager.Selection[0] is NSTSplineMarker root && root.Parent == this)
             {
                 explorer.SelectionManager.UpdateSelection([root]);
             }
+
+            explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, marker.Object);
+            explorer.RenderNextFrame = true;
         }
 
         public void RefreshSpline()
@@ -692,6 +718,8 @@ namespace NST
             // }
             // ImGui.Text($"Distance: {distance}");
 
+            bool onRelease = false;
+
             // Render positions
 
             if (OpenControlPointList)
@@ -735,14 +763,14 @@ namespace NST
                             int count = int.Abs(i - lastIndex);
                             var added = _controlPoints.GetRange(startIndex, count).Where(e => !e.IsSelected).Cast<NSTObject>().ToList();
 
-                            explorer.SelectionManager.UpdateSelection(added, false);
+                            explorer.SelectionManager.UpdateSelection(added, false, true);
                             explorer.RenderNextFrame = true;
                         }
                         // Single selection
                         else
                         {
                             bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.LeftCtrl);
-                            explorer.SelectionManager.UpdateSelection([controlPoint.IsSelected && !ctrlPressed ? Parent : controlPoint], !ctrlPressed);
+                            explorer.SelectionManager.UpdateSelection([controlPoint.IsSelected && !ctrlPressed ? Parent : controlPoint], !ctrlPressed, true);
                             explorer.RenderNextFrame = true;
                             SelectedControlPoint = controlPoint;
                             OpenControlPointList = true;
@@ -754,22 +782,25 @@ namespace NST
                         if (ImGui.Selectable("Create new (before)"))
                         {
                             OpenControlPointList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewControlPoint(explorer, i, true)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewControlPoint(explorer, i, true)], updateHistory: true);
                         }
                         if (ImGui.Selectable("Create new (after)"))
                         {
                             OpenControlPointList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewControlPoint(explorer, i, false)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewControlPoint(explorer, i, false)], updateHistory: true);
                         }
                         ImGui.EndPopup();
                     }
 
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##px{i}", ref controlPoint.Object._position._x)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##py{i}", ref controlPoint.Object._position._y)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##pz{i}", ref controlPoint.Object._position._z)) RefreshControlPoint(controlPoint, previousPosition, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                 }
                 ImGui.PopStyleVar();
                 ImGui.EndTable();
@@ -824,13 +855,13 @@ namespace NST
                             int count = int.Abs(i - lastIndex);
                             var added = _rotationKeyFrames.GetRange(startIndex, count).Where(e => !e.IsSelected).Cast<NSTObject>().ToList();
 
-                            explorer.SelectionManager.UpdateSelection(added, false);
+                            explorer.SelectionManager.UpdateSelection(added, false, true);
                             explorer.RenderNextFrame = true;
                         }
                         else
                         {
                             bool ctrlPressed = ImGui.IsKeyDown(ImGuiKey.LeftCtrl);
-                            explorer.SelectionManager.UpdateSelection([keyframe.IsSelected && !ctrlPressed ? Parent : keyframe], !ctrlPressed);
+                            explorer.SelectionManager.UpdateSelection([keyframe.IsSelected && !ctrlPressed ? Parent : keyframe], !ctrlPressed, true);
                             explorer.RenderNextFrame = true;
                             SelectedRotationKeyFrame = keyframe;
                             OpenRotationList = true;
@@ -842,12 +873,12 @@ namespace NST
                         if (ImGui.Selectable("Create new (before)"))
                         {
                             OpenRotationList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewRotationKeyFrame(explorer, i, true)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewRotationKeyFrame(explorer, i, true)], updateHistory: true);
                         }
                         if (ImGui.Selectable("Create new (after)"))
                         {
                             OpenRotationList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewRotationKeyFrame(explorer, i, false)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewRotationKeyFrame(explorer, i, false)], updateHistory: true);
                         }
                         ImGui.Separator();
                         if (ImGui.Selectable("Preview"))
@@ -857,6 +888,7 @@ namespace NST
                         if (ImGui.Selectable("Set from camera"))
                         {
                             keyframe.SetFromCamera(explorer);
+                            onRelease = true;
                         }
                         ImGui.EndPopup();
                     }
@@ -867,12 +899,16 @@ namespace NST
                         ComputeDistances();
                         RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
                     }
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##rx{i}", ref keyframe.Object._value._x)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##ry{i}", ref keyframe.Object._value._y)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                     ImGui.TableNextColumn(); ImGui.SetNextItemWidth(-1);
                     if (ImGui.DragFloat($"##rz{i}", ref keyframe.Object._value._z)) RefreshRotationKeyFrame(keyframe, previousRotation, explorer);
+                    if (ImGui.IsItemDeactivatedAfterEdit()) onRelease = true;
                 }
                 ImGui.PopStyleVar();
                 ImGui.EndTable();
@@ -890,6 +926,7 @@ namespace NST
                 if (ImGui.SmallButton("Set rotation from camera"))
                 {
                     SelectedRotationKeyFrame.SetFromCamera(explorer);
+                    onRelease = true;
                 }
                 ImGui.Spacing();
             }
@@ -928,7 +965,7 @@ namespace NST
                         else
                         {
                             OpenVelocityList = true;
-                            explorer.SelectionManager.UpdateSelection([ velocity.IsSelected ? Parent : velocity ]);
+                            explorer.SelectionManager.UpdateSelection([ velocity.IsSelected ? Parent : velocity ], updateHistory: true);
                             explorer.RenderNextFrame = true;
                         }
                     }
@@ -938,12 +975,12 @@ namespace NST
                         if (ImGui.Selectable("Create new (before)"))
                         {
                             OpenVelocityList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, true)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, true)], updateHistory: true);
                         }
                         if (ImGui.Selectable("Create new (after)"))
                         {
                             OpenVelocityList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, false)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewVelocityKeyFrame(explorer, i, false)], updateHistory: true);
                         }
                         ImGui.EndPopup();
                     }
@@ -1000,7 +1037,7 @@ namespace NST
                         else
                         {
                             OpenMarkerList = true;
-                            explorer.SelectionManager.UpdateSelection([ marker.IsSelected ? Parent : marker ]);
+                            explorer.SelectionManager.UpdateSelection([ marker.IsSelected ? Parent : marker ], updateHistory: true);
                             explorer.RenderNextFrame = true;
                         }
                     }
@@ -1010,12 +1047,12 @@ namespace NST
                         if (ImGui.Selectable("Create new (before)"))
                         {
                             OpenMarkerList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewMarker(explorer, i, true)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewMarker(explorer, i, true)], updateHistory: true);
                         }
                         if (ImGui.Selectable("Create new (after)"))
                         {
                             OpenMarkerList = true;
-                            explorer.SelectionManager.UpdateSelection([CreateNewMarker(explorer, i, false)]);
+                            explorer.SelectionManager.UpdateSelection([CreateNewMarker(explorer, i, false)], updateHistory: true);
                         }
                         ImGui.EndPopup();
                     }
@@ -1029,6 +1066,11 @@ namespace NST
                 ImGui.PopStyleVar();
                 ImGui.EndTable();
             }
+
+            if (onRelease)
+            {
+                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform);
+            }
         }
     }
 
@@ -1037,7 +1079,14 @@ namespace NST
         public NSTSpline Parent { get; }
 
         public override THREE.Vector3 GetPosition() => Object._position.ToVector3();
-        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Object._position.ToVector3());
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld() * new THREE.Matrix4().SetPosition(GetPosition());
+
+        public THREE.Vector3 GetWorldPosition()
+        {
+            var position = new THREE.Vector3();
+            ObjectToWorld().Decompose(position, new(), new());
+            return position;
+        }
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
@@ -1071,11 +1120,10 @@ namespace NST
         public float LocalDistance { get; set; } = 0;
 
         public THREE.Vector3 Position { get; set; }
-
-        public THREE.Euler RotationEuler => Object._value.ToEuler();
+        public THREE.Vector3 Rotation => Object._value.ToVector3();
 
         public override THREE.Vector3 GetPosition() => Position;
-        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld() * ObjectToWorld(Position, Rotation);
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
@@ -1114,7 +1162,7 @@ namespace NST
         public void PreviewCamera(LevelExplorer explorer)
         {
             if (!IsSelected)
-                explorer.SelectionManager.UpdateSelection([this]);
+                explorer.SelectionManager.UpdateSelection([this], updateHistory: true);
 
             var position = Position.Clone();
             var euler = Object._value.ToVector3() * THREE.MathUtils.DEG2RAD;
@@ -1146,9 +1194,63 @@ namespace NST
             Parent.ComputeDistances();
             Parent.RefreshSpline();
 
-            explorer.SelectionManager.UpdateSelection(explorer.SelectionManager._selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == Parent).ToList());
+            explorer.SelectionManager.UpdateSelection(explorer.SelectionManager.Selection.Where(e => e is NSTSplineRotationKeyFrame kf && kf.Parent == Parent).ToList());
             explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
             explorer.RenderNextFrame = true;
+        }
+
+        public void UpdateDistance(THREE.Vector3 worldPos)
+        {
+            var controlPoints = Parent._controlPoints;
+
+            int closestSegmentIndex = 0;
+            THREE.Vector3 closestPointOnSpline = new();
+            float closestDistance = float.PositiveInfinity;
+
+            for (int i = 0; i < controlPoints.Count - 1; i++)
+            {
+                var a = controlPoints[i].GetWorldPosition();
+                var b = controlPoints[i+1].GetWorldPosition();
+                
+                var c = GetClosestPointOnSegment(a, b, worldPos);
+                var d = c.DistanceTo(worldPos);
+
+                if (d < closestDistance)
+                {
+                    closestDistance = d;
+                    closestSegmentIndex = i;
+                    closestPointOnSpline = c;
+                }
+            }
+
+            float startDist = 0;
+            for (int i = 0; i < closestSegmentIndex; i++)
+            {
+                startDist += controlPoints[i].Object._position.ToVector3().DistanceTo(controlPoints[i + 1].Object._position.ToVector3());
+            }
+
+            Prev = controlPoints[closestSegmentIndex];
+            Next = controlPoints[closestSegmentIndex+1];
+
+            THREE.Vector3 p1 = Prev.GetWorldPosition();
+            THREE.Vector3 p2 = Next.GetWorldPosition();
+
+            float segmentLength = p1.DistanceTo(p2);
+            float length = p1.DistanceTo(closestPointOnSpline);
+
+            Object._distance = startDist + length;
+            LocalDistance = length / segmentLength;
+        }
+
+        private THREE.Vector3 GetClosestPointOnSegment(THREE.Vector3 a, THREE.Vector3 b, THREE.Vector3 p)
+        {
+            THREE.Vector3 ab = b - a;
+
+            float t = THREE.Vector3.Dot(p - a, ab) / THREE.Vector3.Dot(ab, ab);
+            
+            t = Math.Clamp(t, 0f, 1f);
+
+            return a + ab * t;
         }
     }
 
@@ -1158,7 +1260,7 @@ namespace NST
         public THREE.Vector3 Position { get; set; }
 
         public override THREE.Vector3 GetPosition() => Position;
-        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld() * new THREE.Matrix4().SetPosition(Position);
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 
@@ -1194,7 +1296,7 @@ namespace NST
         public THREE.Vector3 Position { get; set; }
 
         public override THREE.Vector3 GetPosition() => Position;
-        public override THREE.Matrix4 ObjectToWorld() => new THREE.Matrix4().SetPosition(Position);
+        public override THREE.Matrix4 ObjectToWorld() => Parent.ObjectToWorld() * new THREE.Matrix4().SetPosition(Position);
 
         public override void Render(LevelExplorer explorer) => Parent.Parent.Render(explorer);
 

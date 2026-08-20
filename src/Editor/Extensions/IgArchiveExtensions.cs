@@ -282,7 +282,7 @@ namespace NST
                         str = str.Substring(0, idx);
                     }
 
-                    if (!str.EndsWith('_'))
+                    if (str.EndsWith('_'))
                     {
                         str = str.Substring(0, str.Length - 1);
                     }
@@ -408,8 +408,6 @@ namespace NST
             using Stream platformDataNST = System.Reflection.Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.platform_data.json")!;
 
             var data = System.Text.Json.JsonSerializer.Deserialize<Dictionary<uint, List<VertexData>>>(platformDataNST)!;
-
-            List<igObject> toRemove = [];
 
             foreach (igObject obj in igz.Objects)
             {

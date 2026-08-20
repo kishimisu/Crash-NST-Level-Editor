@@ -87,6 +87,7 @@ namespace NST
         // Alchemy -> THREE
         public static THREE.Vector3 ToVector3(this igVec3fMetaField v) => new THREE.Vector3(v._x, v._y, v._z);
         public static THREE.Euler ToEuler(this igVec3fMetaField v) => new THREE.Euler(v._x, v._y, v._z, THREE.RotationOrder.ZYX);
+        public static THREE.Euler ToEuler(this igVec3fMetaField v, bool convertToRadians) => !convertToRadians ? ToEuler(v) : new THREE.Euler(v._x * THREE.MathUtils.DEG2RAD, v._y * THREE.MathUtils.DEG2RAD, v._z * THREE.MathUtils.DEG2RAD, THREE.RotationOrder.ZYX);
         public static THREE.Quaternion ToQuaternion(this igVec3fMetaField v) => new THREE.Quaternion().SetFromEuler(v.ToEuler());
         public static THREE.Matrix4 ToMatrix4(this igMatrix44fMetaField m) => new THREE.Matrix4(
             m._row0._x, m._row0._y, m._row0._z, m._row0._w, 

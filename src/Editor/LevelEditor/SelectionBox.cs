@@ -198,7 +198,7 @@ public class SelectionBox
 
 					if ( frustum.ContainsPoint( _center ) ) 
 					{
-						entities ??= instanceManager.Entities.Where(e => !e.IsSelected || instanceManager.SelectionMode).ToList();
+						entities ??= instanceManager.Entities;
 
 						if (entities[instanceId].IsPrefabChild)
 							selection.Add(entities[instanceId].ParentPrefabInstance!);

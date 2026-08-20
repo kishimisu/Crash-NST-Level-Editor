@@ -8,14 +8,19 @@ namespace NST
         private static List<NSTObject> _copyPaste = [];
         private static LevelExplorer? _copyExplorer;
 
-        public List<NSTObject> _selection = [];
-        public THREE.Group _selectionContainer = new THREE.Group();
-        public LevelExplorer _explorer;
+        private readonly LevelExplorer _explorer;
+
+        private readonly List<NSTObject> _selection = [];
+        private readonly THREE.Group _selectionContainer = new THREE.Group();
+        private readonly THREE.Group _scaledObjectsContainer = new THREE.Group();
 
         private readonly THREE.Silk.TransformControls _gizmos;
         private readonly THREE.OutlinePass _outlinePass;
         private bool _revertGizmos = false;
-        private int _scaleMode = 0;
+
+        public List<NSTObject> Selection => _selection;
+        public THREE.Group SelectionContainer => _selectionContainer;
+        public THREE.Silk.TransformControls Gizmos => _gizmos;
 
         public static LevelExplorer? CopyExplorer { get => _copyExplorer; set => _copyExplorer = value; }
 
@@ -28,43 +33,36 @@ namespace NST
             _explorer.KeyDown += OnKeyDown;
 
             rootObject.Add(_selectionContainer);
+            rootObject.Add(_scaledObjectsContainer);
+
             _gizmos.Attach(_selectionContainer);
-            
             _gizmos.Visible = false;
 
             _gizmos._mouseUpEvent += (_) =>
             {
-                ApplyChanges(_explorer.ArchiveRenderer);
+                if (_gizmos.Visible)
+                {
+                    ApplyChanges(_gizmos.mode);
+                }
             };
 
             _gizmos._changeEvent += (_) =>
             {
-                if (_scaleMode != 0) return;
-
-                _scaleMode = -1;
-
-                if (_gizmos.mode == "scale")
+                if (_gizmos.Visible && _gizmos.mode == "scale")
                 {
-                    foreach (NSTEntity entity in _selection.OfType<NSTEntity>())
-                    {
-                        if (entity.Spline?.Object3D != null && entity.Object3D?.Children.Contains(entity.Spline.Object3D) == true)
-                        {
-                            entity.Object3D.Remove(entity.Spline.Object3D);
-                            entity.Spline.Object3D = null;
-                            _scaleMode = 1;
-                        }
-                    }
+                    UpdateScaleTransform(_selectionContainer.Scale, true);
+                    HideSelectedSplines();
                 }
             };
         }
 
-        public void UpdateSelection(List<NSTObject> objects, bool newSelection = true)
+        public void UpdateSelection(List<NSTObject> objects, bool newSelection = true, bool updateHistory = false)
         {
             List<NSTObject> previousSelection = _selection.ToList();
 
             if (newSelection && _selection.Count > 0)
             {
-                ClearSelection(refreshTreeView: false);
+                ClearSelection(refreshTreeView: false, updateHistory: false);
             }
 
             bool instanced = objects.Count > 1;
@@ -88,6 +86,8 @@ namespace NST
                 _outlinePass.selectedObjects.Add(instance.Object3D);
                 _selectionContainer.Attach(instance.Object3D);
             }
+
+            if (updateHistory) _explorer.UndoManager.AddAction(UndoManager.UndoActionType.Select);
 
             if (_selection.Count == 0) _gizmos.Visible = false;
         }
@@ -113,24 +113,26 @@ namespace NST
                 object3D = obj.CreateObject3D(true);
             }
 
-            if (_revertGizmos)
-            {
-                _gizmos.mode = "translate";
-                _revertGizmos = false;
-            }
-
             if (_selection.Count == 0)
             {
-                _selectionContainer.Position.Copy(object3D?.Position ?? obj.GetPosition());
-                _selectionContainer.Quaternion.Copy(THREE.Quaternion.Identity());
-                _selectionContainer.Scale.Copy(THREE.Vector3.One());
+                obj.ObjectToWorld().Decompose(_selectionContainer.Position, _selectionContainer.Quaternion, new THREE.Vector3());
+                
+                _selectionContainer.Scale.Set(1, 1, 1);
 
                 _gizmos.startPos.Copy(_selectionContainer.Position);
-
-                if (obj is NSTSplineRotationKeyFrame && _gizmos.mode != "rotate")
+                
+                if (obj is NSTSplineRotationKeyFrame)
                 {
+                    if (_gizmos.mode != "rotate")
+                    {
+                        _revertGizmos = true;
+                    }
                     _gizmos.mode = "rotate";
-                    _revertGizmos = true;
+                }
+                else if (_revertGizmos)
+                {
+                    _gizmos.mode = "translate";
+                    _revertGizmos = false;
                 }
             }
 
@@ -164,7 +166,7 @@ namespace NST
             _selection.Remove(obj);
         }
 
-        public void ClearSelection(bool refreshInstances = false, bool refreshTreeView = true)
+        public void ClearSelection(bool refreshInstances = false, bool refreshTreeView = true, bool updateHistory = true)
         {
             RemoveObjectsFromScene(_selection);
 
@@ -182,6 +184,8 @@ namespace NST
             {
                 _explorer.TreeView.SetSelectedNode(null);
             }
+
+            if (updateHistory) _explorer.UndoManager.AddAction(UndoManager.UndoActionType.Select);
         }
 
         private static void RemoveObjectsFromScene(List<NSTObject> objects)
@@ -200,16 +204,135 @@ namespace NST
                     parent.Object3D?.Traverse(e => e.Layers.Set((int)LevelExplorer.CameraLayer.ScriptTrigger));
                 }
 
+                if (obj is NSTEntity entity && entity.Components != null)
+                {
+                    entity.Components.RevertGizmos();
+                }
+
                 obj.IsSelected = false;
             }
         }
 
-        public void ApplyChanges(IgArchiveRenderer archiveRenderer)
+        public void TranslateSelectionFromGUI(THREE.Vector3 previousPosition, THREE.Vector3 newPosition)
+        {
+            _selectionContainer.Position += newPosition - previousPosition;
+            _explorer.RenderNextFrame = true;
+        }
+
+        public void RotateSelectionFromGUI(THREE.Euler previousRotation, THREE.Euler newRotation)
+        {
+            var previousQuaternion = new THREE.Quaternion().SetFromEuler(previousRotation);
+            var newQuaternion = new THREE.Quaternion().SetFromEuler(newRotation);
+            var delta = newQuaternion * new THREE.Quaternion().Copy(previousQuaternion).Invert();
+            var result = new THREE.Quaternion().MultiplyQuaternions(delta, _selectionContainer.Quaternion);
+
+            _selectionContainer.Quaternion.Copy(result);
+            _explorer.RenderNextFrame = true;
+        }
+
+        public void ScaleSelectionFromGUI(THREE.Vector3 previousScale, THREE.Vector3 newScale, NSTObject? selected = null)
+        {
+            var delta = newScale / previousScale;
+
+            _gizmos.mode = "scale";
+            _selectionContainer.Scale *= delta;
+            _explorer.RenderNextFrame = true;
+
+            UpdateScaleTransform(_selectionContainer.Scale, true, selected);
+            HideSelectedSplines();
+        }
+
+        public void HideSelectedSplines()
+        {
+            foreach (NSTObject obj in _selection)
+            {
+                if (obj is not NSTEntity e) continue;
+
+                if (e.Spline?.Object3D != null && e.Object3D?.Children.Contains(e.Spline.Object3D) == true)
+                {
+                    _explorer.InstanceManager.RootObject.Attach(e.Spline.Object3D);
+                }
+
+                if (e.Components == null) continue;
+
+                foreach (var component in e.Object.GetComponents())
+                {
+                    if (component is CTriggerVolumeComponentData triggerVolume)
+                    {
+                        THREE.Object3D? gizmo = e.Components.GetGizmo(triggerVolume);
+                        if (gizmo != null)
+                        {
+                            _explorer.InstanceManager.RootObject.Attach(gizmo);
+                        }
+                    }
+                }
+            }
+        }
+
+        public void UpdateScaleTransform(THREE.Vector3 scale, bool addToScaledContainer, NSTObject? selected = null)
+        {
+            foreach (NSTObject obj in _selection)
+            {
+                var transform = obj == selected ? obj.ObjectToWorld() : obj.ObjectToWorld().Scale(scale);
+
+                if (obj.Object3D != null)
+                {
+                    var newScale = new THREE.Vector3();
+                    transform.Decompose(new(), new(), newScale);
+
+                    obj.Object3D.Scale.Copy(newScale);
+
+                    if (addToScaledContainer && obj.Object3D.Parent != _scaledObjectsContainer)
+                    {
+                        _scaledObjectsContainer.Attach(obj.Object3D);
+                    }
+                }
+                else if (obj is NSTEntity entity && entity.InstanceManager != null)
+                {
+                    int index = entity.InstanceManager.Entities.IndexOf(entity);
+
+                    foreach (var child in entity.InstanceManager.Object3D.Children.OfType<THREE.InstancedMesh>())
+                    {
+                        child.SetMatrixAt(index, transform);
+                        child.InstanceMatrix.NeedsUpdate = true;
+                    }
+
+                    if (addToScaledContainer && entity.InstanceManager.Object3D.Parent != _scaledObjectsContainer)
+                    {
+                        _scaledObjectsContainer.Attach(entity.InstanceManager.Object3D);
+                    }
+                }
+            }
+        }
+
+        public void ResetScaleTransform()
+        {
+            if (_scaledObjectsContainer.Children.Count == 0)
+            {
+                return;
+            }
+
+            foreach (NSTObject obj in _selection)
+            {
+                if (obj.Object3D != null)
+                {
+                    _selectionContainer.Attach(obj.Object3D);
+                }
+                else if (obj is NSTEntity entity && entity.InstanceManager != null)
+                {
+                    _selectionContainer.Attach(entity.InstanceManager.Object3D);
+                }
+            }
+        }
+
+        public void ApplyChanges(string mode = "translate", bool updateHistory = true, THREE.Vector3? scaleOverride = null)
         {
             HashSet<NSTSpline> refreshSplines = [];
-            HashSet<NSTObject> refreshedObjects = [];
+            HashSet<NSTObject> refreshTemplates = [];
 
             _gizmos.startPos.Copy(_selectionContainer.Position);
+
+            if (updateHistory) _explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform);
 
             foreach (NSTObject obj in _selection)
             {
@@ -226,51 +349,75 @@ namespace NST
                 }
                 else if (obj is NSTEntity e && e.InstanceManager?.Object3D != null)
                 {
+                    var transform = new THREE.Matrix4();
+
+                    if (e.InstanceManager.Object3D.Children.FirstOrDefault() is THREE.InstancedMesh mesh)
+                    {
+                        int index = e.InstanceManager.Entities.IndexOf(e);
+                        mesh.GetMatrixAt(index, transform);
+                    }
+                    else
+                    {
+                        transform = obj.ObjectToWorld();
+                    }
+
                     e.InstanceManager.Object3D.UpdateWorldMatrix(true, true);
-                    THREE.Matrix4 transform = new THREE.Matrix4().MultiplyMatrices(e.InstanceManager.Object3D.MatrixWorld, obj.ObjectToWorld());
+
+                    transform = new THREE.Matrix4().MultiplyMatrices(e.InstanceManager.Object3D.MatrixWorld, transform);
+
                     transform.Decompose(worldPos, worldQuaternion, worldScale);
                 }
+
+                // More precise scale
+                obj.ObjectToWorld().Decompose(new(), new(), worldScale);
+                worldScale *= scaleOverride ?? _selectionContainer.Scale;
                 
                 THREE.Euler worldEuler = new THREE.Euler().SetFromQuaternion(worldQuaternion, THREE.RotationOrder.ZYX);
                 THREE.Vector3 worldEulerDegrees = worldEuler.ToVector3() * THREE.MathUtils.RAD2DEG;
 
                 if (obj is NSTSplineControlPoint controlPoint)
                 {
-                    THREE.Vector3 wp = controlPoint.Object3D!.GetWorldPosition(new THREE.Vector3());
-                    THREE.Vector3 localPos = wp.ApplyMatrix4(controlPoint.Parent.Parent.ObjectToWorld().Inverted());
+                    THREE.Vector3 localPos = worldPos.ApplyMatrix4(controlPoint.Parent.Parent.ObjectToWorld().Inverted());
                     controlPoint.Object._position = new igVec3fMetaField(localPos.X, localPos.Y, localPos.Z);
+                    _explorer.ArchiveRenderer.SetObjectUpdated(controlPoint.ArchiveFile, controlPoint.Object);
                     refreshSplines.Add(controlPoint.Parent);
-                    archiveRenderer.SetObjectUpdated(controlPoint.ArchiveFile, controlPoint.Object);
                     continue;
                 }
                 if (obj is NSTSplineRotationKeyFrame keyframe)
                 {
-                    THREE.Quaternion quaternion = keyframe.Object3D!.GetWorldQuaternion(new THREE.Quaternion());
-                    THREE.Euler euler = new THREE.Euler().SetFromQuaternion(quaternion, THREE.RotationOrder.ZYX);
-                    THREE.Vector3 rotation = euler.ToVector3() * THREE.MathUtils.RAD2DEG;
-                    keyframe.Object._value = new igVec3fMetaField(rotation.X, rotation.Y, rotation.Z - 90);
-                    archiveRenderer.SetObjectUpdated(keyframe.ArchiveFile, keyframe.Object);
+                    if (mode == "translate")
+                    {
+                        keyframe.UpdateDistance(worldPos);
+                        refreshSplines.Add(keyframe.Parent);
+                    }
+                    else
+                    {
+                        keyframe.Object._value = new igVec3fMetaField(worldEulerDegrees.X, worldEulerDegrees.Y, worldEulerDegrees.Z);
+                    }
+                    _explorer.ArchiveRenderer.SetObjectUpdated(keyframe.ArchiveFile, keyframe.Object);
                     continue;
                 }
                 if (obj is NSTCameraBox cameraBox)
                 {
                     cameraBox.Object._position = worldPos.ToVec3MetaField();
                     cameraBox.Object._rotation = worldEulerDegrees.ToVec3MetaField();
-                    archiveRenderer.SetObjectUpdated(cameraBox.ArchiveFile, cameraBox.Object);
+                    cameraBox.Object._min = cameraBox.Object._min.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                    cameraBox.Object._max = cameraBox.Object._max.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                    _explorer.ArchiveRenderer.SetObjectUpdated(cameraBox.ArchiveFile, cameraBox.Object);
                     continue;
                 }
                 if (obj is NSTCamera camera)
                 {
                     camera.Object._position = worldPos.ToVec3MetaField();
                     camera.Object._rotation = worldEulerDegrees.ToVec3MetaField();
-                    archiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
+                    _explorer.ArchiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
                     continue;
                 }
                 if (obj is NSTWaypoint waypoint)
                 {
                     waypoint.Object._position = worldPos.ToVec3MetaField();
                     waypoint.Object._rotation = worldEulerDegrees.ToVec3MetaField();
-                    archiveRenderer.SetObjectUpdated(waypoint.ArchiveFile, waypoint.Object);
+                    _explorer.ArchiveRenderer.SetObjectUpdated(waypoint.ArchiveFile, waypoint.Object);
                     continue;
                 }
 
@@ -279,6 +426,23 @@ namespace NST
                     Console.WriteLine("[ApplyChanges] Warning: Unknown object type: " + obj.GetObject());
                     continue;
                 }
+
+                igEntity entity = entity3D.Object;
+
+                if (entity is CDynamicClipEntity dynamicClip)
+                {
+                    dynamicClip._min = dynamicClip._min.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                    dynamicClip._max = dynamicClip._max.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                }
+                else if (entity is CScriptTriggerEntity scriptTrigger)
+                {
+                    scriptTrigger._min = scriptTrigger._min.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                    scriptTrigger._max = scriptTrigger._max.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                }
+                // else if (entity.TryGetComponent(out CTriggerVolumeBoxComponentData? triggerVolume))
+                // {
+                //     triggerVolume._dimensions = triggerVolume._dimensions.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                // }
 
                 if (entity3D.IsPrefabChild) // Skip prefab children
                 {
@@ -289,8 +453,11 @@ namespace NST
                     if (entities.Where(e => e.Object == entity3D.Object).ToList().IndexOf(entity3D) > 0) 
                         continue; // Other instances of this prefab found in selection (only update the first one)
                 }
+                // else if (entity3D.IsPrefabInstance)
+                // {
+                //     worldScale.Set(1, 1, 1);
+                // }
 
-                igEntity entity = entity3D.Object;
 
                 // If prefab child, the transform needs to be converted to local space
                 if (entity3D.IsPrefabChild && entity3D.ParentPrefabInstance != null)
@@ -309,7 +476,7 @@ namespace NST
 
                 // Child template scale overrides parent spawner scale
                 NSTEntity? childTemplate = entity3D.GetChildTemplate();
-                if (childTemplate != null)
+                if (childTemplate != null && !_selection.Contains(childTemplate))
                 {
                     var templateScale = childTemplate.Object._transform?._nonUniformPersistentParentSpaceScale;
                     var scale = templateScale == null ? null : new THREE.Vector3(templateScale._x, templateScale._y, templateScale._z);
@@ -317,6 +484,8 @@ namespace NST
                     if (scale == null && hasScale || scale != null && (worldScale - scale).LengthSq() > 1e-3f)
                     {
                         childTemplate = entity3D.MakeChildTemplateUnique(_explorer, childTemplate);
+
+                        refreshTemplates.Add(childTemplate);
 
                         if (childTemplate.Object._transform == null)
                         {
@@ -327,13 +496,15 @@ namespace NST
                     }
                 }
 
+                bool updateScale = childTemplate == null && entity is not CDynamicClipEntity && entity is not CScriptTriggerEntity;
+
                 THREE.Matrix4 previousMatrix = entity3D.ObjectToWorld();
 
                 // Update position
                 entity._parentSpacePosition = worldPos.ToVec3MetaField();
 
                 // Create transform object if necessary
-                if (entity._transform == null && (hasRotation || (hasScale && childTemplate == null)))
+                if (entity._transform == null && (hasRotation || hasScale && updateScale))
                 {
                     entity._transform = new igEntityTransform();
                     entity._transform.MemoryPool = entity.MemoryPool.WithAlignment(16);
@@ -344,16 +515,14 @@ namespace NST
                     // Update rotation
                     entity._transform._parentSpaceRotation = worldEuler.ToVec3MetaField();
 
-                    if (childTemplate == null)
+                    if (updateScale)
                     {
                         // Update scale
                         entity._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
                     }
                 }
 
-                archiveRenderer.SetEntityUpdated(entity3D);
-
-                List<NSTObject> templatesToRefresh = [];
+                _explorer.ArchiveRenderer.SetEntityUpdated(entity3D);
 
                 if (entity3D.IsPrefabInstance)
                 {
@@ -361,13 +530,9 @@ namespace NST
 
                     foreach (NSTEntity child in prefabChildren)
                     {
-                        if (child.IsTemplate)
-                        {
-                            templatesToRefresh.Add(child);
-                        }
                         if (child.CollisionShapeIndex != -1)
                         {
-                            archiveRenderer.SetEntityUpdated(child);
+                            _explorer.ArchiveRenderer.SetEntityUpdated(child);
                         }
                     }
                 }
@@ -375,22 +540,20 @@ namespace NST
                 THREE.Matrix4 deltaMatrix = new THREE.Matrix4().Copy(entity3D.ObjectToWorld()).Multiply(previousMatrix.Inverted());
 
                 // Update child templates position
-                var childTemplates = entity3D.GetUniqueChildTemplates();
-                foreach (var child in childTemplates)
+                foreach (var child in entity3D.GetUniqueChildTemplates())
                 {
-                    if (refreshedObjects.Contains(child)) continue;
-                    refreshedObjects.Add(child);
+                    if (!refreshTemplates.Add(child)) continue;
                     
                     THREE.Matrix4 newChildMatrix = deltaMatrix * child.ObjectToWorld();
                     THREE.Vector3 p = new THREE.Vector3();
                     newChildMatrix.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
                     child.Object._parentSpacePosition = p.ToVec3MetaField();
-                    templatesToRefresh.Add(child);
                 }
-                if (templatesToRefresh.Count > 0)
+                foreach (var parent in entity3D.GetParentSpawners())
                 {
-                    _explorer.InstanceManager.RefreshInstances(templatesToRefresh);
+                    refreshTemplates.Add(parent);
                 }
+                
                 // Update child waypoints position
                 if (_explorer.FileManager.GetIgz(entity3D.ArchiveFile) is IgzFile igz)
                 {
@@ -403,7 +566,14 @@ namespace NST
                     }
                 }
             }
+            
+            // Refresh templates
+            if (refreshTemplates.Count > 0)
+            {
+                _explorer.InstanceManager.RefreshInstances(refreshTemplates.ToList());
+            }
 
+            // Refresh splines
             foreach (NSTSpline spline in refreshSplines)
             {
                 spline.RefreshDistances(_explorer);
@@ -411,8 +581,16 @@ namespace NST
                 spline.RefreshSpline();
             }
 
-            // Refresh selected instances
+            _selectionContainer.Scale.Set(1, 1, 1);
+
+            if (mode == "scale" || _selection.Any(e => e is NSTSplineRotationKeyFrame))
             {
+                // Refresh entire selection
+                UpdateSelection(_selection.ToList());
+            }
+            else
+            {
+                // Refresh selected instances
                 foreach (var instance in _selection.OfType<NSTEntity>().Select(e => e.InstanceManager).Distinct())
                 {
                     if (instance?.Object3D == null) continue;
@@ -427,14 +605,9 @@ namespace NST
                 }
             }
 
+            // Refresh active collision previews
             var collisionGizmos = _selection.OfType<NSTEntity>().Where(e => e.CollisionObject != null).ToList();
             _explorer.InstanceManager.RefreshCollisionShapes(collisionGizmos);
-
-            if (_scaleMode == 1)
-            {
-                UpdateSelection(_selection.ToList());
-            }
-            _scaleMode = 0;
         }
 
         public bool Copy(LevelExplorer explorer)
@@ -448,7 +621,7 @@ namespace NST
            It started out as a clean, simple function to paste objects into another level editor, but I had to manage  
            so many edge cases that it slowly turned into a mess that is becoming harder to maintain with every new case. 
            It'll need to be improved in the future, but as long as it works... For your own sanity, I'd recommend not spending too much time on it. */
-        public void Paste(IgArchiveRenderer renderer, ActiveFileManager fileManager, THREE.Vector3? spawnPoint = null, Action<NSTObject?>? callback = null)
+        public void Paste(THREE.Vector3? spawnPoint = null, Action<NSTObject?>? callback = null)
         {
             if (_copyPaste.Count == 0 || _copyExplorer == null) return;
 
@@ -537,7 +710,7 @@ namespace NST
             Dictionary<NSTEntity, NSTEntity> newEntities = new Dictionary<NSTEntity, NSTEntity>();
             Dictionary<NSTEntity, NSTEntity> newCollisionEntities = new Dictionary<NSTEntity, NSTEntity>();
 
-            ClearSelection(true);
+            ClearSelection(true, updateHistory: false);
 
             ModalRenderer.ShowLoadingModal("Pasting selection...");
             int counter = 0;
@@ -549,7 +722,7 @@ namespace NST
                 foreach ((IgArchiveFile file, List<NSTObject> objects) in instances)
                 {
                     List<NSTEntity> entities = objects.OfType<NSTEntity>().ToList();
-                    IgzFile srcIgz = copyToSameFile ? fileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
+                    IgzFile srcIgz = copyToSameFile ? _explorer.FileManager.GetIgz(file)! : _copyExplorer.FileManager.GetIgz(file)!;
                     
                     IgArchiveFile? dstFile = file;
                     IgzFile dstIgz = srcIgz;
@@ -579,7 +752,7 @@ namespace NST
                             }
                             else
                             {
-                                renderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
+                                _explorer.ArchiveRenderer.Clone(obj.GetObject(), _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
                             }
                             continue;
                         }
@@ -649,7 +822,7 @@ namespace NST
                         // Paste to external archive
                         else
                         {
-                            renderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
+                            _explorer.ArchiveRenderer.Clone(entity.Object, _copyExplorer.Archive, srcIgz, dstIgz, clones, true, !newFile, copyFromCtrToNst);
                         }
 
                         if (triggerHandleList != null && triggerData != null)
@@ -661,7 +834,7 @@ namespace NST
                     foreach ((igObject src, igObject dst) in clones)
                     {
                         newClones.Add(dst);
-                        renderer.SetObjectUpdated(dstFile, dst);
+                        _explorer.ArchiveRenderer.SetObjectUpdated(dstFile, dst);
 
                         foreach (NamedReference handle in dst.GetHandles(_explorer.Archive.GameVersion))
                         {
@@ -988,19 +1161,19 @@ namespace NST
                             // If an updated collision shape is found for the original object, it means the collision index comes from another archive. Reuse this collision shape
                             if (_explorer.FileManager.GetInfos(original.ArchiveFile)?.updatedCollisions.TryGetValue(original, out var infos) == true)
                             {
-                                renderer.SetEntityUpdated(newPrefabChild, infos.shapeInstance);
+                                _explorer.ArchiveRenderer.SetEntityUpdated(newPrefabChild, infos.shapeInstance);
                             }
                             // No update collision shape found, the collision index points to a valid collision in this archive
                             else
                             {
-                                renderer.SetEntityUpdated(newPrefabChild);
+                                _explorer.ArchiveRenderer.SetEntityUpdated(newPrefabChild);
                             }
                         }
                         else
                         {
                             // Console.WriteLine($"Paste prefab collision shape to another level ({clone.ParentPrefabInstance?.Object.ObjectName} -> {clone.Object.ObjectName}), hash: {original.CollisionPrefabHash}");
                             hknpShapeInstance? shape = FindHavokShape(original.CollisionShapeIndex);
-                            renderer.SetEntityUpdated(newPrefabChild, shape);
+                            _explorer.ArchiveRenderer.SetEntityUpdated(newPrefabChild, shape);
                         }
                     }
                     else if (copyToSameFile)
@@ -1008,19 +1181,19 @@ namespace NST
                         if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
                         {
                             // Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
-                            renderer.SetEntityUpdated(clone, infos.shapeInstance);
+                            _explorer.ArchiveRenderer.SetEntityUpdated(clone, infos.shapeInstance);
                         }
                         else
                         {
                             // Console.WriteLine("Paste collision index to same file: " + clone.Object.ObjectName);
-                            renderer.SetEntityUpdated(clone);
+                            _explorer.ArchiveRenderer.SetEntityUpdated(clone);
                         }
                     }
                     else
                     {
                         // Console.WriteLine("Paste collision shape to another level: " + clone.Object.ObjectName);
                         hknpShapeInstance? shape = FindHavokShape(original.CollisionShapeIndex);
-                        renderer.SetEntityUpdated(clone, shape);
+                        _explorer.ArchiveRenderer.SetEntityUpdated(clone, shape);
                     }
                 }
 
@@ -1037,7 +1210,7 @@ namespace NST
                     _selectionContainer.Position.Copy(spawnPoint);
                 }
 
-                ApplyChanges(renderer);
+                ApplyChanges();
                 
                 if (!copyToSameFile)
                 {
@@ -1108,7 +1281,7 @@ namespace NST
 
             _selectionContainer.Position.Add(snappedPosition - worldPos);
 
-            ApplyChanges(_explorer.ArchiveRenderer);
+            ApplyChanges();
 
             _gizmos.StopDragging();
         }

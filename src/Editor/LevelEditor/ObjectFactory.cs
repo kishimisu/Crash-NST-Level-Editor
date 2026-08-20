@@ -163,13 +163,13 @@ namespace NST
                     {
                         _scaleDownCTR = MathF.Max(0.05f, MathF.Min(1.0f, _scaleDownCTR));
                     }
-                    if (explorer.SelectionManager._selection.Count == 0) ImGui.BeginDisabled();
+                    if (explorer.SelectionManager.Selection.Count == 0) ImGui.BeginDisabled();
                     if (ImGui.MenuItem("Scale down selection"))
                     {
-                        explorer.SelectionManager._selectionContainer.Scale *= _scaleDownCTR;
-                        explorer.SelectionManager.ApplyChanges(explorer.ArchiveRenderer);
+                        explorer.SelectionManager.SelectionContainer.Scale *= _scaleDownCTR;
+                        explorer.SelectionManager.ApplyChanges("scale");
                     }
-                    if (explorer.SelectionManager._selection.Count == 0) ImGui.EndDisabled();
+                    if (explorer.SelectionManager.Selection.Count == 0) ImGui.EndDisabled();
                     
                     ImGui.Separator();
                     
@@ -194,7 +194,7 @@ namespace NST
                             return true;
                         });
 
-                        explorer.SelectionManager.UpdateSelection(selection.Cast<NSTObject>().ToList());
+                        explorer.SelectionManager.UpdateSelection(selection.ToList(), true, true);
                     }
                     ImGui.EndPopup();
                 }
@@ -309,9 +309,14 @@ namespace NST
                         if (ImGui.MenuItem("L201_TurtleWoods    |  Body slam entrance       ")) TryAddObject(() => AddGeneric("L201_TurtleWoods", [("L201_TurtleWoods", "Jungle_SecretEntrance_BodySlam"), ("L201_TurtleWoods_Art", "HolePitrim01")], "Platforms", explorer));
                         ImGui.EndMenu();
                     }
+
+                    if (ImGui.BeginMenu("Teleporter..."))
+                    {
+                        if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddFadeTeleporter(explorer));
+                        if (ImGui.MenuItem("Warp Teleporter")) TryAddObject(() => AddWarpTeleporter(explorer));
+                        ImGui.EndMenu();
+                    }
                     
-                    if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddFadeTeleporter(explorer));
-                    if (ImGui.MenuItem("Warp Teleporter")) TryAddObject(() => AddWarpTeleporter(explorer));
                     ImGui.EndMenu();
                 }
 
@@ -534,7 +539,8 @@ namespace NST
                             if (obj is NSTEntity entity)
                             {
                                 Type type = obj.GetObject().GetType();
-
+                                
+                                if (entity.IsTemplate)                                return false;
                                 if (entity.IsPrefabChild || entity.IsPrefabTemplate)  return false;
                                 if (entity.IsPrefabInstance)                          return selectAll["Prefabs"];
                                 if (entity.Model != null && type == typeof(igEntity)) return selectAll["Static Objects"];
@@ -562,7 +568,7 @@ namespace NST
                         .Distinct()
                         .ToList();
 
-                        explorer.SelectionManager.UpdateSelection(selection);
+                        explorer.SelectionManager.UpdateSelection(selection, true, true);
                     }
 
                     ImGui.EndMenu();
@@ -1012,7 +1018,7 @@ namespace NST
                 if (objects.Count == 4 && objects[0] is NSTEntity start && objects[3] is NSTEntity end)
                 {
                     end.Object._parentSpacePosition = new igVec3fMetaField(start.Position.X + 600, start.Position.Y, start.Position.Z - 500);
-                    explorer.SelectionManager.UpdateSelection([end], false);
+                    explorer.SelectionManager.UpdateSelection([end], false, true);
                 }
             });
         }

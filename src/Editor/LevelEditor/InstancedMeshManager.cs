@@ -7,41 +7,57 @@ namespace NST
 {
     public class InstanceManager
     {
-        public HashSet<NSTEntity> Entities { get; } = [];
-
         private NSTModel? _model = null;
-        private THREE.Object3D group = new THREE.Group();
+        private List<NSTEntity> _entities = [];
 
-        public InstanceManager(NSTModel? model = null) => _model = model;
+        public THREE.Object3D Object3D { get; private set; } = new THREE.Object3D();
+        public bool SelectionMode { get; set; } = false;
 
-        public bool SelectionMode = false;
-        public THREE.Object3D Object3D => group;
+        public List<NSTEntity> Entities
+        {
+            get
+            {
+                if (SelectionMode)
+                {
+                    return _entities;
+                }
+
+                return _entities.Where(e => !e.IsSelected).ToList();
+            }
+        }
+
+        public bool IsEmpty => _entities.Count == 0;
+
+        public InstanceManager(NSTModel? model = null)
+        {
+            _model = model;
+        }
 
         public void Add(NSTEntity entity)
         {
             entity.InstanceManager = this;
-            Entities.Add(entity);
+            _entities.Add(entity);
         }
 
         public void Remove(NSTEntity entity)
         {
             entity.InstanceManager = null;
-            Entities.Remove(entity);
+            _entities.Remove(entity);
         }
 
         public void ConvertToInstanced(THREE.Object3D scene, LevelExplorer.DebugMode debugMode)
         {
             // Console.WriteLine($"Converting {_model?.Name} to instanced: {entities.Where(e => !e.IsSelected).Count()}/{entities.Count}");
 
-            scene.Remove(group);
+            scene.Remove(Object3D);
 
-            if (Entities.Count == 0) return;
+            if (_entities.Count == 0) return;
 
-            group = CreateInstancedGroup(debugMode);
+            Object3D = CreateInstancedGroup(debugMode);
 
-            group.UserData["instance"] = this;
+            Object3D.UserData["instance"] = this;
             
-            group.Traverse(e => 
+            Object3D.Traverse(e => 
             {
                 e.UserData["instance"] = this;
 
@@ -51,24 +67,24 @@ namespace NST
                 }
             });
 
-            scene.Add(group);
+            scene.Add(Object3D);
 
             SetLayer();
 
-            foreach (NSTEntity e in Entities)
+            foreach (NSTEntity e in _entities)
             {
                 if (e.IsSelected) continue;
 
                 foreach (THREE.Object3D child in e.CreateChildrenObject3D())
                 {
-                    group.Add(child);
+                    Object3D.Add(child);
                 }
             };
         }
 
         private THREE.Group CreateInstancedGroup(LevelExplorer.DebugMode debugMode)
         {
-            var instances = Entities.Where(e => !e.IsSelected || SelectionMode);
+            var instances = _entities.Where(e => !e.IsSelected || SelectionMode);
 
             THREE.Color highlightColor = new THREE.Color(0xff5141);
             THREE.Color defaultColor = new THREE.Color(0xb6b6b6);
@@ -109,18 +125,18 @@ namespace NST
 
             if (modelName == null)
             {
-                group.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities);
-                group.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities));
+                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities);
+                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities));
             }
             else if (modelName.Contains("cloud"))
             {
-                group.Layers.Set((int)LevelExplorer.CameraLayer.Clouds);
-                group.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Clouds));
+                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.Clouds);
+                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Clouds));
             }
             else if (modelName.Contains("shadow"))
             {
-                group.Layers.Set((int)LevelExplorer.CameraLayer.Shadows);
-                group.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Shadows));
+                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.Shadows);
+                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Shadows));
             }
         }
     }
@@ -187,7 +203,7 @@ namespace NST
 
             foreach (var manager in _instances.Values)
             {
-                if (manager.Entities.Count == 0 && manager.Object3D != null)
+                if (manager.IsEmpty && manager.Object3D != null)
                 {
                     RootObject.Remove(manager.Object3D);
                 }
@@ -317,12 +333,20 @@ namespace NST
         {
             if (hit.object3D.UserData.TryGetValue("entity", out object? entityObj))
             {
-                return Select((NSTObject)entityObj);
+                NSTObject obj = (NSTObject)entityObj;
+
+                if (obj is NSTEntity entity && entity.Components != null && hit.object3D.UserData.TryGetValue("component", out object? c))
+                {
+                    if (!entity.Components.IsSetup) entity.Components.SetupComponents(_explorer);
+                    entity.Components.SelectComponent((igComponentData)c);
+                }
+                
+                return Select(obj);
             }
             else if (hit.object3D.UserData.TryGetValue("instance", out object? instanceObj))
             {
                 InstanceManager instance = (InstanceManager)instanceObj;
-                NSTEntity entity = instance.Entities.Where(e => !e.IsSelected || instance.SelectionMode).ElementAt(hit.instanceId);
+                NSTEntity entity = instance.Entities[hit.instanceId];
                 return Select(entity);
             }
             else if (hit.object3D.UserData.TryGetValue("spline", out object? splineObj))
@@ -349,7 +373,7 @@ namespace NST
 
         public List<NSTObject> Select(NSTObject obj, bool fromTree = false)
         {
-            List<NSTEntity> selection = _explorer.SelectionManager._selection.OfType<NSTEntity>().ToList();
+            List<NSTEntity> selection = _explorer.SelectionManager.Selection.OfType<NSTEntity>().ToList();
             
             bool shiftPressed = ImGui.IsKeyDown(ImGuiKey.LeftShift);
             bool selectionEmpty = selection.Count == 0;
@@ -696,7 +720,7 @@ namespace NST
                     if (show)
                     {
                         entity.Components.Explorer = _explorer;
-                        entity.Components.UpdateBox3D(component, scale: scale, updateLayer: false);
+                        entity.Components.UpdateGizmo(component, scale: scale, useParentScale: false, updateLayer: false);
                     }
                 }
             }

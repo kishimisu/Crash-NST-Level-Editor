@@ -27,6 +27,18 @@ namespace NST
 
         public NamedReference ToReference() => GetObject().ToNamedReference(FileNamespace);
 
+        public static THREE.Matrix4 ObjectToWorld(THREE.Vector3 position, THREE.Vector3 rotation)
+        {
+            rotation *= THREE.MathUtils.DEG2RAD;
+
+            THREE.Euler euler = new THREE.Euler(rotation.X, rotation.Y, rotation.Z, THREE.RotationOrder.ZYX);
+            THREE.Quaternion quaternion = new THREE.Quaternion().SetFromEuler(euler);
+
+            THREE.Vector3 scale = new THREE.Vector3(1, 1, 1);
+
+            return new THREE.Matrix4().Compose(position, quaternion, scale);
+        }
+
         protected THREE.Mesh CreateBoxHelper(THREE.Vector3 min, THREE.Vector3 max, THREE.Color color, bool focused, LevelExplorer.CameraLayer? layer = null)
         {
             THREE.BoxGeometry geo = new THREE.BoxGeometry(1, 1, 1);
@@ -149,18 +161,22 @@ namespace NST
             ImGui.SeparatorText("Transform");
             ImGui.PopStyleColor();
 
-            bool updated = RenderVector3("Position", ref position);
-            updated     |= RenderVector3("Rotation", ref rotation);
+            THREE.Vector3 previousPosition = position.ToVector3();
+            THREE.Euler previousRotation = rotation.ToEuler(true);
 
-            if (updated)
+            if (RenderVector3("Position", ref position, out bool onRelease))
             {
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
-
-                if (Object3D != null)
-                {
-                    explorer.SelectionManager.UpdateSelection([this]);
-                }
+                explorer.SelectionManager.TranslateSelectionFromGUI(previousPosition, position.ToVector3());
             }
+            if (onRelease) explorer.SelectionManager.ApplyChanges("translate");
+
+            if (RenderVector3("Rotation", ref rotation, out onRelease))
+            {
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
+                explorer.SelectionManager.RotateSelectionFromGUI(previousRotation, rotation.ToEuler(true));
+            }
+            if (onRelease) explorer.SelectionManager.ApplyChanges("rotate");
         }
 
         public void RenderBounds(ref igVec3fMetaField min, ref igVec3fMetaField max, LevelExplorer explorer)
@@ -169,21 +185,44 @@ namespace NST
             ImGui.SeparatorText("Bounds");
             ImGui.PopStyleColor();
 
-            bool updated = RenderVector3("Min     ", ref min);
-            updated     |= RenderVector3("Max     ", ref max);
+            bool hasPressed = false;
+            bool hasReleased = false;
 
-            if (updated && Object3D != null)
+            var previousBounds = new THREE.Box3(min.ToVector3(), max.ToVector3());
+
+            if (RenderVector3("Min     ", ref min, out bool onPress, out bool onRelease))
             {
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
+                if (Object3D != null) explorer.SelectionManager.UpdateSelection([this]);
+            }
+            hasPressed |= onPress;
+            hasReleased |= onRelease;
 
-                if (Object3D != null)
-                {
-                    explorer.SelectionManager.UpdateSelection([this]);
-                }
+            if (RenderVector3("Max     ", ref max, out onPress, out onRelease))
+            {
+                explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
+                if (Object3D != null) explorer.SelectionManager.UpdateSelection([this]);
+            }
+            hasPressed |= onPress;
+            hasReleased |= onRelease;
+            
+            if (hasPressed)
+            {
+                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform, previousBounds);
+            }
+            if (hasReleased)
+            {
+                var newBounds = new THREE.Box3(min.ToVector3(), max.ToVector3());
+                explorer.UndoManager.FinalizeBoundsAction(newBounds);
             }
         }
 
-        public static bool RenderVector3(string name, ref igVec3fMetaField vec, float speed = 1.0f)
+        public static bool RenderVector3(string name, ref igVec3fMetaField vec, out bool onRelease, float speed = 1.0f)
+        {
+            return RenderVector3(name, ref vec, out _, out onRelease, speed);
+        }
+
+        public static bool RenderVector3(string name, ref igVec3fMetaField vec, out bool onPress, out bool onRelease, float speed = 1.0f)
         {
             System.Numerics.Vector3 num = vec.ToNumericsVector3();
             bool changed = false;
@@ -200,6 +239,9 @@ namespace NST
                 vec = num.ToVec3MetaField();
                 changed = true;
             }
+            
+            onPress = ImGui.IsItemActivated();
+            onRelease = ImGui.IsItemDeactivatedAfterEdit();
 
             ImGui.SameLine();
 

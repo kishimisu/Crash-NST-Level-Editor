@@ -223,6 +223,10 @@ namespace NST
             {
                 _io.AddKeyEvent(ImGuiKey.A, down);
             }
+            else if (key == Key.W) // Fix Ctrl+Z not working on text inputs on azerty keyboards
+            {
+                _io.AddKeyEvent(ImGuiKey.Z, down);
+            }
         }
 
         public virtual void OnMouseMove(IMouse mouse,System.Numerics.Vector2 position)
