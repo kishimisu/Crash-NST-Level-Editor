@@ -88,14 +88,29 @@ namespace NST
 
                 ImGui.Separator();
 
-                if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
+                string gameTooltip = !string.IsNullOrEmpty(LocalStorage.GamePath)
+                    ? Path.Join(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe")
+                    : "(Not set)";
 
-                if (LocalStorage.GamePath?.Contains("Steam") == true && 
-                    ImGui.MenuItem("Skip steam popup", null, LocalStorage.SkipSteamPopup))
+                string steamTooltip = !string.IsNullOrEmpty(LocalStorage.SteamExe)
+                    ? LocalStorage.SteamExe
+                    : "(Not set)";
+
+                if (ImGui.MenuItem("Set game path")) LocalStorage.SetNewGamePath();
+                ImGui.SetItemTooltip(gameTooltip);
+
+                if (ImGui.MenuItem("Set steam path")) LocalStorage.SetNewSteamPath();
+                ImGui.SetItemTooltip(steamTooltip);
+
+                bool steamNotFound = string.IsNullOrEmpty(LocalStorage.SteamExe);
+                if (steamNotFound) ImGui.BeginDisabled();
+                if (ImGui.MenuItem("Skip steam popup", null, LocalStorage.SkipSteamPopup))
                 {
                     LocalStorage.SkipSteamPopup = !LocalStorage.SkipSteamPopup;
                     LocalStorage.Set("skip_steam_popup", LocalStorage.SkipSteamPopup);
                 }
+                if (steamNotFound) ImGui.EndDisabled();
+                if (steamNotFound) ImGui.SetItemTooltip("You must set the path to steam.exe first");
 
                 // if (ImGui.MenuItem("ImGui Demo")) _showDemo = !_showDemo;
                 if (ImGui.MenuItem("Exit")) Environment.Exit(0);

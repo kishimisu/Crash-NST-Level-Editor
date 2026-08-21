@@ -363,11 +363,10 @@ namespace NST
             string exePath = Path.Join(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe");
             string args = levelPath == null ? "" : $"-om {levelPath}";
 
-            if (LocalStorage.SkipSteamPopup && LocalStorage.GamePath.Contains("Steam"))
+            if (LocalStorage.SkipSteamPopup && !string.IsNullOrEmpty(LocalStorage.SteamExe) && File.Exists(LocalStorage.SteamExe))
             {
                 const int NST_STEAM_IDENTIFIER = 731490;
-                int idx = LocalStorage.GamePath.LastIndexOf("Steam") + 5;
-                exePath = Path.Join(LocalStorage.GamePath.Substring(0, idx), "steam.exe");
+                exePath = LocalStorage.SteamExe;
                 args = $"-applaunch {NST_STEAM_IDENTIFIER} {args}";
             }
 
