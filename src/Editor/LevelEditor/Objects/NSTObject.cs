@@ -258,6 +258,8 @@ namespace NST
                 {
                     vec = _copyVector.Value.ToVec3MetaField();
                     changed = true;
+                    onPress = true;
+                    onRelease = true;
                 }
             }
 

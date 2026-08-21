@@ -23,7 +23,7 @@ namespace NST
         private int _lastX;
         private int _lastY;
         private bool _firstMouse = true;
-        private DateTime _moveStartTime;
+        private DateTime _moveStartTime = DateTime.MinValue;
 
         private bool _focused = false;
         public bool Focused() => _focused || _velocity.X != 0 || _velocity.Y != 0 || _velocity.Z != 0;
@@ -82,7 +82,12 @@ namespace NST
                     moveSpeed *= 6.0f;
 
                 if (SpeedIncrease)
+                {
+                    if (_moveStartTime == DateTime.MinValue)
+                        _moveStartTime = DateTime.Now;
+
                     moveSpeed *= 1 + (float)(DateTime.Now - _moveStartTime).TotalSeconds * 1.5f;
+                }
                 
                 _velocity.AddScaledVector(input.Normalize(), moveSpeed * deltaTime);
             }

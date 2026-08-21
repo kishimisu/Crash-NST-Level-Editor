@@ -234,7 +234,6 @@ namespace NST
         {
             var delta = newScale / previousScale;
 
-            _gizmos.mode = "scale";
             _selectionContainer.Scale *= delta;
             _explorer.RenderNextFrame = true;
 
@@ -305,25 +304,25 @@ namespace NST
             }
         }
 
-        public void ResetScaleTransform()
-        {
-            if (_scaledObjectsContainer.Children.Count == 0)
-            {
-                return;
-            }
+        // public void ResetScaleTransform()
+        // {
+        //     if (_scaledObjectsContainer.Children.Count == 0)
+        //     {
+        //         return;
+        //     }
 
-            foreach (NSTObject obj in _selection)
-            {
-                if (obj.Object3D != null)
-                {
-                    _selectionContainer.Attach(obj.Object3D);
-                }
-                else if (obj is NSTEntity entity && entity.InstanceManager != null)
-                {
-                    _selectionContainer.Attach(entity.InstanceManager.Object3D);
-                }
-            }
-        }
+        //     foreach (NSTObject obj in _selection)
+        //     {
+        //         if (obj.Object3D != null)
+        //         {
+        //             _selectionContainer.Attach(obj.Object3D);
+        //         }
+        //         else if (obj is NSTEntity entity && entity.InstanceManager != null)
+        //         {
+        //             _selectionContainer.Attach(entity.InstanceManager.Object3D);
+        //         }
+        //     }
+        // }
 
         public void ApplyChanges(string mode = "translate", bool updateHistory = true, THREE.Vector3? scaleOverride = null)
         {

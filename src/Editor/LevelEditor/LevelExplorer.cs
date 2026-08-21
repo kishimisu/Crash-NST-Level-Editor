@@ -1051,11 +1051,6 @@ namespace NST
                         Resize((int)canvasSize.X, (int)canvasSize.Y);
                     }
 
-                    if (_gizmos.mode != "scale")
-                    {
-                        SelectionManager.ResetScaleTransform();
-                    }
-
                     base.Render(deltaTime);
 
                     if (RebuildState == RebuildStatus.None)

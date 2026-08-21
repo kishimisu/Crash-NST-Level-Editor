@@ -366,7 +366,7 @@ namespace NST
             if (LocalStorage.SkipSteamPopup && LocalStorage.GamePath.Contains("Steam"))
             {
                 const int NST_STEAM_IDENTIFIER = 731490;
-                int idx = LocalStorage.GamePath.IndexOf("Steam") + 5;
+                int idx = LocalStorage.GamePath.LastIndexOf("Steam") + 5;
                 exePath = Path.Join(LocalStorage.GamePath.Substring(0, idx), "steam.exe");
                 args = $"-applaunch {NST_STEAM_IDENTIFIER} {args}";
             }
