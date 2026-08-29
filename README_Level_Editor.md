@@ -22,6 +22,7 @@
   - [Checkpoint Text](#checkpoint-text)
   - [On Start Music](#on-start-music)
 ---
+- [Custom hub/modpacks](#custom-hubs--modpacks)
 - [CTR:NF support](#ctrnf-support)
 
 # New Level
@@ -404,6 +405,35 @@ It's possible to change the text that is displayed when breaking checkpoints, al
 You can listen to the default music, and import your own audio files (.mp3) using this component.
 
 <img src="assets/readme/level_editor/c_music.jpg" alt="On Start Music" width="300"/>
+
+# Custom hubs / modpacks
+
+You can create custom hubs from which to access mutliple custom levels at once.
+
+### Custom Level setup
+
+Here's how to setup a custom level before adding it to your modpack/hub:
+
+1) Find the custom level archive (.pak) that you wish to add to your modpack
+2) Make sure the archive's name is the same as the final level name, without any space or special character (eg. `My_Amazing_Level.pak`)
+3) Open the custom level using the editor, and click `"File -> Update level name"` to make sure the level name and archive name are the same
+4) Save the archive and place it in the game's `archives/` folder. If you want to rename it later, make sure to use "File -> Update level name" afterwards and edit your hub (see below)
+
+### Custom Hub setup
+
+Here's how to add a custom level to a custom hub:
+
+1) Right click -> `New platform -> Level entrance...`
+2) Select the newly created Portal, and focus the `C2_WarpRoom_LevelPortal` component
+3) Change the "Level" property to match the name of the level (as set above)
+
+### Installing Custom Hubs
+
+Here are the recommended indications to install a custom hub/modpack after downloading:
+
+1) Place the hub archive anywhere on your PC.
+2) Place the level archives in the game's `archives/` folder directly, without creating a subfolder.
+3) Use "Play Custom Level" and run the hub archive.
 
 # CTR:NF support
 

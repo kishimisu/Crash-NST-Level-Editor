@@ -33,7 +33,8 @@ namespace NST
             typeof(igPrefabComponentData), 
             typeof(common_Level_ManagerData),
             typeof(common_BonusRoundTeleporterData),
-            typeof(Egypt_Hazard_FloodWater_BehaviorData)
+            typeof(Egypt_Hazard_FloodWater_BehaviorData),
+            typeof(common_C2_WarpRoom_LevelPortal)
         ];
 
         public bool IsSetup => _components != null;

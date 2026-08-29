@@ -696,6 +696,14 @@ namespace NST
                                 toCopyPaste.Remove(toRemove);
                             }
                         }
+                        else if (e.Object.TryGetComponent(out common_C2_WarpRoom_LevelPortal? l200) && l200._Camera_Base.Reference != null)
+                        {
+                            if (toCopyPaste.FirstOrDefault(c => NamedReference.Compare(c.ToReference(), l200._Camera_Base.Reference)) is NSTObject toRemove)
+                            {
+                                toCopyPaste.Remove(toRemove);
+                                l200._Camera_Base.Reference = null;
+                            }
+                        }
                     }
                 }
             }

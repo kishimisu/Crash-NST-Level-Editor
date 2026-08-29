@@ -489,15 +489,43 @@ namespace NST
 
         public static IgArchiveFile? FindCustomZoneInfoFile(this IgArchive archive)
         {
-            return archive.Files.Find(e => e.Path.StartsWith("update/") && e.Path.EndsWith("_zoneinfo.igz"));
+            var zoneInfos = archive.Files.Where(e => e.Path.StartsWith("update/") && e.Path.EndsWith("_zoneinfo.igz"));
+
+            if (zoneInfos.Count() > 1)
+            {
+                string? levelName = archive.FindPackageFile()?.GetName(false).Replace("_pkg", "");
+
+                if (levelName != null)
+                {
+                    var zoneInfo = zoneInfos.FirstOrDefault(f => f.GetName(false).StartsWith(levelName, StringComparison.InvariantCultureIgnoreCase));
+                    if (zoneInfo != null) return zoneInfo;
+                }
+            }
+
+            return zoneInfos.FirstOrDefault();
         }
 
         public static void TryRunLevel(this IgArchive archive)
         {
             try
             {
-                archive.RunLevel();
-                LocalStorage.AddRecentFile(archive.Path, true);
+                IgArchiveFile? pkg = archive.FindPackageFile();
+                bool isLevel = pkg != null && pkg.GetName() != "chunkInfos_pkg.igz" && pkg.Path.Substring("packages/generated/".Length).StartsWith("maps/");
+                
+                if (!isLevel)
+                {
+                    ModalRenderer.ShowMessageModal("Could not launch the level", "This archive is not a level archive.");
+                }
+                else
+                {
+                    if (!CheckHub(archive, out List<string> subLevelPaths))
+                    {
+                        return;
+                    }
+
+                    archive.RunLevel(subLevelPaths);
+                    LocalStorage.AddRecentFile(archive.Path, true);
+                }
             }
             catch (Exception e)
             {
@@ -506,7 +534,65 @@ namespace NST
             }
         }
 
-        private static void RunLevel(this IgArchive archive)
+        private static bool CheckHub(IgArchive archive, out List<string> subLevelPaths)
+        {
+            subLevelPaths = [];
+
+            IgArchiveFile? zoneInfoFile = archive.FindCustomZoneInfoFile();
+            if (zoneInfoFile == null) return true;
+            
+            IgzFile zoneInfoIgz = zoneInfoFile.ToIgzFile();
+            CZoneInfo zoneInfo = zoneInfoIgz.FindObject<CZoneInfo>()!;
+
+            if (!GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build).Contains("hub"))
+            {
+                return true;
+            }
+
+            List<string> missingLevels = [];
+            List<IgArchiveFile> mapFiles = archive.GetFiles(FileSearchParams.MapIgz);
+
+            string[] existingFiles = Directory.GetFiles(LocalStorage.ArchivePath, "*.pak");
+
+            foreach (IgArchiveFile file in mapFiles)
+            {
+                var igz = file.ToIgzFile();
+                foreach (var obj in igz.FindObjects<common_C2_WarpRoom_LevelPortal>())
+                {
+                    if (obj._Zone_Info.Reference == null) continue;
+
+                    string levelName = obj._Zone_Info.Reference.namespaceName.Replace("_zoneinfo", "", StringComparison.InvariantCultureIgnoreCase);
+                    string levelPath = Path.Combine(LocalStorage.ArchivePath, levelName + ".pak");
+
+                    string? existingPath = existingFiles.FirstOrDefault(f => string.Compare(f, levelPath, StringComparison.InvariantCultureIgnoreCase) == 0);
+
+                    if (!string.IsNullOrEmpty(existingPath))
+                    {
+                        subLevelPaths.Add(existingPath);
+                    }
+                    else
+                    {
+                        missingLevels.Add(levelName);
+                    }
+                }
+            }
+
+            if (missingLevels.Count > 0)
+            {
+                string str = "Couldn't launch this modpack, the following required levels were not found:\n";
+                foreach (var level in missingLevels)
+                {
+                    str += $"\n- {level}.pak";
+                }
+                str += $"\n\nPlace them in \"{LocalStorage.ArchivePath}\"";
+                ModalRenderer.ShowMessageModal("Incomplete modpack", str);
+                return false;
+            }
+
+            return true;
+        }
+
+        private static void RunLevel(this IgArchive archive, List<string> subLevelPaths)
         {
             ModManager.PlayButtonTimeout();
 
@@ -624,7 +710,7 @@ namespace NST
             {
                 try
                 {
-                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter);
+                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfo._year, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter);
                     update.AddFile(characterData);
                 }
                 catch (Exception e)
@@ -640,9 +726,6 @@ namespace NST
 
             zoneInfoFile.SetData(zoneInfoIgz.Save());
 
-            chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = zoneInfoPath});
-            packageFile.SetData(packageIgz.Save());
-
             foreach (IgArchiveFile file in archive.Files.Where(f => f.Path.StartsWith("update/")))
             {
                 string path = file.Path.Substring(7);
@@ -655,6 +738,28 @@ namespace NST
                 IgArchiveFile clone = file.Clone(path);
                 update.AddFile(clone);
             }
+
+            foreach (string subLevelPath in subLevelPaths)
+            {
+                IgArchive levelArchive = IgArchive.Open(subLevelPath);
+                IgArchiveFile? levelZoneInfo = levelArchive.FindCustomZoneInfoFile();
+                if (levelZoneInfo == null) continue;
+
+                string path = levelZoneInfo.Path.Substring(7);
+
+                if (update.FindFile(path, FileSearchType.Path) is IgArchiveFile previousFile)
+                {
+                    update.RemoveFile(previousFile);
+                }
+
+                IgArchiveFile clone = levelZoneInfo.Clone(path);
+                update.AddFile(clone);
+
+                chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = clone.Path });
+            }
+
+            chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = zoneInfoPath });
+            packageFile.SetData(packageIgz.Save());
 
             if (update.FindFile(packageFile.Path, FileSearchType.Path) is IgArchiveFile previousPackageFile)
             {

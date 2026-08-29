@@ -573,6 +573,21 @@ namespace NST
             RenderObjectReference("Collision Off:", component._Entity_0x30, typeof(CScriptTriggerEntity), manager);
         }
 
+        private static void RenderComponent(common_C2_WarpRoom_LevelPortal component, NSTComponent manager)
+        {
+            string? name = component._Zone_Info.Reference?.namespaceName.Replace("_zoneinfo", "", StringComparison.InvariantCultureIgnoreCase);
+
+            if (RenderString("Level: ", ref name, component, manager))
+            {
+                component._Zone_Info.Reference ??= new NamedReference("", "CZoneInfo");
+                component._Zone_Info.Reference.namespaceName = name + "_zoneInfo";
+            }
+
+            RenderEnum("2nd Gem:", ref component._E_Zone_Collectible_Type, component, manager);
+
+            manager.RenderAdvancedProperties(component, component.GetFields(manager.GameVersion).Skip(2).ToList());
+        }
+
 #endregion
 #region Other
 

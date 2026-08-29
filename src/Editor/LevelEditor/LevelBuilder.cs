@@ -164,6 +164,44 @@ namespace NST
             return archive;
         }
 
+        public static void RenameLevel(IgArchive archive, string newLevelName)
+        {
+            // Rename collision files
+
+            IgArchiveFile? collisionFileIgz = archive.FindCollisionFile(".igz");
+            IgArchiveFile? collisionFileHkx = archive.FindCollisionFile(".hkx");
+
+            if (collisionFileIgz != null && collisionFileHkx != null)
+            {
+                IgzFile collisionIgz = collisionFileIgz.ToIgzFile();
+                collisionIgz.Objects.OfType<igNameList>().Last()._data[0]._name = $"StaticCollision_{newLevelName}";
+                collisionFileIgz.SetData(collisionIgz.Save());
+
+                collisionFileIgz.Rename($"StaticCollision_{newLevelName}.igz");
+                collisionFileHkx.Rename($"StaticCollision_{newLevelName}.hkx");
+            }
+
+            // Rename package file
+
+            IgArchiveFile packageFile = archive.FindPackageFile()!;
+            packageFile.Rename($"{newLevelName}_pkg.igz");
+
+            // Rename zone info file
+
+            IgArchiveFile? zoneInfoFile = archive.FindCustomZoneInfoFile();
+            if (zoneInfoFile == null) return;
+
+            zoneInfoFile.Rename($"{newLevelName}_zoneinfo.igz");
+
+            IgzFile zoneInfoIgz = zoneInfoFile.ToIgzFile();
+            CZoneInfo? zoneInfo = zoneInfoIgz.FindObject<CZoneInfo>();
+            if (zoneInfo != null)
+            {
+                zoneInfo._name = packageFile.Path.Substring(packageFile.Path.IndexOf("maps/") + 5).Replace("_pkg.igz", "");
+                zoneInfoFile.SetData(zoneInfoIgz.Save());
+            }
+        }
+
         public static string ConvertToCustomLevel(IgArchive archive)
         {
             string levelName  = archive.FindPackageFile()!.GetName(false).Replace("_pkg", "");
@@ -266,7 +304,7 @@ namespace NST
             string mainPath = $"{basePath}/Custom_Level/Custom_Level.igz";
             string cameraPath = $"{basePath}/Custom_Level/Custom_Level_Camera.igz";
             string lightingPath = $"{basePath}/Custom_Level/Custom_Level_lighting.igz";
-            string cratePath = $"{basePath}/Custom_Level/Custom_Level_Crates.igz";
+            string cratePath = $"{basePath}/Custom_Level/Custom_Level_MyCrates.igz";
             string musicPath = $"{basePath}/Custom_Level/Custom_Level_Music.igz";
             string infoPath = $"update/{basePath}/Custom_Level/Custom_Level_zoneinfo.igz".ToLowerInvariant();
 

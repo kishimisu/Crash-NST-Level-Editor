@@ -432,7 +432,7 @@ namespace NST
             return buildName + optionsStr;
         }
 
-        public static IgArchiveFile CreateCharacterData(List<string> options, string zoneInfoName, string? characterName)
+        public static IgArchiveFile CreateCharacterData(List<string> options, EGameYear crashMode, string zoneInfoName, string? characterName)
         {
             if (string.IsNullOrEmpty(characterName))
             {
@@ -479,6 +479,13 @@ namespace NST
                         boulderData._Zone_Info_0x88.Reference!.namespaceName = zoneInfoName;
                         break;
 
+                    case "hub":
+                        Crash_Coco_ManagerData manager = igz.FindObject<Crash_Coco_ManagerData>()!;
+                        if      (crashMode == EGameYear.eGY_2017_Crash1) manager._Zone_Info_0x30.Reference!.namespaceName = zoneInfoName;
+                        else if (crashMode == EGameYear.eGY_2017_Crash2) manager._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
+                        else if (crashMode == EGameYear.eGY_2017_Crash3) manager._Zone_Info_0x40.Reference!.namespaceName = zoneInfoName;
+                        break;
+
                     // case "jetski":
                     //     var jetskiData = igz.FindObject<Crash_Ride_JetskiData>()!;
                     //     jetskiData._Zone_Info_0x28.Reference!.namespaceName = zoneInfoName;
@@ -501,6 +508,7 @@ namespace NST
         {
             string id = levelName.Substring(0, 4);
 
+            if (id == "L100" || id == "L200" || id == "L300")                 return "hub";
             if (id == "L107" || id == "L114")                                 return "hog";
             if (id == "L208" || id == "L213" || id == "L215" || id == "L226") return "bear";
             if (id == "L303" || id == "L310")                                 return "tiger";

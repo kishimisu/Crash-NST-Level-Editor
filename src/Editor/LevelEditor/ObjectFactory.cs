@@ -113,7 +113,23 @@ namespace NST
             }}
         };
 
-        private static readonly Dictionary<string, (string fileName, string objectName, string suffix)> splineCameraPaths = new ()
+        private static readonly Dictionary<string, (string floor, string level)> _levelEntrances = new() 
+        {
+            { "Temple Frame",  ("Floor01", "L201_TurtleWoods") },
+            { "Snow Frame",    ("Floor02", "L206_SnowBiz") },
+            { "Mine Frame 1",  ("Floor04", "L216_HanginOut") },
+            { "Mine Frame 2",  ("Floor04", "L219_Ruination") },
+            { "Space Frame 1", ("Floor05", "L222_RockIt") },
+            { "Space Frame 2", ("Floor05", "L221_PistonItAway") },
+            { "Sewer Frame 1", ("Floor03", "L211_PlantFood") },
+            { "Sewer Frame 2", ("Floor03", "L212_SewerOrLater") },
+            { "Sewer Frame 3", ("Floor03", "L213_BearDown") },
+            { "Sewer Frame 4", ("Floor03", "L214_RoadToRuin") },
+            { "Sewer Frame 5", ("Floor03", "L215_UnBearable") },
+            // { "Secret Frame",  ("SecretWarpRoom", "L227_TotallyFly_Secret") },
+        };
+
+        private static readonly Dictionary<string, (string fileName, string objectName, string suffix)> _splineCameraPaths = new ()
         {
             { "forward",    ("L210_TheEelDeal_Cameras",  "MainPath_SplineCam06", "") },
             { "backward",   ("L104_Boulders_Camera",     "CSplineCamera012", "Chase") },
@@ -121,7 +137,7 @@ namespace NST
             { "vertical",   ("L103_TheGreatGate_Camera", "Camera01_V", "Vertical") },
         };
 
-        private static readonly Dictionary<string, bool> selectAll = new() 
+        private static readonly Dictionary<string, bool> _selectAll = new() 
         {
             {"Static Objects", true},
             {"Prefabs", true},
@@ -316,6 +332,20 @@ namespace NST
                         if (ImGui.MenuItem("Warp Teleporter")) TryAddObject(() => AddWarpTeleporter(explorer));
                         ImGui.EndMenu();
                     }
+
+                    if (ImGui.BeginMenu("Level entrance..."))
+                    {
+                        string last = "";
+                        foreach ((string displayName, (string floor, string level)) in _levelEntrances)
+                        {
+                            if (!string.IsNullOrEmpty(last) && last != floor) ImGui.Separator();
+                            last = floor;
+                            
+                            if (ImGui.MenuItem(displayName)) TryAddObject(() => AddLevelEntrance(explorer, floor, level));
+                        }
+
+                        ImGui.EndMenu();
+                    }
                     
                     ImGui.EndMenu();
                 }
@@ -427,10 +457,6 @@ namespace NST
 
                         ImGui.EndMenu();
                     }
-
-                    // if (ImGui.MenuItem("Generic Platform Path")) AddPlatformPath("Generic", explorer);
-                    // if (ImGui.MenuItem("Bonus Platform Path")) AddPlatformPath("Bonus", explorer);
-                    // if (ImGui.MenuItem("Death Platform Path")) AddPlatformPath("Death", explorer);
                     
                     ImGui.EndMenu();
                 }
@@ -514,19 +540,19 @@ namespace NST
                 {
                     if (ImGui.SmallButton("Toggle all"))
                     {
-                        bool toggle = !selectAll["Static Objects"];
-                        foreach (var e in selectAll)
+                        bool toggle = !_selectAll["Static Objects"];
+                        foreach (var e in _selectAll)
                         {
-                            selectAll[e.Key] = toggle;
+                            _selectAll[e.Key] = toggle;
                         }
                     }
 
-                    foreach (var e in selectAll)
+                    foreach (var e in _selectAll)
                     {
                         bool tmp = e.Value;
                         if (ImGui.Checkbox(e.Key, ref tmp))
                         {
-                            selectAll[e.Key] = tmp;
+                            _selectAll[e.Key] = tmp;
                         }
                     }
 
@@ -542,27 +568,27 @@ namespace NST
                                 
                                 if (entity.IsTemplate)                                return false;
                                 if (entity.IsPrefabChild || entity.IsPrefabTemplate)  return false;
-                                if (entity.IsPrefabInstance)                          return selectAll["Prefabs"];
-                                if (entity.Model != null && type == typeof(igEntity)) return selectAll["Static Objects"];
+                                if (entity.IsPrefabInstance)                          return _selectAll["Prefabs"];
+                                if (entity.Model != null && type == typeof(igEntity)) return _selectAll["Static Objects"];
 
-                                if (entity.IsLight)  return selectAll["Lights"];
-                                if (entity.IsVFX)    return selectAll["VFX"];
-                                if (entity.IsSFX)    return selectAll["SFX"];
-                                if (entity.IsHidden) return selectAll["Hidden"];
+                                if (entity.IsLight)  return _selectAll["Lights"];
+                                if (entity.IsVFX)    return _selectAll["VFX"];
+                                if (entity.IsSFX)    return _selectAll["SFX"];
+                                if (entity.IsHidden) return _selectAll["Hidden"];
 
-                                if (type == typeof(CEntity))              return selectAll["CEntity"];
-                                if (type == typeof(CGameEntity))          return selectAll["CGameEntity"];
-                                if (type == typeof(CPhysicalEntity))      return selectAll["CPhysicalEntity"];
-                                if (type == typeof(CDynamicClipEntity))   return selectAll["Dynamic Clips"];
-                                if (type == typeof(CScriptTriggerEntity)) return selectAll["Script Triggers"];
+                                if (type == typeof(CEntity))              return _selectAll["CEntity"];
+                                if (type == typeof(CGameEntity))          return _selectAll["CGameEntity"];
+                                if (type == typeof(CPhysicalEntity))      return _selectAll["CPhysicalEntity"];
+                                if (type == typeof(CDynamicClipEntity))   return _selectAll["Dynamic Clips"];
+                                if (type == typeof(CScriptTriggerEntity)) return _selectAll["Script Triggers"];
                             }
                             else
                             {
-                                if (obj is NSTCamera)    return selectAll["Cameras"];
-                                if (obj is NSTCameraBox) return selectAll["Camera Boxes"];
+                                if (obj is NSTCamera)    return _selectAll["Cameras"];
+                                if (obj is NSTCameraBox) return _selectAll["Camera Boxes"];
                             }
 
-                            return selectAll["Other"];
+                            return _selectAll["Other"];
                         })
                         .SelectMany(e => explorer.InstanceManager.Select(e))
                         .Distinct()
@@ -829,7 +855,7 @@ namespace NST
 
         private static void AddSplineCamera(LevelExplorer explorer, string type)
         {
-            if (!splineCameraPaths.TryGetValue(type, out var splinePath)) return;
+            if (!_splineCameraPaths.TryGetValue(type, out var splinePath)) return;
 
             string[] parts = splinePath.fileName.Split('_');
             string archiveName = parts.Length >= 2 ? $"{parts[0]}_{parts[1]}" : splinePath.fileName;
@@ -903,6 +929,28 @@ namespace NST
             explorer.GetOrCreateIgzFile("Camera", out IgArchiveFile cameraFile, out IgzFile cameraIgz);
 
             explorer.Clone([stackCamera], sourceArchive, sourceIgz, cameraFile, cameraIgz);
+        }
+
+        private static void AddLevelEntrance(LevelExplorer explorer, string floor, string level)
+        {
+            IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "L200_Hub.pak"));
+            IgzFile sourceIgz = sourceArchive.FindFile($"L200_Hub_{floor}.igz")!.ToIgzFile();
+            IgzFile sourceIgzFrame = sourceArchive.FindFile($"L200_Hub_Floor01.igz")!.ToIgzFile();
+
+            CGameEntity portal = sourceIgz.FindObject<CGameEntity>($"{level}_Portal")!;
+            CGameEntity frame = sourceIgzFrame.FindObject<CGameEntity>($"C2_PortalFrame{level.Substring(0, 4)}")!;
+
+            explorer.GetOrCreateIgzFile("Hub", out IgArchiveFile hubFile, out IgzFile hubIgz);
+
+            if (portal.TryGetComponent(out common_C2_WarpRoom_LevelPortal? portalComponent))
+            {
+                portalComponent._Camera_Base.Reference = null;
+                portalComponent._Entity_0xd8.Reference!.namespaceName = hubFile.GetName(false);
+            }
+
+            explorer.Clone([portal, frame], sourceArchive, sourceIgz, hubFile, hubIgz, addToSelection: true, initializeObjects: true);
+
+            EnableGameMode("hub", explorer);
         }
 
         private static void AddCannonBall(LevelExplorer explorer)

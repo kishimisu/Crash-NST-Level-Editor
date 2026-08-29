@@ -126,6 +126,7 @@ namespace NST
             {"Jetpack", "jetpack"},
             {"Boulder", "boulder"},
             {"Digging", "dig"},
+            {"Hub", "hub"}
         };
         
         public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
