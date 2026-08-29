@@ -415,24 +415,28 @@ You can create custom hubs from which to access mutliple custom levels at once.
 Here's how to setup a custom level before adding it to your modpack/hub:
 
 1) Find the custom level archive (.pak) that you wish to add to your modpack
-2) Make sure the archive's name is the same as the final level name, without any space or special character (eg. `My_Amazing_Level.pak`)
-3) Open the custom level using the editor, and click `"File -> Update level name"` to make sure the level name and archive name are the same
-4) Save the archive and place it in the game's `archives/` folder. If you want to rename it later, make sure to use "File -> Update level name" afterwards and edit your hub (see below)
+2) Make sure the archive's name doesn't contain any space or special character (example of a valid name: `My_Amazing_1st_Level.pak`)
+3) Open the archive using the editor, and click `"File -> Update level name"` to setup the archive internally
+4) Save the archive and place it in the game's `archives/` folder. If you were to rename it later, make sure to do step 3) again and edit your hub (see below)
 
 ### Custom Hub setup
+
+Note: No special step is required to create a custom hub, you can use the "New Level" feature as usual
 
 Here's how to add a custom level to a custom hub:
 
 1) Right click -> `New platform -> Level entrance...`
-2) Select the newly created Portal, and focus the `C2_WarpRoom_LevelPortal` component
-3) Change the "Level" property to match the name of the level (as set above)
+2) Select the newly created Portal entity, and focus its `C2_WarpRoom_LevelPortal` component
+3) Change the "Level" property to match the archive's name (as set above)
+
+<img src="assets/readme/level_editor/entrance.png" alt="Level entrance" height="500"/>
 
 ### Installing Custom Hubs
 
-Here are the recommended indications to install a custom hub/modpack after downloading:
+Here are the recommended indications for installing a custom hub/modpack after downloading it:
 
 1) Place the hub archive anywhere on your PC.
-2) Place the level archives in the game's `archives/` folder directly, without creating a subfolder.
+2) Place the all the level archives in the game's `archives/` folder directly, without creating a subfolder.
 3) Use "Play Custom Level" and run the hub archive.
 
 # CTR:NF support
