@@ -436,7 +436,7 @@ Here's how to add a custom level to a custom hub:
 Here are the recommended indications for installing a custom hub/modpack after downloading it:
 
 1) Place the hub archive anywhere on your PC.
-2) Place the all the level archives in the game's `archives/` folder directly, without creating a subfolder.
+2) Place all level archives in the game's `archives/` folder directly, without creating a subfolder.
 3) Use "Play Custom Level" and run the hub archive.
 
 # CTR:NF support
