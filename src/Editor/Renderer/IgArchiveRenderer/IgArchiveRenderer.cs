@@ -201,17 +201,6 @@ namespace NST
                         if (ImGui.MenuItem("Compress and save")) customSaveMethod(false, false, true);
                     }
 
-                    if (ImGui.MenuItem("Update level name"))
-                    {
-                        string previousName = Archive.FindPackageFile()!.GetName(false).Replace("_pkg", "");
-                        string newName = Archive.GetName(false).Trim().Replace(" ", "_");
-
-                        LevelBuilder.RenameLevel(Archive, newName);
-                        ModalRenderer.ShowMessageModal("Success", $"Level name changed from {previousName} to {newName}");
-                        _treeView = new IgArchiveTreeView(this);
-                        IsUpdated = true;
-                    }
-
                     ImGui.Separator();
 
                     if (ImGui.BeginMenu("Archive"))
@@ -223,6 +212,15 @@ namespace NST
                         else if (!fromLevelEditor && ImGui.MenuItem("Extract all files"))
                         {
                             ExtractAllFiles(Archive.Files, true);
+                        }
+                        if (ImGui.MenuItem("Update level name"))
+                        {
+                            string previousName = Archive.FindPackageFile()!.GetName(false).Replace("_pkg", "");
+                            string newName = Archive.GetName(false).Trim().Replace(" ", "_");
+                            LevelBuilder.RenameLevel(Archive, newName);
+                            ModalRenderer.ShowMessageModal("Success", $"Level name changed from {previousName} to {newName}");
+                            _treeView = new IgArchiveTreeView(this);
+                            IsUpdated = true;
                         }
                         ImGui.Separator();
                         AudioPlayer.RenderAudioMenu();

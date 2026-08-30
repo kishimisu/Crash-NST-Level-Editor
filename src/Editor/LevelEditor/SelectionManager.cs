@@ -232,7 +232,7 @@ namespace NST
 
         public void ScaleSelectionFromGUI(THREE.Vector3 previousScale, THREE.Vector3 newScale, NSTObject? selected = null)
         {
-            var delta = newScale / previousScale;
+            var delta = MathUtils.SafeDivide(newScale, previousScale);
 
             _selectionContainer.Scale *= delta;
             _explorer.RenderNextFrame = true;

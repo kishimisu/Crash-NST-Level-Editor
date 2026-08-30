@@ -416,7 +416,7 @@ Here's how to setup a custom level before adding it to your modpack/hub:
 
 1) Find the custom level archive (.pak) that you wish to add to your modpack
 2) Make sure the archive's name doesn't contain any space or special character (example of a valid name: `My_Amazing_1st_Level.pak`)
-3) Open the archive using the editor, and click `"File -> Update level name"` to setup the archive internally
+3) Open the archive using the editor, and click `"File -> Archive -> Update level name"` to setup the archive internally
 4) Save the archive and place it in the game's `archives/` folder. If you were to rename it later, make sure to do step 3) again and edit your hub (see below)
 
 ### Custom Hub setup

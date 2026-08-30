@@ -8,6 +8,18 @@ namespace NST
     public static class MathUtils
     {
         /// <summary>
+        /// Safely divides a by b, replacing inf/nan/0 values with 1
+        /// </summary>
+        public static THREE.Vector3 SafeDivide(THREE.Vector3 a, THREE.Vector3 b)
+        {
+            return new THREE.Vector3(
+                float.IsFinite(a.X / b.X) && a.X / b.X != 0 ? a.X / b.X : 1f,
+                float.IsFinite(a.Y / b.Y) && a.Y / b.Y != 0 ? a.Y / b.Y : 1f,
+                float.IsFinite(a.Z / b.Z) && a.Z / b.Z != 0 ? a.Z / b.Z : 1f
+            );
+        }
+
+        /// <summary>
         /// Get the scale component of the matrix
         /// </summary>
         public static THREE.Vector3 GetScale(this THREE.Matrix4 matrix)

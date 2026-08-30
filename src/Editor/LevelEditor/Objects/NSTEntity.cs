@@ -766,9 +766,9 @@ namespace NST
 
                 if (onRelease && childTemplate.Object._transform != null)
                 {
-                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._x /= explorer.SelectionManager.SelectionContainer.Scale.X;
-                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._y /= explorer.SelectionManager.SelectionContainer.Scale.Y;
-                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale._z /= explorer.SelectionManager.SelectionContainer.Scale.Z;
+                    THREE.Vector3 currentScale = childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3();
+                    THREE.Vector3 newScale = MathUtils.SafeDivide(currentScale, explorer.SelectionManager.SelectionContainer.Scale);
+                    childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = newScale.ToVec3MetaField();
                     explorer.SelectionManager.ApplyChanges("scale");
                 }
             }
@@ -791,9 +791,9 @@ namespace NST
 
                 if (onRelease)
                 {
-                    transform._nonUniformPersistentParentSpaceScale._x /= explorer.SelectionManager.SelectionContainer.Scale.X;
-                    transform._nonUniformPersistentParentSpaceScale._y /= explorer.SelectionManager.SelectionContainer.Scale.Y;
-                    transform._nonUniformPersistentParentSpaceScale._z /= explorer.SelectionManager.SelectionContainer.Scale.Z;
+                    THREE.Vector3 currentScale = transform._nonUniformPersistentParentSpaceScale.ToVector3();
+                    THREE.Vector3 newScale = MathUtils.SafeDivide(currentScale, explorer.SelectionManager.SelectionContainer.Scale);
+                    transform._nonUniformPersistentParentSpaceScale = newScale.ToVec3MetaField();
                     explorer.SelectionManager.ApplyChanges("scale");
                 }
             }
