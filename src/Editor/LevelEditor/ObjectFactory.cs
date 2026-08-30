@@ -530,6 +530,13 @@ namespace NST
                     if (ImGui.MenuItem("New Dynamic Clip")) TryAddObject(() => AddCDynamicClipEntity(explorer));
                     if (ImGui.MenuItem("New Dynamic Clip Switch")) TryAddObject(() => AddGeneric("L103_TheGreatGate_Platforms", "PlatformHelper01_Collision", "Platforms", explorer, newObjectName: "DynamicClip_Switch_001", addToSelection: true));
                     ImGui.Separator();
+                    if (ImGui.BeginMenu("New Chase..."))
+                    {
+                        if (ImGui.MenuItem("Boulder Chase")) TryAddObject(() => AddGeneric("L104_Boulders_Hazards", "Spawner_Boulder03", "Chase", explorer, _ => EnableGameMode("boulder", explorer), "Boulder_Chase"));
+                        if (ImGui.MenuItem("Polar Bear Chase")) TryAddObject(() => AddGeneric("L215_UnBearable_Enemies", "Section04_Bear", "Chase", explorer, newObjectName: "Bear_Chase"));
+                        if (ImGui.MenuItem("Triceratops Chase")) TryAddObject(() => AddGeneric("L304_BoneYard_Hazards", "Triceratops_Section02", "Chase", explorer, newObjectName: "Triceratops_Chase"));
+                        ImGui.EndMenu();
+                    }
                     if (ImGui.MenuItem("New Boost Pad")) TryAddObject(() => AddGenericTemplate("Chase_BoostPad", "Platforms", explorer));
                     if (ImGui.MenuItem("New Bounce Mine")) TryAddObject(() => AddGenericTemplate("Chase_BounceMine", "Hazards", explorer));
                     if (ImGui.MenuItem("New Cannon Ball")) TryAddObject(() => AddCannonBall(explorer));
