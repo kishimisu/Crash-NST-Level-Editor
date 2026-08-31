@@ -128,7 +128,16 @@ namespace NST
                 return color;
             }
 
-            uint hash = Alchemy.NamespaceUtils.ComputeHash(type.Name);
+            uint col = GetUniqueColor(type.Name);
+
+            _uniqueColorsCache[type] = col;
+            
+            return col;
+        }
+
+        public static uint GetUniqueColor(string name)
+        {
+            uint hash = Alchemy.NamespaceUtils.ComputeHash(name);
             Random random = new Random((int)hash);
 
             int r = random.Next(100, 255);
@@ -136,7 +145,6 @@ namespace NST
             int b = random.Next(100, 255);
             uint col = 0xff000000 | (uint)((b << 16) | (g << 8) | r);
 
-            _uniqueColorsCache[type] = col;
             return col;
         }
     }

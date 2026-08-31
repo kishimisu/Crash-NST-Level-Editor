@@ -26,6 +26,8 @@ namespace NST
 
         public static bool SkipSteamPopup { get; set; } = false;
 
+        private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
+
         /// <summary>
         /// Initialize the local storage.
         /// Checks for the game executable and creates the local storage folder if it doesn't exist
@@ -242,7 +244,7 @@ namespace NST
         {
             var data = GetAll();
             data[key] = value is string str ? str : JsonSerializer.Serialize(value);
-            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data));
+            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data, _jsonSerializerOptions));
         }
 
         /// <summary>
@@ -266,7 +268,7 @@ namespace NST
         {
             var data = GetAll();
             data.Remove(key);
-            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data));
+            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data, _jsonSerializerOptions));
         }
 
         /// <summary>

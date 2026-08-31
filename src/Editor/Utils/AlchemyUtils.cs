@@ -58,12 +58,12 @@ namespace NST
         /// <param name="reference">The object reference</param>
         /// <returns>The igObject corresponding to the reference</returns>
         /// <exception cref="FileNotFoundException">Thrown if the object could not be found in any archive</exception>
-        public static igObject? FindObjectInArchives(NamedReference reference, IgArchive archive, LevelExplorer? explorer = null, IgzFile? igz = null)
+        public static igObject? FindObjectInArchives(NamedReference reference, IgArchive? archive, LevelExplorer? explorer = null, IgzFile? igz = null)
         {
             // Hashed namespace
             if (reference.namespaceName.All(char.IsDigit))
             {
-                IgArchiveFile? file = archive.FindFile(reference.namespaceName, FileSearchType.NamespaceHash);
+                IgArchiveFile? file = archive?.FindFile(reference.namespaceName, FileSearchType.NamespaceHash);
                 if (file != null)
                 {
                     reference = reference.Clone();
@@ -80,12 +80,12 @@ namespace NST
             IgArchiveFile? parentFile = null;
             obj = explorer?.FileManager.FindObjectInOpenFiles(reference, out parentFile);
 
-            if (obj != null && parentFile?.GameVersion == archive.GameVersion) return obj;
+            if (obj != null && (archive == null || parentFile?.GameVersion == archive.GameVersion)) return obj;
             
             // Try to find the object in the current archive
-            obj = archive.FindObject(reference);
+            obj = archive?.FindObject(reference);
 
-            if (obj != null || archive.GameVersion == GameVersion.CTR) return obj;
+            if (obj != null || (archive != null && archive.GameVersion == GameVersion.CTR)) return obj;
 
             // Find the object in its original archive
             string? archivePath = NamespaceUtils.GetInfos(reference)?.pak;

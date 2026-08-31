@@ -92,9 +92,10 @@ namespace NST
         /// <summary>
         /// Find the model name associated to this entity
         /// </summary>
-        public static string? GetModelName(this igEntity entity, IgzFile igz, LevelExplorer explorer)
+        public static string? GetModelName(this igEntity entity, IgzFile igz, LevelExplorer? explorer = null, IgArchive? archive = null)
         {
-            // todo: cleanup this mess
+            archive ??= explorer?.Archive;
+
             CModelComponentData? modelComponent = entity.GetComponent<CModelComponentData>();
 
             string? modelName = modelComponent?._fileName; // CModelComponentData._fileName
@@ -123,7 +124,7 @@ namespace NST
 
                     if (entityToSpawnRef != null)
                     {
-                        igObject? entityToSpawn = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, explorer.Archive, explorer, igz);
+                        igObject? entityToSpawn = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, archive, explorer, igz);
 
                         if (entityToSpawn is igEntity entityToSpawnEntity)
                         {
@@ -151,7 +152,7 @@ namespace NST
                                 }
                                 else
                                 {
-                                    modelName = GetCollectibleModelName(entityToSpawnEntity, explorer);
+                                    modelName = GetCollectibleModelName(entityToSpawnEntity, explorer, archive);
                                 }
                             }
 
@@ -177,7 +178,7 @@ namespace NST
 
                     if (handleListRef != null)
                     {
-                        igObject? handleListObject = AlchemyUtils.FindObjectInArchives(handleListRef, explorer.Archive, explorer, igz);
+                        igObject? handleListObject = AlchemyUtils.FindObjectInArchives(handleListRef, archive, explorer, igz);
 
                         if (handleListObject is CEntityHandleList handleList && handleList._count > 0)
                         {
@@ -185,7 +186,7 @@ namespace NST
 
                             if (entityToSpawnRef != null)
                             {
-                                igObject? entityToSpawnObject = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, explorer.Archive, explorer);
+                                igObject? entityToSpawnObject = AlchemyUtils.FindObjectInArchives(entityToSpawnRef, archive, explorer);
 
                                 if (entityToSpawnObject is igEntity entityToSpawn)
                                 {
@@ -199,13 +200,13 @@ namespace NST
 
             if (string.IsNullOrEmpty(modelName)) // CCollectibleComponentData
             {
-                modelName = GetCollectibleModelName(entity, explorer);
+                modelName = GetCollectibleModelName(entity, explorer, archive);
             }
 
             // common_BabyT_SpawnManagerData
             if (string.IsNullOrEmpty(modelName) && entity.TryGetComponent(out common_BabyT_SpawnManagerData? babyT) && babyT._Entity_0x38.Reference != null)
             {
-                if (AlchemyUtils.FindObjectInArchives(babyT._Entity_0x38.Reference, explorer.Archive, explorer, igz) is CActor actor)
+                if (AlchemyUtils.FindObjectInArchives(babyT._Entity_0x38.Reference, archive, explorer, igz) is CActor actor)
                 {
                     modelName = GetModelName(actor, igz, explorer);
                 }
@@ -223,8 +224,10 @@ namespace NST
             return modelName;
         }
 
-        private static string? GetCollectibleModelName(igEntity entity, LevelExplorer explorer)
+        private static string? GetCollectibleModelName(igEntity entity, LevelExplorer? explorer, IgArchive? archive)
         {
+            archive ??= explorer?.Archive;
+
             CCollectibleComponentData? cccd = entity.GetComponent<CCollectibleComponentData>();
 
             if (cccd != null)
@@ -233,7 +236,7 @@ namespace NST
 
                 if (idleVfxRef != null)
                 {
-                    IgArchiveFile? vfxFile = AlchemyUtils.FindFileInArchives(idleVfxRef.namespaceName, out _, explorer.Archive);
+                    IgArchiveFile? vfxFile = AlchemyUtils.FindFileInArchives(idleVfxRef.namespaceName, out _, archive);
                     if (vfxFile != null)
                     {
                         IgzFile igz = vfxFile.ToIgzFile();

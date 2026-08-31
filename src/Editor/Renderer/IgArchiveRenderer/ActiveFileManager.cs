@@ -209,7 +209,7 @@ namespace NST
         /// </summary>
         public igObject? FindObjectInOpenFiles(NamedReference reference, out IgArchiveFile? file)
         {
-            foreach (var infos in _files)
+            foreach (var infos in _files.ToList())
             {
                 if (infos.Value.igz != null && infos.Key.GetName(false).Equals(reference.namespaceName, StringComparison.InvariantCultureIgnoreCase))
                 {

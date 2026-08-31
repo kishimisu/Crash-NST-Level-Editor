@@ -90,6 +90,15 @@ namespace NST
             SilkWindow.instance.RestoreViewport();
         }
 
+        public ModelPreview(int width, int height) : base(width, height)
+        {
+            var ambientLight = new THREE.AmbientLight(0xffffff, 0.55f);
+            _light = new THREE.DirectionalLight(0xffffff, 0.65f);
+            _scene.Add(ambientLight);
+            _scene.Add(_light);
+            _scene.Fog = null!;
+        }
+
         /// <summary>
         /// Render the model preview
         /// </summary>
@@ -135,6 +144,39 @@ namespace NST
             base.DrawImage(0.6f);
 
             _controls.SetFocus(ImGui.IsItemHovered());
+        }
+
+        public void RenderModel(NSTModel model)
+        {
+            if (_object != null)
+            {
+                _object.Traverse(e => e.Material?.Dispose());
+                _scene.Remove(_object);
+            }
+
+            // Create 3D mesh
+            _object = new THREE.Group();
+            _object.Add(model.CreateObject());
+
+            // Compute model bounds
+            THREE.Box3 boundingBox = new THREE.Box3().SetFromObject(_object);
+            THREE.Vector3 center = boundingBox.GetCenter(new THREE.Vector3());
+            float radius = boundingBox.GetSize().Length();
+
+            // Setup camera and controls
+            _camera.Near = MathF.Max(1.0f, radius * 0.0004f);
+            _camera.Far = radius * 6.0f;
+            _camera.UpdateProjectionMatrix();
+
+            _controls = new OrbitControls(this, _camera, radius * 0.85f);
+            _controls.Update();
+
+            // Add mesh to scene
+            _object.Position = center.Negate();
+            _light.Position = _camera.Position.Negate();
+            _scene.Add(_object);
+
+            base.Render();
         }
 
         /// <summary>

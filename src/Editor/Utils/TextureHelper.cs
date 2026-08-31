@@ -36,10 +36,10 @@ namespace NST
         /// <summary>
         /// Save an image to the disk
         /// </summary>
-        public static void SaveImageToFile(byte[] pixels, int width, int height, string filePath)
+        public static void SaveImageToFile(byte[] pixels, int width, int height, string filePath, bool flipY = true)
         {
             using var image = Image.LoadPixelData<Rgba32>(pixels, width, height);
-            image.Mutate(x => x.Flip(FlipMode.Vertical));
+            if (flipY) image.Mutate(x => x.Flip(FlipMode.Vertical));
             image.Save(filePath);
         }
 
@@ -85,7 +85,7 @@ namespace NST
         /// <summary>
         /// Create an OpenGL texture from a byte array of pixels
         /// </summary>
-        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false, bool linear = true)
+        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false, bool linear = true, bool reuseLastTexture = true)
         {
             // Flip image vertically
             if (flipY)
@@ -95,7 +95,7 @@ namespace NST
                 image.CopyPixelDataTo(pixels);
             }
 
-            if (_textureId == -1)
+            if (_textureId == -1 || !reuseLastTexture)
             {
                 // Generate OpenGL texture
                 uint textureId = gl.GenTexture();
@@ -129,6 +129,37 @@ namespace NST
             gl.BindTexture(TextureTarget.Texture2D, 0);
 
             return _textureId;
+        }
+
+        /// <summary>
+        /// Read a GPU texture's rendered pixels back to the CPU
+        /// </summary>
+        public static unsafe byte[] ReadTexture(GL gl, uint texture, int width, int height)
+        {
+            uint framebuffer = gl.GenFramebuffer();
+            gl.BindFramebuffer(FramebufferTarget.Framebuffer, framebuffer);
+            gl.FramebufferTexture2D(FramebufferTarget.Framebuffer, FramebufferAttachment.ColorAttachment0, TextureTarget.Texture2D, texture, 0);
+
+            var status = gl.CheckFramebufferStatus(FramebufferTarget.Framebuffer);
+
+            if (status != GLEnum.FramebufferComplete)
+            {
+                gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+                gl.DeleteFramebuffer(framebuffer);
+                throw new InvalidOperationException($"Framebuffer is incomplete: {status}");
+            }
+
+            byte[] pixels = new byte[width * height * 4];
+
+            fixed (byte* ptr = pixels)
+            {
+                gl.ReadPixels(0, 0, (uint)width, (uint)height, PixelFormat.Rgba, PixelType.UnsignedByte, ptr);
+            }
+
+            gl.BindFramebuffer(FramebufferTarget.Framebuffer, 0);
+            gl.DeleteFramebuffer(framebuffer);
+
+            return pixels;
         }
 
         public static byte[] UnswizzlePS4Texture(byte[] data, int imageWidth, int imageHeight, string format)

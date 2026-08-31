@@ -217,8 +217,16 @@ namespace NST
                 return;
             }
 
+            ObjectCollection.Update();
+
             if (ImGui.BeginPopup("ObjectFactoryContextMenu"))
             {
+                if (ImGui.BeginMenu("Object collection..."))
+                {
+                    ObjectCollection.Render(explorer);
+                    ImGui.EndMenu();
+                }
+
                 if (ImGui.BeginMenu("New crate..."))
                 {
                     ImGui.SeparatorText("Crate settings");
@@ -864,9 +872,7 @@ namespace NST
         {
             if (!_splineCameraPaths.TryGetValue(type, out var splinePath)) return;
 
-            string[] parts = splinePath.fileName.Split('_');
-            string archiveName = parts.Length >= 2 ? $"{parts[0]}_{parts[1]}" : splinePath.fileName;
-
+            string archiveName = ExtractArchiveName(splinePath.fileName);
             IgArchive sourceArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, archiveName + ".pak"));
             IgArchiveFile sourceFile = sourceArchive.FindFile(splinePath.fileName + ".igz")!;
             IgzFile sourceIgz = sourceFile.ToIgzFile();
@@ -1264,11 +1270,9 @@ namespace NST
             explorer.SelectAndMoveToCamera(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList(), 400);
         }
 
-        private static void AddGeneric(string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400, bool addToSelection = false)
+        public static void AddGeneric(string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400, bool addToSelection = false)
         {
-            string[] parts = fileName.Split('_');
-            string archiveName = parts.Length >= 2 ? $"{parts[0]}_{parts[1]}" : fileName;
-
+            string archiveName = ExtractArchiveName(fileName);
             IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
             IgzFile sourceIgz = sourceArchive.FindFile(fileName, FileSearchType.Name, FileSearchParams.MapIgz)!.ToIgzFile();
             
@@ -1634,6 +1638,17 @@ namespace NST
             safeArea.MemoryPool.alignment = 16;
 
             return camera;
+        }
+
+        /// <summary>
+        /// Extract the archive's name from a file name. Eg: "L101_NSanityBeach_Enemies" -> "L101_NSanityBeach"
+        /// </summary>
+        /// <param name="filePath"></param>
+        /// <returns></returns>
+        public static string ExtractArchiveName(string fileName)
+        {
+            string[] parts = fileName.Split('_');
+            return parts.Length >= 2 ? $"{parts[0]}_{parts[1]}" : fileName;
         }
     }
 }

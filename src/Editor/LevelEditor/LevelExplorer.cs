@@ -1655,7 +1655,10 @@ namespace NST
 
         public void Focus(igObject obj)
         {
-            NSTObject? nstObj = InstanceManager.AllObjects.Find(e => e.GetObject() == obj);
+            NSTObject? nstObj = 
+                InstanceManager.AllObjects.Find(e => e.GetObject() == obj) ??
+                InstanceManager.AllObjects.Find(e => e.GetObject().ToString() == obj.ToString());
+
             if (nstObj == null)
             {
                 Console.WriteLine("Warning: Object not found: " + obj);

@@ -234,14 +234,12 @@ namespace NST
         /// <summary>
         /// Create a THREE.Texture using the provided textureData
         /// </summary>
-        public THREE.Texture CreateThreeTexture(TextureData textureData)
+        private void CreateThreeTexture(TextureData textureData)
         {
             SKBitmap bitmap = new SKBitmap(textureData.width, textureData.height, SKColorType.Rgba8888, SKAlphaType.Unpremul);
             Marshal.Copy(textureData.pixels, 0, bitmap.GetPixels(), textureData.pixels.Length);
 
             texture = new THREE.Texture(bitmap) { NeedsUpdate = true };
-
-            return texture;
         }
 
         /// <summary>
@@ -319,7 +317,7 @@ namespace NST
 
             if (texture != null)
             {
-                material.Map = (THREE.Texture)texture.Clone();
+                material.Map = texture; // (THREE.Texture)texture.Clone();
                 material.Map.WrapS = _TEXTURE_WRAP_MAP[wrapS];
                 material.Map.WrapT = _TEXTURE_WRAP_MAP[wrapT];
                 material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];

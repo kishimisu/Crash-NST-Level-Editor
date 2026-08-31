@@ -26,6 +26,10 @@ namespace NST
         public RebuildStatus RebuildState { get; set; } = RebuildStatus.None;
         public bool RenderNextFrame { get; set; } = true;
 
+        public uint TextureId => _renderer == null ? 0 : _composer == null
+                ? (uint)_renderer.properties.Get(_renderTarget.Texture)["glTexture"]!
+                : (uint)_renderer.properties.Get(_composer.RenderTarget1.Texture)["glTexture"]!;
+
         public override THREE.Rectangle GetClientRectangle() => new THREE.Rectangle(0, 0, _width, _height);
 
         public ThreeSceneRenderer(int width = 1280, int height = 720, bool useEffectComposer = true, bool alwaysRender = true)
@@ -134,11 +138,7 @@ namespace NST
         {
             if (_renderer == null) return new System.Numerics.Vector4(0, 0, _width, _height);
 
-            uint renderTargetTextureId = _composer == null
-                ? (uint)_renderer.properties.Get(_renderTarget.Texture)["glTexture"]!
-                : (uint)_renderer.properties.Get(_composer.RenderTarget1.Texture)["glTexture"]!;
-
-            return TextureHelper.RenderImageFittingParentWidth((int)renderTargetTextureId, _width, _height, heightRatio, tint);
+            return TextureHelper.RenderImageFittingParentWidth((int)TextureId, _width, _height, heightRatio, tint);
         }
 
         public override void Dispose()
