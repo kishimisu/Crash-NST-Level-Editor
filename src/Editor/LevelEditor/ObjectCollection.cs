@@ -18,13 +18,13 @@ namespace NST
             public string DisplayName { get; set; } = displayName;
             public string ModelName { get; set; } = modelName;
             public string Type { get; set; } = type;
+            public readonly string Key => $"{ModelName}_{DisplayName}";
         }
 
         private const int RENDER_SIZE = 256;
 
         private static List<CollectionEntry> _collection;
         private static readonly List<CollectionEntry> _searchResults = [];
-        private static readonly HashSet<CollectionEntry> _favorites = [];
         private static readonly JsonSerializerOptions jsonSerializerOptions = new() { IncludeFields = true };
 
         private static ModelPreview _modelPreview;
@@ -38,22 +38,22 @@ namespace NST
 
         private class Settings
         {
+            public HashSet<string> favorites = [];
             public int previewSize = 40;
             public string sortBy = "Archive";
-            public string selectedType = "Enemies";
+            public string currentTab = "Enemies";
             public bool showFileName = true;
-            public bool showObjectType = false;
+            public bool showObjectType = true;
             public bool filterC1 = true;
             public bool filterC2 = true;
             public bool filterC3 = true;
             public bool filterLevel = true; 
-            public bool filterHub = false;
             public bool filterBoss = false;
+            public bool filterHub = false;
             public bool filterCEntity = true;
             public bool filterCGameEntity = true;
             public bool filterCPhysicalEntity = true;
             public bool filterCActor = true;
-            public HashSet<string> _favorites = [];
         }
         
         private static Settings _settings = new Settings();
@@ -69,7 +69,7 @@ namespace NST
             var archives = Directory
                 .GetFiles(LocalStorage.ArchivePath, "*.pak")
                 .ToDictionary(path => NamespaceUtils.GetFileName(path, false), path => path)
-                .Where(e => (e.Key[0] == 'B' || e.Key[0] == 'L') && originals.Contains(e.Key.ToLowerInvariant()))
+                .Where(e => originals.Contains(e.Key.ToLowerInvariant()))
                 .ToDictionary();
 
             Directory.CreateDirectory(GetStoragePath());
@@ -89,7 +89,6 @@ namespace NST
 
                     foreach (igEntity entity in igz.FindObjects<igEntity>())
                     {
-                        // if (entity.GetType() == typeof(igEntity)) continue;
                         if (entity._bitfield._isArchetype || !entity._bitfield._canSpawn) continue;
                         if (entity.ObjectName!.StartsWith("Crate_") || entity.ObjectName.StartsWith("Collectible_")) continue;
                         if (entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
@@ -105,7 +104,7 @@ namespace NST
 
                         string archiveName = archive.GetName(false);
                         string fileName = igz.GetName(false);
-                        string type = "Decoration";
+                        string type = "Scenery";
                         
                         if (entity.GetType() != typeof(igEntity))
                         {
@@ -138,8 +137,11 @@ namespace NST
 
         private static void CreatePreviewImages(IgArchive archive, string modelName)
         {
-            IgArchiveFile modelFile = archive.FindFile($"{modelName}.igz")!;
-            IgzFile modelIgz = modelFile.ToIgzFile();
+            IgzFile modelIgz = archive.Files
+                .Find(f => 
+                    (f.Path.StartsWith("actors/") || f.Path.StartsWith("models/")) && 
+                    string.Equals(f.GetName(), $"{modelName}.igz", StringComparison.InvariantCultureIgnoreCase)
+                )!.ToIgzFile();
 
             NSTModel? model = NSTModel.FromIgz(modelIgz);
             if (model == null) return;
@@ -169,10 +171,14 @@ namespace NST
             {
                 string prefix = e.ArchiveName.Substring(0, 4);
                 bool isHub = prefix == "L100" || prefix == "L200" || prefix == "L300";
+                bool isLevel = prefix[0] == 'L' && !isHub;
+                bool isBoss = prefix[0] == 'B';
+
+                if (!isHub && !isLevel && !isBoss) isHub = true;
 
                 if (isHub && !_settings.filterHub) continue;
-                if (prefix[0] == 'B' && !_settings.filterBoss) continue;
-                if (prefix[0] == 'L' && !_settings.filterLevel && !isHub) continue;
+                if (isBoss && !_settings.filterBoss) continue;
+                if (isLevel && !_settings.filterLevel) continue;
                 if (prefix[1] == '1' && !_settings.filterC1) continue;
                 if (prefix[1] == '2' && !_settings.filterC2) continue;
                 if (prefix[1] == '3' && !_settings.filterC3) continue;
@@ -181,8 +187,11 @@ namespace NST
                 if (e.ObjectType == "CPhysicalEntity" && !_settings.filterCPhysicalEntity) continue;
                 if (e.ObjectType == "CActor" && !_settings.filterCActor) continue;
 
-                if (_settings.selectedType == "Favorite" && !_favorites.Contains(e)) continue;
-                else if (_settings.selectedType != "All" && e.Type != _settings.selectedType) continue;
+                if (_settings.currentTab == "Favorites")
+                {
+                    if (!_settings.favorites.Contains(e.Key)) continue;
+                }
+                else if (_settings.currentTab != "All" && e.Type != _settings.currentTab) continue;
 
                 if (!e.DisplayName.Contains(_search, StringComparison.CurrentCultureIgnoreCase) && 
                     !e.FileName.StartsWith(_search, StringComparison.CurrentCultureIgnoreCase) &&
@@ -278,7 +287,7 @@ namespace NST
                 RenderTab("Enemies");
                 RenderTab("Hazards");
                 RenderTab("Platforms");
-                RenderTab("Decoration");
+                RenderTab("Scenery");
                 RenderTab("Other");
                 RenderTab("Favorites");
                 ImGui.PopStyleVar();
@@ -336,6 +345,13 @@ namespace NST
 
             string json = File.ReadAllText(collectionPath);
             _collection = JsonSerializer.Deserialize<List<CollectionEntry>>(json) ?? [];
+            for (int i = 0; i < _collection.Count; i++) // handle legacy name
+            {
+                if (_collection[i].Type == "Decoration")
+                {
+                    var item = _collection[i]; item.Type = "Scenery"; _collection[i] = item;
+                }
+            }
             _initialized = true;
             LoadSettings();
             UpdateSearch(false);
@@ -374,7 +390,7 @@ namespace NST
 
             if (ImGui.Checkbox("Crash 2  ", ref _settings.filterC2)) UpdateSearch();
             ImGui.SameLine();
-            if (ImGui.Checkbox("Hubs    ", ref _settings.filterHub)) UpdateSearch();
+            if (ImGui.Checkbox("Bosses  ", ref _settings.filterBoss)) UpdateSearch();
             ImGui.SameLine();
             if (ImGui.Checkbox("CGameEntity ", ref _settings.filterCGameEntity)) UpdateSearch();
             ImGui.SameLine();
@@ -382,11 +398,12 @@ namespace NST
 
             if (ImGui.Checkbox("Crash 3  ", ref _settings.filterC3)) UpdateSearch();
             ImGui.SameLine();
-            if (ImGui.Checkbox("Bosses  ", ref _settings.filterBoss)) UpdateSearch();
+            if (ImGui.Checkbox("Hubs    ", ref _settings.filterHub)) UpdateSearch();
 
             if (ImGui.SmallButton("Reset settings"))
             {
-                _settings = new Settings();
+                var favorites = _settings.favorites;
+                _settings = new Settings() { favorites = favorites };
                 UpdateSearch();
             }
 
@@ -395,14 +412,14 @@ namespace NST
 
         private static void RenderTab(string name)
         {
-            bool selected = _settings.selectedType == name;
+            bool selected = _settings.currentTab == name;
 
             if (selected)
                 ImGui.PushStyleColor(ImGuiCol.Tab, ImGui.GetStyle().Colors[(int)ImGuiCol.TabHovered]);
 
             if (ImGui.TabItemButton(name))
             {
-                _settings.selectedType = name;
+                _settings.currentTab = name;
                 UpdateSearch();
             }
 
@@ -448,16 +465,21 @@ namespace NST
 
                         ImGui.Separator();
 
-                        bool isFavorite = _favorites.Contains(e);
+                        string key = e.Key;
+                        bool isFavorite = _settings.favorites.Contains(key);
 
                         if (!isFavorite && ImGui.Selectable("Add to favorites"))
                         {
-                            _favorites.Add(e);
+                            _settings.favorites.Add(key);
+                            SaveSettings();
                         }
                         else if (isFavorite && ImGui.Selectable("Remove from favorites"))
                         {
-                            _favorites.Remove(e);
-                            if (_settings.selectedType == "favorite") UpdateSearch();
+                            _settings.favorites.Remove(key);
+                            SaveSettings();
+
+                            if (_settings.currentTab == "Favorites") 
+                                UpdateSearch(false);
                         }
 
                         ImGui.EndPopup();
@@ -514,6 +536,11 @@ namespace NST
                     ImGui.Text(e.DisplayName);
 
                     if (_settings.showFileName) ImGui.TextDisabled(e.FileName);
+
+                    if (_settings.currentTab == "All" || _settings.currentTab == "Favorites")
+                    {
+                        ImGui.TextDisabled(e.Type);
+                    }
 
                     ImGui.EndGroup();
                 }
