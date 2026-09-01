@@ -70,6 +70,16 @@ namespace NST
                 .GetFiles(LocalStorage.ArchivePath, "*.pak")
                 .ToDictionary(path => NamespaceUtils.GetFileName(path, false), path => path)
                 .Where(e => originals.Contains(e.Key.ToLowerInvariant()))
+                .OrderBy(e =>
+                {
+                    bool isHub = e.Key.Substring(2, 2) == "00";
+                    bool isLevel = e.Key[0] == 'L' && !isHub;
+                    bool isBoss = e.Key[0] == 'B';
+                    if (isLevel) return 0;
+                    if (isBoss)  return 1;
+                    if (isHub)   return 2;
+                    return 3;
+                })
                 .ToDictionary();
 
             Directory.CreateDirectory(GetStoragePath());
@@ -98,6 +108,12 @@ namespace NST
 
                         string modelName = NamespaceUtils.GetFileName(modelPath, false);
                         string displayName = GetDisplayName(igz, entity);
+
+                        if (entity.GetType() == typeof(igEntity))
+                        {
+                            displayName = modelName;
+                        }
+
                         string key = $"{modelName}_{displayName}";
                         
                         if (entities.ContainsKey(key)) continue;
