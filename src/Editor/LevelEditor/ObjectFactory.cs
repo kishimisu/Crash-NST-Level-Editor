@@ -221,12 +221,6 @@ namespace NST
 
             if (ImGui.BeginPopup("ObjectFactoryContextMenu"))
             {
-                if (ImGui.BeginMenu("Object collection..."))
-                {
-                    ObjectCollection.Render(explorer);
-                    ImGui.EndMenu();
-                }
-
                 if (ImGui.BeginMenu("New crate..."))
                 {
                     ImGui.SeparatorText("Crate settings");
@@ -615,6 +609,12 @@ namespace NST
                     ImGui.EndMenu();
                 }
 
+                if (ImGui.BeginMenu("Object library..."))
+                {
+                    ObjectCollection.Render(explorer);
+                    ImGui.EndMenu();
+                }
+
                 ImGui.EndPopup();
             }
         }
@@ -644,7 +644,7 @@ namespace NST
             }
         }
 
-        private static void TryAddObject(Action callback)
+        public static void TryAddObject(Action callback)
         {
             try
             {

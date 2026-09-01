@@ -85,7 +85,7 @@ namespace NST
         /// <summary>
         /// Create an OpenGL texture from a byte array of pixels
         /// </summary>
-        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false, bool linear = true, bool reuseLastTexture = true)
+        public static int CreateOpenGLTexture(GL gl, int width, int height, byte[] pixels, bool flipY = false, bool linear = true, bool overwrite = true)
         {
             // Flip image vertically
             if (flipY)
@@ -95,7 +95,9 @@ namespace NST
                 image.CopyPixelDataTo(pixels);
             }
 
-            if (_textureId == -1 || !reuseLastTexture)
+            gl.GetInteger(GLEnum.TextureBinding2D, out int previousTexture);
+
+            if (_textureId == -1 || !overwrite)
             {
                 // Generate OpenGL texture
                 uint textureId = gl.GenTexture();
@@ -125,8 +127,8 @@ namespace NST
                 gl.TexImage2D<byte>(GLEnum.Texture2D, 0, (int)GLEnum.Rgba, (uint)width, (uint)height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, pixels);
             }
 
-            gl.GenerateMipmap(GLEnum.Texture2D);
-            gl.BindTexture(TextureTarget.Texture2D, 0);
+            // gl.GenerateMipmap(GLEnum.Texture2D);
+            gl.BindTexture(TextureTarget.Texture2D, (uint)previousTexture);
 
             return _textureId;
         }

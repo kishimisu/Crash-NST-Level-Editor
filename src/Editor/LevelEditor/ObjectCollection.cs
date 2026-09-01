@@ -321,7 +321,7 @@ namespace NST
 
             if (!File.Exists(collectionPath))
             {
-                ImGui.Text("The object collection hasn't been initialized.");
+                ImGui.Text("The object library hasn't been initialized.");
                 ImGui.Spacing();
                 ImGui.BeginDisabled();
                 ImGui.Text("This operation can take 10-20 minutes to\ncomplete, but you only have to do it once.");
@@ -330,9 +330,9 @@ namespace NST
                 ImGui.Text("Steam -> Library -> Crash NST (right-click) ->\nProperties -> Installed Files -> Verify integrity");
                 ImGui.EndDisabled();
                 ImGuiUtils.VerticalSpacing(6);
-                if (ImGuiUtils.CenteredButton("   Initialize collection   "))
+                if (ImGuiUtils.CenteredButton("   Initialize library   "))
                 {
-                    ModalRenderer.ShowLoadingModal("Initializing collection...");
+                    ModalRenderer.ShowLoadingModal("Initializing library...");
 
                     _modelPreview = new ModelPreview(RENDER_SIZE, RENDER_SIZE);
 
@@ -343,10 +343,10 @@ namespace NST
                         {
                             foreach (var ex in t.Exception.InnerExceptions)
                             {
-                                CrashHandler.Log($"Error initializing collection: {ex.Message}\n{ex.StackTrace}");
+                                CrashHandler.Log($"Error initializing library: {ex.Message}\n{ex.StackTrace}");
                             }
                             string logPath = CrashHandler.WriteLogsToFile();
-                            ModalRenderer.ShowMessageModal("Error", $"An error occured while initializing the collection\n\nLog file: {logPath}");
+                            ModalRenderer.ShowMessageModal("Error", $"An error occured while initializing the library\n\nLog file: {logPath}");
                         }
                     }, TaskContinuationOptions.OnlyOnFaulted);   
                 }
@@ -459,7 +459,15 @@ namespace NST
 
                     if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, new Vector2(0, _settings.previewSize)))
                     {
-                        ObjectFactory.AddGeneric(e.FileName, e.ObjectName, e.Type, explorer, null, e.DisplayName, addToSelection: true);
+                        Task.Run(() =>
+                        {
+                            ModalRenderer.ShowLoadingModal($"Importing {e.DisplayName}...");
+                            ObjectFactory.TryAddObject(() =>
+                            {
+                                ObjectFactory.AddGeneric(e.FileName, e.ObjectName, e.Type, explorer, null, e.DisplayName, 800, true);
+                            });
+                            ModalRenderer.CloseLoadingModal();
+                        });
                     }
                     if (ImGui.BeginPopupContextItem())
                     {
@@ -514,7 +522,7 @@ namespace NST
                             if (File.Exists(imagePath))
                             {
                                 byte[] pixels = TextureHelper.LoadImageFromFile(imagePath, out int width, out int height);
-                                textureId = TextureHelper.CreateOpenGLTexture(SilkWindow.instance._gl, width, height, pixels, flipY: true, reuseLastTexture: false);
+                                textureId = TextureHelper.CreateOpenGLTexture(SilkWindow.instance._gl, width, height, pixels, flipY: true, overwrite: false);
                             }
 
                             _previews.Add(e.ModelName, textureId);
