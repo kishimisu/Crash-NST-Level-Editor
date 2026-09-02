@@ -146,7 +146,7 @@ namespace NST
             _controls.SetFocus(ImGui.IsItemHovered());
         }
 
-        public void RenderModel(NSTModel model)
+        public void RenderObject(THREE.Object3D obj)
         {
             if (_object != null)
             {
@@ -155,8 +155,7 @@ namespace NST
             }
 
             // Create 3D mesh
-            _object = new THREE.Group();
-            _object.Add(model.CreateObject());
+            _object = obj;
 
             // Compute model bounds
             THREE.Box3 boundingBox = new THREE.Box3().SetFromObject(_object);
@@ -168,7 +167,7 @@ namespace NST
             _camera.Far = radius * 6.0f;
             _camera.UpdateProjectionMatrix();
 
-            _controls = new OrbitControls(this, _camera, radius * 0.85f);
+            _controls = new OrbitControls(this, _camera, radius * 0.8f, MathF.PI * 0.5f - 0.45f);
             _controls.Update();
 
             // Add mesh to scene

@@ -35,12 +35,17 @@ namespace NST
         public bool Focused() => _currentlyFocused;
         public void SetFocus(bool focused) => _currentlyFocused = focused;
 
-        public OrbitControls(IControlsContainer control, Camera camera, float radius)
+        public OrbitControls(IControlsContainer control, Camera camera, float radius, float? pitch = null)
         {
             _camera = camera;
             _camera.Up = new THREE.Vector3(0, 0, -1); // Z up
 
             _radius = radius;
+            
+            if (pitch != null)
+            {
+                _pitch = pitch.Value;
+            }
 
             control.MouseUp += OnMouseUp;
             control.MouseDown += OnMouseDown;
