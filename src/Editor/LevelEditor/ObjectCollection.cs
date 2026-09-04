@@ -2,6 +2,7 @@ using Alchemy;
 using ImGuiNET;
 using System.Numerics;
 using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Text.RegularExpressions;
 using System.Collections.Concurrent;
 
@@ -11,6 +12,7 @@ namespace NST
     {
         private struct CollectionEntry(string archiveName, string fileName, string objectName, string objectType, string displayName, string modelName, string type, bool prefab, bool collisions)
         {
+            public string? ArchivePath { get; set; } = null;
             public string ArchiveName { get; set; } = archiveName;
             public string FileName { get; set; } = fileName;
             public string ObjectName { get; set; } = objectName;
@@ -20,12 +22,12 @@ namespace NST
             public string Type { get; set; } = type;
             public bool IsPrefab { get; set; } = prefab;
             public bool HasCollisions { get; set; } = collisions;
-            public readonly string Key => $"{ModelName}_{DisplayName}";
+            [JsonIgnore] public readonly string Key => $"{ModelName}_{DisplayName}_{ObjectType}".ToLowerInvariant();
         }
 
         private const int RENDER_SIZE = 256;
 
-        private static List<CollectionEntry> _collection;
+        private static List<CollectionEntry> _collection = [];
         private static readonly List<CollectionEntry> _searchResults = [];
         private static readonly JsonSerializerOptions jsonSerializerOptions = new() { IncludeFields = true };
 
@@ -38,6 +40,7 @@ namespace NST
         private static bool _initialized = false;
         private static string _search = "";
         private static string _currentTab = "Enemies";
+        private static bool _tabChanged = false;
 
         private class Settings
         {
@@ -64,34 +67,36 @@ namespace NST
 
         private static string GetStoragePath(string path = "") => Path.Combine(LocalStorage.GetStoragePath("collection"), path);
 
-        private static void CreateCollection()
+        private static void CreateCollection(string path, List<string> originalArchives, bool customFolder = false)
         {
-            List<string> originals = ModManager._levels.Select(e => e.Split("/").Last()).ToList();
-            Dictionary<string, CollectionEntry> entities = [];
-            HashSet<string> models = [];
+            Directory.CreateDirectory(GetStoragePath());
+
+            var entities = _collection.ToDictionary(e => e.Key, e => e);
+            
+            var models = Directory
+                .GetFiles(GetStoragePath(), "*.png")
+                .Select(e => NamespaceUtils.GetFileName(e, false))
+                .ToHashSet();
 
             var archives = Directory
-                .GetFiles(LocalStorage.ArchivePath, "*.pak")
+                .GetFiles(path, "*.pak", SearchOption.AllDirectories)
                 .ToDictionary(path => NamespaceUtils.GetFileName(path, false), path => path)
-                .Where(e => originals.Contains(e.Key.ToLowerInvariant()))
+                .Where(e => customFolder || originalArchives.Contains(e.Key.ToLowerInvariant()))
                 .OrderBy(e =>
                 {
-                    bool isHub = e.Key.Substring(2, 2) == "00";
-                    bool isLevel = e.Key[0] == 'L' && !isHub;
-                    bool isBoss = e.Key[0] == 'B';
-                    if (isLevel) return 0;
-                    if (isBoss)  return 1;
-                    if (isHub)   return 2;
+                    string type = GetLevelType(e.Key);
+                    if (type == "level") return 0;
+                    if (type == "boss")  return 1;
+                    if (type == "hub")   return 2;
                     return 3;
                 });
 
-            Directory.CreateDirectory(GetStoragePath());
-
             int archiveIndex = 0;
+            int entityIndex = 0;
 
-            foreach ((string archiveName, string path) in archives)
+            foreach ((string archiveName, string archivePath) in archives)
             {
-                var archive = IgArchive.Open(path);
+                var archive = IgArchive.Open(archivePath);
                 var mapFiles = archive.GetFiles(FileSearchParams.MapIgz);
                 var collisions = archive.FindCollisionFile(".igz")?.ToIgzFile().FindObject<CStaticCollisionHashInstanceIdHashTable>()?.Dict;
                 var compoundShape = archive.FindCollisionFile(".hkx")?.ToHavokFile().GetAllObjects().Find(e => e is Havok.hknpStaticCompoundShape) as Havok.hknpStaticCompoundShape;
@@ -100,127 +105,165 @@ namespace NST
 
                 foreach (IgArchiveFile file in mapFiles)
                 {
-                    IgzFile igz = file.ToIgzFile();
-                    string fileName = igz.GetName(false);
-
-                    foreach (igEntity entity in igz.FindObjects<igEntity>())
+                    try 
                     {
-                        bool staticObject = entity.GetType() == typeof(igEntity);
-                        if ((entity._bitfield._isArchetype || !entity._bitfield._canSpawn) && !staticObject) continue;
-                        if (entity.ObjectName!.StartsWith("Crate_") || entity.ObjectName.StartsWith("Collectible_")) continue;
-                        if (entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
+                        IgzFile igz = file.ToIgzFile();
+                        string fileName = igz.GetName(false);
 
-                        string key;
-                        string modelName;
-                        string type = "Scenery";
-                        string displayName = GetDisplayName(igz, entity);
-
-                        bool isPrefab = entity.TryGetComponent(out igPrefabComponentData? prefabComponent);
-                        bool hasCollisions = false;
-
-                        if (isPrefab)
+                        foreach (igEntity entity in igz.FindObjects<igEntity>())
                         {
-                            var prefabChildren = prefabComponent!._prefabEntities?._data;
-                            if (prefabChildren == null) continue;
+                            bool staticObject = entity.GetType() == typeof(igEntity);
+                            if ((entity._bitfield._isArchetype || !entity._bitfield._canSpawn) && !staticObject) continue;
+                            if (entity.ObjectName!.StartsWith("Crate_") || entity.ObjectName.StartsWith("Collectible_")) continue;
+                            if (entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
 
-                            Dictionary<THREE.Matrix4, string> prefabModels = [];
+                            string key;
+                            string modelName;
+                            string type = "Scenery";
+                            string objectType = entity.GetType().Name;
+                            string displayName = GetDisplayName(igz, entity);
 
-                            var parentTransform = entity.GetTransformMatrix();
+                            bool isPrefab = entity.TryGetComponent(out igPrefabComponentData? prefabComponent);
+                            bool hasCollisions = false;
 
-                            foreach (var child in prefabChildren)
+                            if (isPrefab)
                             {
-                                if (!child._bitfield._canSpawn) continue;
-                                
-                                string? childModelPath = child.GetModelName(igz, archive: archive);
-                                if (childModelPath == null) continue;
+                                var prefabChildren = prefabComponent!._prefabEntities?._data;
+                                if (prefabChildren == null) continue;
 
-                                string childModelName = NamespaceUtils.GetFileName(childModelPath, false);
-                                var childTransform = child.GetTransformMatrix();
-                                
-                                prefabModels.Add(childTransform, childModelName);
+                                Dictionary<THREE.Matrix4, string> prefabModels = [];
 
-                                if (compoundShape == null || hasCollisions) continue;
+                                var parentTransform = entity.GetTransformMatrix();
 
-                                var worldTransform = parentTransform * childTransform;
-
-                                THREE.Vector3 childPosition = new THREE.Vector3();
-                                worldTransform.Decompose(childPosition, new THREE.Quaternion(), new THREE.Vector3());
-
-                                foreach (var shape in compoundShape._elements.GetElements())
+                                foreach (var child in prefabChildren)
                                 {
-                                    THREE.Vector3 havokPosition = new THREE.Vector3(shape._transform.M41, shape._transform.M42, shape._transform.M43);
-                                    float distance = havokPosition.DistanceTo(childPosition * 0.0254f);
-                                    if (distance < 0.01f)
+                                    if (!child._bitfield._canSpawn) continue;
+                                    
+                                    string? childModelPath = child.GetModelName(igz, archive: archive);
+                                    if (childModelPath == null) continue;
+
+                                    string childModelName = NamespaceUtils.GetFileName(childModelPath, false);
+                                    var childTransform = child.GetTransformMatrix();
+                                    
+                                    prefabModels.Add(childTransform, childModelName);
+
+                                    if (compoundShape == null || hasCollisions) continue;
+
+                                    var worldTransform = parentTransform * childTransform;
+
+                                    THREE.Vector3 childPosition = new THREE.Vector3();
+                                    worldTransform.Decompose(childPosition, new THREE.Quaternion(), new THREE.Vector3());
+
+                                    foreach (var shape in compoundShape._elements.GetElements())
                                     {
-                                        hasCollisions = true;
-                                        break;
+                                        THREE.Vector3 havokPosition = new THREE.Vector3(shape._transform.M41, shape._transform.M42, shape._transform.M43);
+                                        float distance = havokPosition.DistanceTo(childPosition * 0.0254f);
+                                        if (distance < 0.01f)
+                                        {
+                                            hasCollisions = true;
+                                            break;
+                                        }
                                     }
+                                }
+
+                                if (prefabModels.Count == 0) continue;
+
+                                modelName = $"Prefab_{displayName}";
+                                key = $"{modelName}_{displayName}_{objectType}".ToLowerInvariant();
+                                
+                                if (entities.ContainsKey(key)) continue;
+
+                                if (prefabChildren.Any(e => e.GetType() != typeof(igEntity)))
+                                {
+                                    type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? "Other";
+                                }
+
+                                if (models.Add(modelName))
+                                {
+                                    _createPreviewsTotalCount++;
+                                    _createPreviewsMainThread.Enqueue((archive, modelName, prefabModels));
+                                }
+                            }
+                            else
+                            {
+                                string? modelPath = entity.GetModelName(igz, archive: archive);
+                                if (modelPath == null) continue;
+
+                                modelName = NamespaceUtils.GetFileName(modelPath, false);
+
+                                if (staticObject)
+                                {
+                                    displayName = modelName;
+                                }
+
+                                key = $"{modelName}_{displayName}_{objectType}".ToLowerInvariant();
+                                
+                                if (key == "turtle_01_jungle_enemy_tracking_turtle_centity") continue;
+                                if (key == "flytrap_01_jr_enemy_flytrapinstance_centity") continue;
+                                if (key == "flytrap_01_jungle_enemy_basic_flytrap_cphysicalentity") continue;
+                                if (entities.ContainsKey(key)) continue;
+                                
+                                if (!staticObject)
+                                {
+                                    type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? GetType(modelPath) ?? "Other";
+                                }
+
+                                HashedReference reference = entity.ToNamedReference(fileName).ToEXID();
+                                u64 collisionKey = ((u64)reference.fileHash << 32) | reference.objectHash;
+                                hasCollisions |= collisions?.ContainsKey(collisionKey) == true;
+
+                                if (models.Add(modelName))
+                                {
+                                    _createPreviewsTotalCount++;
+                                    _createPreviewsMainThread.Enqueue((archive, modelName, null));
                                 }
                             }
 
-                            if (prefabModels.Count == 0) continue;
+                            CollectionEntry entry = new(archiveName, fileName, entity.ObjectName, objectType, displayName, modelName, type, isPrefab, hasCollisions);
 
-                            modelName = $"Prefab_{displayName}";
-                            key = displayName.ToLowerInvariant();
-                            
-                            if (entities.ContainsKey(key)) continue;
-
-                            if (prefabChildren.Any(e => e.GetType() != typeof(igEntity)))
+                            if (customFolder)
                             {
-                                type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? "Other";
+                                entry.ArchivePath = archivePath;
                             }
 
-                            _createPreviewsTotalCount++;
-                            _createPreviewsMainThread.Enqueue((archive, modelName, prefabModels));
-                        }
-                        else
-                        {
-                            string? modelPath = entity.GetModelName(igz, archive: archive);
-                            if (modelPath == null) continue;
+                            entities.Add(key, entry);
 
-                            modelName = NamespaceUtils.GetFileName(modelPath, false);
+                            entityIndex++;
 
-                            if (staticObject)
+                            if (entityIndex == 1 || entityIndex % 50 == 0)
                             {
-                                displayName = modelName;
+                                float progress = (float)archiveIndex / (archives.Count() - 1);
+                                ModalRenderer.ShowLoadingModal($"{archiveName}.pak | {entityIndex} objects found ({archiveIndex}/{archives.Count()})", progress);
                             }
-
-                            key = $"{modelName}_{displayName}";
-                            
-                            if (entities.ContainsKey(key)) continue;
-                            
-                            if (!staticObject)
-                            {
-                                type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? GetType(modelPath) ?? "Other";
-                            }
-
-                            HashedReference reference = entity.ToNamedReference(fileName).ToEXID();
-                            u64 collisionKey = ((u64)reference.fileHash << 32) | reference.objectHash;
-                            hasCollisions |= collisions?.ContainsKey(collisionKey) == true;
-
-                            if (models.Add(modelName))
-                            {
-                                _createPreviewsTotalCount++;
-                                _createPreviewsMainThread.Enqueue((archive, modelName, null));
-                            }
-                        }
-
-                        entities.Add(key, new (archiveName, fileName, entity.ObjectName, entity.GetType().Name, displayName, modelName, type, isPrefab, hasCollisions));
-
-                        if (entities.Count == 1 || entities.Count % 50 == 0)
-                        {
-                            float progress = (float)archiveIndex / (archives.Count() - 1);
-                            ModalRenderer.ShowLoadingModal($"{archiveName}.pak | {entities.Count} objects found ({archiveIndex}/{archives.Count()})", progress);
                         }
                     }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine(e.Message);
+                    }
                 }
+            }
+
+            if (_createPreviewsTotalCount == 0)
+            {
+                ModalRenderer.CloseLoadingModal();
+
+                if (entityIndex == 0)
+                {
+                    ModalRenderer.ShowMessageModal("No object found", "No object found to import");
+                    return;
+                }
+            }
+            else
+            {
+                _waitingForPreviews = true;
             }
 
             var options = new JsonSerializerOptions { WriteIndented = true };
             string json = JsonSerializer.Serialize(entities.Values, options);
             File.WriteAllText(GetStoragePath("collection.json"), json);
 
-            _waitingForPreviews = true;
+            _collection = entities.Values.ToList();
         }
 
         private static void CreatePreviewImage(IgArchive archive, string name, Dictionary<THREE.Matrix4, string> objects)
@@ -232,7 +275,8 @@ namespace NST
 
             foreach ((var transform, var modelName) in objects)
             {
-                IgzFile modelIgz = modelFiles.First(f => string.Equals(f.GetName(), $"{modelName}.igz", StringComparison.InvariantCultureIgnoreCase)).ToIgzFile();
+                IgzFile? modelIgz = modelFiles.FirstOrDefault(f => string.Equals(f.GetName(), $"{modelName}.igz", StringComparison.InvariantCultureIgnoreCase))?.ToIgzFile();
+                if (modelIgz == null) continue;
 
                 NSTModel? model = NSTModel.FromIgz(modelIgz);
                 if (model == null) continue;
@@ -266,19 +310,15 @@ namespace NST
 
             foreach (CollectionEntry e in _collection)
             {
-                string prefix = e.ArchiveName.Substring(0, 4);
-                bool isHub = prefix == "L100" || prefix == "L200" || prefix == "L300";
-                bool isLevel = prefix[0] == 'L' && !isHub;
-                bool isBoss = prefix[0] == 'B';
+                string levelType = GetLevelType(e.ArchiveName);
 
-                if (!isHub && !isLevel && !isBoss) isHub = true;
-
-                if (isHub && !_settings.filterHub) continue;
-                if (isBoss && !_settings.filterBoss) continue;
-                if (isLevel && !_settings.filterLevel) continue;
-                if (prefix[1] == '1' && !_settings.filterC1) continue;
-                if (prefix[1] == '2' && !_settings.filterC2) continue;
-                if (prefix[1] == '3' && !_settings.filterC3) continue;
+                if (levelType == "level" && !_settings.filterLevel) continue;
+                if (levelType == "boss" && !_settings.filterBoss) continue;
+                if (levelType == "hub" && !_settings.filterHub) continue;
+                if (levelType == "other" && !_settings.filterHub) continue;
+                if (e.ArchiveName[1] == '1' && !_settings.filterC1) continue;
+                if (e.ArchiveName[1] == '2' && !_settings.filterC2) continue;
+                if (e.ArchiveName[1] == '3' && !_settings.filterC3) continue;
                 if (e.ObjectType == "CEntity" && !_settings.filterCEntity) continue;
                 if (e.ObjectType == "CGameEntity" && !_settings.filterCGameEntity) continue;
                 if (e.ObjectType == "CPhysicalEntity" && !_settings.filterCPhysicalEntity) continue;
@@ -330,6 +370,9 @@ namespace NST
                         cmp = string.Compare(a.ArchiveName, b.ArchiveName);
                     else
                         cmp = string.Compare(a.DisplayName, b.DisplayName);
+
+                    if (cmp == 0)
+                        cmp = string.Compare(a.ObjectType, b.ObjectType);
                 }
 
                 return cmp;
@@ -343,7 +386,7 @@ namespace NST
 
         public static void Update()
         {
-            if (_initialized || _createPreviewsMainThread.IsEmpty || !_createPreviewsMainThread.TryDequeue(out var item)) 
+            if (_createPreviewsMainThread.IsEmpty || !_createPreviewsMainThread.TryDequeue(out var item)) 
                 return;
 
             if (item.prefabs == null)
@@ -364,8 +407,10 @@ namespace NST
                 {
                     ModalRenderer.CloseLoadingModal();
                     _waitingForPreviews = false;
+                    _createPreviewsTotalCount = 0;
+                    UpdateSearch(false);
                 }
-                else if (current % 10 == 0)
+                else if (current == 1 || current % 10 == 0)
                 {
                     ModalRenderer.ShowLoadingModal($"Generating preview images... ({current}/{_createPreviewsTotalCount})", progress);
                 }
@@ -394,11 +439,7 @@ namespace NST
                 UpdateSearch(false);
             }
 
-            if (ImGui.TreeNodeEx("Settings"))
-            {
-                RenderSettings();
-                ImGui.TreePop();
-            }
+            RenderSettings();
 
             if (ImGui.BeginTabBar("CollectionTabs"))
             {
@@ -421,7 +462,11 @@ namespace NST
                 UpdateSearch();
             }
 
-            RenderItemList(explorer);
+            if (ImGui.BeginChild("ItemList"))
+            {
+                RenderItemList(explorer);
+            }
+            ImGui.EndChild();
         }
 
         private static bool RenderInitialize()
@@ -443,21 +488,14 @@ namespace NST
                 {
                     ModalRenderer.ShowLoadingModal("Initializing library...");
 
-                    _modelPreview = new ModelPreview(RENDER_SIZE, RENDER_SIZE);
+                    List<string> originals = ModManager._levels.Select(e => e.Split("/").Last()).ToList();
 
-                    Task.Run(CreateCollection)
-                    .ContinueWith(t =>
+                    _modelPreview ??= new ModelPreview(RENDER_SIZE, RENDER_SIZE);
+
+                    CrashHandler.TryRunTask("initializing library", () =>
                     {
-                        if (t.IsFaulted && t.Exception != null)
-                        {
-                            foreach (var ex in t.Exception.InnerExceptions)
-                            {
-                                CrashHandler.Log($"Error initializing library: {ex.Message}\n{ex.StackTrace}");
-                            }
-                            string logPath = CrashHandler.WriteLogsToFile();
-                            ModalRenderer.ShowMessageModal("Error", $"An error occured while initializing the library\n\nLog file: {logPath}");
-                        }
-                    }, TaskContinuationOptions.OnlyOnFaulted);   
+                        CreateCollection(LocalStorage.ArchivePath, originals);
+                    }); 
                 }
                 ImGuiUtils.VerticalSpacing(4);
                 return false;
@@ -486,52 +524,94 @@ namespace NST
 
         private static void RenderSettings()
         {
-            ImGui.SeparatorText("Display");
-
-            ImGuiUtils.Prefix("Sort by:");
-            if (ImGui.BeginCombo("##sortBy", _settings.sortBy))
+            if (ImGui.TreeNodeEx("Settings"))
             {
-                if (ImGui.Selectable("Archive")) UpdateSort("Archive");
-                if (ImGui.Selectable("Name")) UpdateSort("Name");
-                if (ImGui.Selectable("Model")) UpdateSort("Model");
-                ImGui.EndCombo();
+                ImGuiUtils.Prefix("Sort by:");
+                if (ImGui.BeginCombo("##sortBy", _settings.sortBy))
+                {
+                    if (ImGui.Selectable("Archive")) UpdateSort("Archive");
+                    if (ImGui.Selectable("Name")) UpdateSort("Name");
+                    if (ImGui.Selectable("Model")) UpdateSort("Model");
+                    ImGui.EndCombo();
+                }
+                ImGuiUtils.Prefix("Show file name:");
+                if (ImGui.Checkbox("##show_file_name", ref _settings.showFileName)) SaveSettings();
+                ImGuiUtils.Prefix("Show object type:");
+                if (ImGui.Checkbox("##show_object_type", ref _settings.showObjectType)) SaveSettings();
+                ImGuiUtils.Prefix("Preview size:");
+                if (ImGui.SliderInt("##preview_size", ref _settings.previewSize, 0, 128)) SaveSettings();
+
+                if (ImGui.Button("Add custom folder"))
+                {
+                    string? path = FileExplorer.SelectFolder();
+                    if (path != null)
+                    {
+                        ModalRenderer.ShowLoadingModal("Adding custom folder...");
+
+                        _modelPreview ??= new ModelPreview(RENDER_SIZE, RENDER_SIZE);
+                        
+                        CrashHandler.TryRunTask("adding custom folder", () =>
+                        {
+                            CreateCollection(path, [], true);
+                        });
+                    }
+                }
+
+                if (ImGui.Button("Clear library data"))
+                {
+                    ModalRenderer.ShowWarningModal("Are you sure you want to remove all objects from the library?", () =>
+                    {
+                        Directory.Delete(GetStoragePath(), true);
+                        _initialized = false;
+                        _collection.Clear();
+                    });
+                }
+
+                ImGui.TreePop();
             }
-            ImGuiUtils.Prefix("Show file name:");
-            if (ImGui.Checkbox("##show_file_name", ref _settings.showFileName)) SaveSettings();
-            ImGuiUtils.Prefix("Show object type:");
-            if (ImGui.Checkbox("##show_object_type", ref _settings.showObjectType)) SaveSettings();
-            ImGuiUtils.Prefix("Preview size:");
-            if (ImGui.SliderInt("##preview_size", ref _settings.previewSize, 0, 128)) SaveSettings();
 
-            ImGui.SeparatorText("Filters");
-
-            if (ImGui.Checkbox("Crash 1  ", ref _settings.filterC1)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("Levels  ", ref _settings.filterLevel)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("CEntity       ", ref _settings.filterCEntity)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("Prefabs       ", ref _settings.filterPrefab)) UpdateSearch();
-
-            if (ImGui.Checkbox("Crash 2  ", ref _settings.filterC2)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("Bosses  ", ref _settings.filterBoss)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("CGameEntity   ", ref _settings.filterCGameEntity)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("CActor  ", ref _settings.filterCActor)) UpdateSearch();
-
-            if (ImGui.Checkbox("Crash 3  ", ref _settings.filterC3)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("Hubs    ", ref _settings.filterHub)) UpdateSearch();
-            ImGui.SameLine();
-            if (ImGui.Checkbox("CPhysicalEntity", ref _settings.filterCPhysicalEntity)) UpdateSearch();
-
-            if (ImGui.SmallButton("Reset settings"))
+            if (ImGui.TreeNodeEx("Filters"))
             {
-                var favorites = _settings.favorites;
-                _settings = new Settings() { favorites = favorites };
-                UpdateSearch();
+                if (ImGui.Checkbox("Crash 1  ", ref _settings.filterC1)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("Levels  ", ref _settings.filterLevel)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("CEntity        ", ref _settings.filterCEntity)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("Prefabs        ", ref _settings.filterPrefab)) UpdateSearch();
+
+                if (ImGui.Checkbox("Crash 2  ", ref _settings.filterC2)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("Bosses  ", ref _settings.filterBoss)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("CGameEntity    ", ref _settings.filterCGameEntity)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("CActor  ", ref _settings.filterCActor)) UpdateSearch();
+
+                if (ImGui.Checkbox("Crash 3  ", ref _settings.filterC3)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("Hubs    ", ref _settings.filterHub)) UpdateSearch();
+                ImGui.SameLine();
+                if (ImGui.Checkbox("CPhysicalEntity", ref _settings.filterCPhysicalEntity)) UpdateSearch();
+
+                if (ImGui.SmallButton("Reset filters"))
+                {
+                    _settings.filterC1 = true;
+                    _settings.filterC2 = true;
+                    _settings.filterC3 = true;
+                    _settings.filterLevel = true; 
+                    _settings.filterBoss = false;
+                    _settings.filterHub = false;
+                    _settings.filterCEntity = true;
+                    _settings.filterCGameEntity = true;
+                    _settings.filterCPhysicalEntity = true;
+                    _settings.filterCActor = true;
+                    _settings.filterPrefab = true;
+                    _settings.filterNoCollisions = true;
+                    UpdateSearch();
+                }
+
+                ImGui.TreePop();
             }
 
             ImGui.Spacing();
@@ -546,6 +626,7 @@ namespace NST
 
             if (ImGui.TabItemButton(name))
             {
+                _tabChanged = true;
                 _currentTab = name;
                 UpdateSearch(false);
             }
@@ -556,13 +637,19 @@ namespace NST
 
         private unsafe static void RenderItemList(LevelExplorer explorer)
         {
+            if (_tabChanged)
+            {
+                ImGui.SetScrollY(0);
+                _tabChanged = false;
+            }
+
             var clipper = new ImGuiListClipperPtr(ImGuiNative.ImGuiListClipper_ImGuiListClipper());
 
             clipper.Begin(_searchResults.Count);
 
             while (clipper.Step())
             {
-                for (var i = clipper.DisplayStart; i < clipper.DisplayEnd; i++)
+                for (var i = clipper.DisplayStart; i < clipper.DisplayEnd && i < _searchResults.Count; i++)
                 {
                     CollectionEntry e = _searchResults[i];
 
@@ -575,11 +662,14 @@ namespace NST
                             ModalRenderer.ShowLoadingModal($"Importing {e.DisplayName}...");
                             ObjectFactory.TryAddObject(() =>
                             {
-                                ObjectFactory.AddGeneric(e.FileName, e.ObjectName, e.Type, explorer, null, e.DisplayName, 800, true);
+                                ObjectFactory.AddGeneric(e.FileName, e.ObjectName, e.Type, explorer, null, e.DisplayName, 800, true, e.ArchivePath);
                             });
                             ModalRenderer.CloseLoadingModal();
                         });
                     }
+
+                    bool hovered = ImGui.IsItemHovered();
+                    
                     if (ImGui.BeginPopupContextItem())
                     {
                         if (ImGui.Selectable("Focus in original level"))
@@ -587,9 +677,13 @@ namespace NST
                             try
                             {
                                 string archivePath = Path.Combine(LocalStorage.ArchivePath, $"{e.ArchiveName}.pak");
-                                IgArchiveRenderer renderer = new IgArchiveRenderer(archivePath);
-                                igObject? toFocus = renderer.Archive.FindObject(new NamedReference(e.FileName, e.ObjectName));
-                                if (toFocus == null) throw new Exception($"Could not find {e.ObjectName} in {e.FileName}.igz");
+
+                                var renderer = App.GetLevelExplorer(archivePath)?.ArchiveRenderer 
+                                                ?? new IgArchiveRenderer(archivePath);
+
+                                var toFocus = renderer.Archive.FindObject(new NamedReference(e.FileName, e.ObjectName))
+                                                ?? throw new Exception($"Could not find {e.ObjectName} in {e.FileName}.igz");
+
                                 App.OpenLevelExplorer(renderer, toFocus);
                             }
                             catch (Exception ex)
@@ -643,7 +737,7 @@ namespace NST
                         {
                             ImGui.Image(textureId, new Vector2(_settings.previewSize, _settings.previewSize), Vector2.Zero, Vector2.One, Vector4.One);
 
-                            if (ImGui.IsItemHovered())
+                            if (hovered)
                             {
                                 ImGui.BeginTooltip();
                                 ImGui.Text(e.DisplayName);
@@ -674,6 +768,12 @@ namespace NST
                     {
                         ImGui.SameLine();
                         ImGui.TextDisabled("[Prefab]");
+                    }
+
+                    if (e.HasCollisions && e.Type == "Scenery")
+                    {
+                        ImGui.SameLine();
+                        ImGui.TextDisabled("[Collision]");
                     }
 
                     if (_settings.showFileName) ImGui.TextDisabled(e.FileName);
@@ -720,6 +820,20 @@ namespace NST
             else if (name.Contains("teleporter")) return "Platforms";
             
             return null;
+        }
+
+        private static string GetLevelType(string name)
+        {
+            name = name.ToLowerInvariant();
+
+            if (name.Length >= 4 && name.Substring(2, 2) == "00") 
+                return "hub";
+            else if (name[0] == 'l' || name[0] == 'a' || name[0] == 't')
+                return "level";
+            else if (name.Length >= 2 && name[0] == 'b' && char.IsDigit(name[1]))
+                return "boss";
+            
+            return "other";
         }
 
         private static string GetDisplayName(IgzFile igz, igEntity entity)

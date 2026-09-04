@@ -6,12 +6,6 @@ namespace NST
     {
         private static List<string> _warnings = [];
 
-        public static void Log(string message)
-        {
-            Console.WriteLine(message);
-            _warnings.Add(message);
-        }
-
         public static UnhandledExceptionEventHandler CreateExceptionHandler()
         {
             return new UnhandledExceptionEventHandler(OnUnhandledException);
@@ -50,7 +44,7 @@ namespace NST
             });
         }
 
-        public static string WriteLogsToFile()
+        private static string WriteLogsToFile()
         {
             var time = DateTime.UtcNow;
             
@@ -67,6 +61,30 @@ namespace NST
             File.WriteAllText(filePath, stackTrace);
 
             return filePath;
+        }
+
+        public static void Log(string message)
+        {
+            Console.WriteLine(message);
+            _warnings.Add(message);
+        }
+
+        public static Task TryRunTask(string label, Action task, Action? error = null)
+        {
+            return Task.Run(task).ContinueWith(t =>
+            {
+                if (t.IsFaulted && t.Exception != null)
+                {
+                    error?.Invoke();
+
+                    foreach (var ex in t.Exception.InnerExceptions)
+                    {
+                        Log($"Error {label}: {ex.Message}\n{ex.StackTrace}");
+                    }
+                    string logPath = WriteLogsToFile();
+                    ModalRenderer.ShowMessageModal("Error", $"An error occured while {label}\n\nLog file: {logPath}");
+                }
+            }, TaskContinuationOptions.OnlyOnFaulted);   
         }
     }
 }

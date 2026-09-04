@@ -247,6 +247,7 @@ namespace NST
         }
 
         public static void AddLevelExplorer(LevelExplorer explorer) { _editors.Add(explorer); _mainMenu.IsOpen = false; }
+        public static LevelExplorer? GetLevelExplorer(string archivePath) => _editors.Find(e => e.ArchiveRenderer.Archive.Path == archivePath);
         public static LevelExplorer? GetLevelExplorer(IgArchiveRenderer archive) => _editors.Find(e => e.ArchiveRenderer == archive);
         public static void CloseArchive(IgArchiveRenderer archive) => _archives.Remove(archive);
         public static bool CanCloseArchive(IgArchiveRenderer archive)

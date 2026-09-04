@@ -196,6 +196,22 @@ Use the quick-access menu (right-click) to create various objects:
 - **New Camera**: Create a new camera (Relative Camera, Spline Camera or Free Camera) or a new camera transition zone
 - **Other**: Create other useful objects (Death Trigger, Invisible Walls...)
 
+### Object library
+
+<img src="assets/readme/level_editor/library.png" alt="Object library" height="500"/>
+
+Use the object library to quicky search through the game assets.
+
+- The first initialization can take 10-20 minutes to complete. 
+During this time the editor window may become unresponsive but other apps should be fine - you can open up a second instance of the editor in the meantime without issue.
+- You can automatically scan folders containing custom .pak archives and add their objects to the library (useful to add assets from CTR:NF). 
+Use `Settings -> Add custom folder` (note: you shouldn't move the original archives after the scan or you won't be able to import their objects using the library anymore)
+
+Controls:
+- Click on an object to import it
+- Right-click on an object to focus it in its original archive or to add it to favorites
+- Hover a preview image to make it bigger
+
 ## Object properties
 
 Contains every editable property for the currently selected object.

@@ -313,21 +313,6 @@ namespace NST
                         ImGui.EndMenu();
                     }
 
-                    if (ImGui.BeginMenu("Level platform..."))
-                    {
-                        if (ImGui.MenuItem("L103_TheGreatGate   |  Wooden spinning platform ")) TryAddObject(() => AddGeneric("L103_TheGreatGate_Platforms", "Village_Platform_SpinningPlat", "Platforms", explorer));
-                        if (ImGui.MenuItem("L106_RollingStones  |  Falling stone pillar     ")) TryAddObject(() => AddGeneric("L106_RollingStones_Hazards", "Jungle_Platform_Stone_FallAway002", "Platforms", explorer));
-                        if (ImGui.MenuItem("L106_RollingStones  |  Moving stone pillar      ")) TryAddObject(() => AddGeneric("L106_RollingStones_Hazards", "Jungle_Platform_Stone_Spline001", "Platforms", explorer));
-                        if (ImGui.MenuItem("L108_NativeFortress |  Cloud platform           ")) TryAddObject(() => AddGeneric("L108_NativeFortress_Platforms", "Village_Platform_Clouds007", "Platforms", explorer));
-                        // if (ImGui.MenuItem("L111_TempleRuins    |  Spline temple platform   ")) TryAddObject(() => AddGeneric("L111_TempleRuins_Platforms", "Temple_Platform_Spline", "Platforms", explorer));
-                        if (ImGui.MenuItem("L111_TempleRuins    |  Falling temple platform  ")) TryAddObject(() => AddGeneric("L111_TempleRuins_Platforms", "Temple_Platform_FallAway", "Platforms", explorer));
-                        if (ImGui.MenuItem("L111_TempleRuins    |  Up/down temple platform  ")) TryAddObject(() => AddGeneric("L111_TempleRuins_Platforms", "Temple_Platform_UpDown", "Platforms", explorer));
-                        if (ImGui.MenuItem("L111_TempleRuins    |  Orbit temple platform    ")) TryAddObject(() => AddGeneric("L111_TempleRuins_Platforms", "Temple_Platform_Orbit_Spline001", "Platforms", explorer));
-                        if (ImGui.MenuItem("L112_RoadToNowhere  |  Upside down bounce turtle")) TryAddObject(() => AddGeneric("L112_RoadToNowhere_BounceTurtle", "Jungle_Enemy_Bounce_Turtle", "Platforms", explorer));
-                        if (ImGui.MenuItem("L201_TurtleWoods    |  Body slam entrance       ")) TryAddObject(() => AddGeneric("L201_TurtleWoods", [("L201_TurtleWoods", "Jungle_SecretEntrance_BodySlam"), ("L201_TurtleWoods_Art", "HolePitrim01")], "Platforms", explorer));
-                        ImGui.EndMenu();
-                    }
-
                     if (ImGui.BeginMenu("Teleporter..."))
                     {
                         if (ImGui.MenuItem("Fade In/Out Teleporter")) TryAddObject(() => AddFadeTeleporter(explorer));
@@ -1270,10 +1255,11 @@ namespace NST
             explorer.SelectAndMoveToCamera(clones.Where(c => c is not NSTEntity e || !e.IsTemplate).ToList(), 400);
         }
 
-        public static void AddGeneric(string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400, bool addToSelection = false)
+        public static void AddGeneric(string fileName, string objectName, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null, string? newObjectName = null, float camDistance = 400, bool addToSelection = false, string? archivePath = null)
         {
             string archiveName = ExtractArchiveName(fileName);
-            IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak"));
+            archivePath ??= Path.Combine(LocalStorage.ArchivePath, archiveName + ".pak");
+            IgArchive sourceArchive = IgArchive.Open(archivePath);
             IgzFile sourceIgz = sourceArchive.FindFile(fileName, FileSearchType.Name, FileSearchParams.MapIgz)!.ToIgzFile();
             
             igObject obj = sourceIgz.FindObject<igObject>(objectName)!;
