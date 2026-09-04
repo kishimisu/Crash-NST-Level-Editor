@@ -234,11 +234,11 @@ namespace NST
         {
             var delta = MathUtils.SafeDivide(newScale, previousScale);
 
+            UpdateScaleTransform(_selectionContainer.Scale * delta, true, selected);
+            HideSelectedSplines();
+
             _selectionContainer.Scale *= delta;
             _explorer.RenderNextFrame = true;
-
-            UpdateScaleTransform(_selectionContainer.Scale, true, selected);
-            HideSelectedSplines();
         }
 
         public void HideSelectedSplines()
@@ -331,7 +331,7 @@ namespace NST
 
             _gizmos.startPos.Copy(_selectionContainer.Position);
 
-            if (updateHistory) _explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform);
+            if (updateHistory) _explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform, mode);
 
             foreach (NSTObject obj in _selection)
             {
@@ -722,7 +722,7 @@ namespace NST
             ModalRenderer.ShowLoadingModal("Pasting selection...");
             int counter = 0;
 
-            Task.Run(() =>
+            CrashHandler.TryRunTask("pasting objects", () =>
             {
                 string cameraNamespace = _explorer.GetFileNameFromIdentifier("Camera");
 
@@ -1241,19 +1241,7 @@ namespace NST
                 ModalRenderer.CloseLoadingModal();
                 
                 callback?.Invoke(newObjects[0]); // phew, we're done...
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error pasting objects: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while pasting the objects. Log saved to:\n\n{logPath}");
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            });
         }
 
         private void OnKeyDown(object? sender, THREE.Silk.KeyboardKeyEventArgs e)

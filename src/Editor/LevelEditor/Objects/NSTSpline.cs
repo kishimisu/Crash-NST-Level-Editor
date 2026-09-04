@@ -1069,7 +1069,7 @@ namespace NST
 
             if (onRelease)
             {
-                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform);
+                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform, explorer.SelectionManager.Gizmos.mode);
             }
         }
     }

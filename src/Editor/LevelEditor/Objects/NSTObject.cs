@@ -208,7 +208,7 @@ namespace NST
             
             if (hasPressed)
             {
-                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform, previousBounds);
+                explorer.UndoManager.AddAction(UndoManager.UndoActionType.Transform, "resize", previousBounds);
             }
             if (hasReleased)
             {

@@ -139,7 +139,7 @@ namespace NST
         {
             Init();
 
-            _initializationTask = Task.Run(() => 
+            _initializationTask = CrashHandler.TryRunTask("loading scene", () => 
             {
                 IgArchive archive = LevelBuilder.CreateLevel(baseLevel, level, musicLevel, crashMode, _progressManager);
 
@@ -149,20 +149,8 @@ namespace NST
                 ArchiveRenderer.IsOpen = false;
 
                 LoadEntities();
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while loading the scene\n\nLog file: {logPath}");
-                    IsOpen = false;
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);        
+            },
+            () => IsOpen = false);       
         }
 
         /// <summary>
@@ -174,7 +162,7 @@ namespace NST
 
             Init();
 
-            _initializationTask = Task.Run(() => 
+            _initializationTask = CrashHandler.TryRunTask("loading scene", () => 
             {
                 LoadEntities();
 
@@ -188,20 +176,8 @@ namespace NST
                 {
                     Focus(objToFocus);
                 }
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error loading entities: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while loading the scene. Log saved to:\n\n{logPath}");
-                    IsOpen = false;
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            },
+            () => IsOpen = false);
         }
 
         private void Init()

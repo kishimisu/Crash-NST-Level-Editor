@@ -759,6 +759,10 @@ namespace NST
                     }
                     explorer.ArchiveRenderer.SetEntityUpdated(childTemplate);
 
+                    if (scale._x == 0) scale._x = 0.0001f;
+                    if (scale._y == 0) scale._y = 0.0001f;
+                    if (scale._z == 0) scale._z = 0.0001f;
+
                     childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = scale;
 
                     explorer.SelectionManager.ScaleSelectionFromGUI(previousScale, scale.ToVector3(), this);
@@ -784,6 +788,10 @@ namespace NST
                         explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object, true);
                     }
                     explorer.ArchiveRenderer.SetEntityUpdated(this);
+
+                    if (transform._nonUniformPersistentParentSpaceScale._x == 0) transform._nonUniformPersistentParentSpaceScale._x = 0.0001f;
+                    if (transform._nonUniformPersistentParentSpaceScale._y == 0) transform._nonUniformPersistentParentSpaceScale._y = 0.0001f;
+                    if (transform._nonUniformPersistentParentSpaceScale._z == 0) transform._nonUniformPersistentParentSpaceScale._z = 0.0001f;
 
                     explorer.SelectionManager.ScaleSelectionFromGUI(previousScale, transform._nonUniformPersistentParentSpaceScale.ToVector3(), this);
                 }

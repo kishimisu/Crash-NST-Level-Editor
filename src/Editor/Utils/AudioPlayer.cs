@@ -148,25 +148,12 @@ namespace NST
                 if (paths.Count == 1)
                 {
                     ModalRenderer.ShowLoadingModal("Importing audio...");
-                    Task.Run(() =>
+                    CrashHandler.TryRunTask("importing audio", () =>
                     {
                         _rawData = ReplaceAudio(_rawData, paths[0]);
                         onReplace?.Invoke(_rawData);
                         ModalRenderer.CloseLoadingModal();
-                    })
-                    .ContinueWith(t => 
-                    {
-                        if (t.IsFaulted && t.Exception != null)
-                        {
-                            foreach (var ex in t.Exception.InnerExceptions)
-                            {
-                                CrashHandler.Log($"Error importing audio: {ex.Message}\n{ex.StackTrace}");
-                            }
-                            string logPath = CrashHandler.WriteLogsToFile();
-                            ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the audio\n\nLog file: {logPath}");
-                        }
-                    }, 
-                    TaskContinuationOptions.OnlyOnFaulted);
+                    });
                 }
             }
 

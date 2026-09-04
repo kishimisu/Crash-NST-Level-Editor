@@ -107,11 +107,10 @@ namespace NST
 
         public UndoManager(LevelExplorer explorer) => _explorer = explorer;
 
-        public void AddAction(UndoActionType type, THREE.Box3? bounds = null)
+        public void AddAction(UndoActionType type, string mode = "", THREE.Box3? bounds = null)
         {
             SelectionManager manager = _explorer.SelectionManager;
             List<NSTObject> objects = manager.Selection.ToList();
-            string mode = bounds != null ? "resize" : manager.Gizmos.mode;
 
             var action = new UndoAction()
             {

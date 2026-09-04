@@ -37,10 +37,12 @@ namespace NST
         private static int _createPreviewsTotalCount = 0;
         private static bool _waitingForPreviews = false;
 
-        private static bool _initialized = false;
         private static string _search = "";
         private static string _currentTab = "Enemies";
+
+        private static bool _initialized = false;
         private static bool _tabChanged = false;
+        private static bool _hasCustom = false;
 
         private class Settings
         {
@@ -61,6 +63,7 @@ namespace NST
             public bool filterCActor = true;
             public bool filterPrefab = true;
             public bool filterNoCollisions = true;
+            public bool filterCustom = true;
         }
         
         private static Settings _settings = new Settings();
@@ -114,8 +117,7 @@ namespace NST
                         {
                             bool staticObject = entity.GetType() == typeof(igEntity);
                             if ((entity._bitfield._isArchetype || !entity._bitfield._canSpawn) && !staticObject) continue;
-                            if (entity.ObjectName!.StartsWith("Crate_") || entity.ObjectName.StartsWith("Collectible_")) continue;
-                            if (entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
+                            if (entity.ObjectName!.StartsWith("Crate_") || entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
 
                             string key;
                             string modelName;
@@ -264,6 +266,7 @@ namespace NST
             File.WriteAllText(GetStoragePath("collection.json"), json);
 
             _collection = entities.Values.ToList();
+            _hasCustom = entities.Values.Any(e => e.ArchivePath != null);
         }
 
         private static void CreatePreviewImage(IgArchive archive, string name, Dictionary<THREE.Matrix4, string> objects)
@@ -324,6 +327,7 @@ namespace NST
                 if (e.ObjectType == "CPhysicalEntity" && !_settings.filterCPhysicalEntity) continue;
                 if (e.ObjectType == "CActor" && !_settings.filterCActor) continue;
                 if (e.Type == "Scenery" && !e.HasCollisions && !_settings.filterNoCollisions) continue;
+                if (e.ArchivePath != null && !_settings.filterCustom) continue;
                 if (e.IsPrefab && !_settings.filterPrefab) continue;
 
                 if (_currentTab == "Favorites")
@@ -386,16 +390,16 @@ namespace NST
 
         public static void Update()
         {
-            if (_createPreviewsMainThread.IsEmpty || !_createPreviewsMainThread.TryDequeue(out var item)) 
-                return;
-
-            if (item.prefabs == null)
+            if (!_createPreviewsMainThread.IsEmpty && _createPreviewsMainThread.TryDequeue(out var item))
             {
-                CreatePreviewImage(item.archive, item.path, new() {{ THREE.Matrix4.Identity(), item.path }});
-            }
-            else
-            {
-                CreatePreviewImage(item.archive, item.path, item.prefabs);
+                if (item.prefabs == null)
+                {
+                    CreatePreviewImage(item.archive, item.path, new() {{ THREE.Matrix4.Identity(), item.path }});
+                }
+                else
+                {
+                    CreatePreviewImage(item.archive, item.path, item.prefabs);
+                }
             }
             
             if (_waitingForPreviews)
@@ -559,9 +563,9 @@ namespace NST
 
                 if (ImGui.Button("Clear library data"))
                 {
-                    ModalRenderer.ShowWarningModal("Are you sure you want to remove all objects from the library?", () =>
+                    ModalRenderer.ShowWarningModal("Are you sure you want to remove all objects from the library?\n\nNote that previews won't be deleted, which should speed up\nfuture initializations.", () =>
                     {
-                        Directory.Delete(GetStoragePath(), true);
+                        File.Delete(GetStoragePath("collection.json"));
                         _initialized = false;
                         _collection.Clear();
                     });
@@ -593,6 +597,11 @@ namespace NST
                 if (ImGui.Checkbox("Hubs    ", ref _settings.filterHub)) UpdateSearch();
                 ImGui.SameLine();
                 if (ImGui.Checkbox("CPhysicalEntity", ref _settings.filterCPhysicalEntity)) UpdateSearch();
+                if (_hasCustom)
+                {
+                    ImGui.SameLine();
+                    if (ImGui.Checkbox("Custom", ref _settings.filterCustom)) UpdateSearch();
+                }
 
                 if (ImGui.SmallButton("Reset filters"))
                 {

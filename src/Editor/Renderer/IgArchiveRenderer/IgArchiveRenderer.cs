@@ -784,7 +784,7 @@ namespace NST
             ModalRenderer.ShowLoadingModal($"Saving{(compress ? " compressed " : " ")}archive...");
             int counter = 0;
 
-            Task.Run(() =>
+            CrashHandler.TryRunTask("saving archive", () =>
             {
                 List<CollisionUpdateInfos> updatedCollisions = [];
 
@@ -861,20 +861,8 @@ namespace NST
                 {
                     Archive.TryRunLevel();
                 }
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error saving archive: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while saving the archive. Log saved to:\n\n{logPath}");
-                }
-                postSaveCallback?.Invoke();
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            }, 
+            postSaveCallback);
         }
 
         /// <summary>

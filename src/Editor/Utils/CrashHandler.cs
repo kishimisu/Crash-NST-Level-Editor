@@ -63,7 +63,7 @@ namespace NST
             return filePath;
         }
 
-        public static void Log(string message)
+        private static void Log(string message)
         {
             Console.WriteLine(message);
             _warnings.Add(message);

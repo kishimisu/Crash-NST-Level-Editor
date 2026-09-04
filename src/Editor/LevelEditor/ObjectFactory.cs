@@ -1153,7 +1153,7 @@ namespace NST
         {
             ModalRenderer.ShowLoadingModal("Importing bonus round...");
 
-            Task.Run(() =>
+            CrashHandler.TryRunTask("importing bonus round", () =>
             {
                 (string archiveName, string fileName) = _bonusFiles[type];
 
@@ -1192,19 +1192,7 @@ namespace NST
                 // explorer.InstanceManager.RefreshInstances(explorer.InstanceManager.AllObjects);
 
                 ModalRenderer.CloseLoadingModal();
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error importing bonus round: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the bonus round\n\nLog file: {logPath}");
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            });
         }
 
         private static void AddGeneric(string archiveName, List<(string fileName, string objectName)> objectPaths, string identifier, LevelExplorer explorer, Action<List<NSTObject>>? callback = null)
@@ -1335,23 +1323,11 @@ namespace NST
         private static void AddC2BonusRound(string archiveName, LevelExplorer explorer)
         {
             ModalRenderer.ShowLoadingModal("Importing bonus round... (this can take a few seconds)");
-            Task.Run(() =>
+            CrashHandler.TryRunTask("importing bonus round", () =>
             {
                 AddC2BonusRoundInternal(archiveName, explorer);
                 ModalRenderer.CloseLoadingModal();
-            })
-            .ContinueWith(t =>
-            {
-                if (t.IsFaulted && t.Exception != null)
-                {
-                    foreach (var ex in t.Exception.InnerExceptions)
-                    {
-                        CrashHandler.Log($"Error importing bonus round: {ex.Message}\n{ex.StackTrace}");
-                    }
-                    string logPath = CrashHandler.WriteLogsToFile();
-                    ModalRenderer.ShowMessageModal("Error", $"An error occured while importing the bonus round\n\nLog file: {logPath}");
-                }
-            }, TaskContinuationOptions.OnlyOnFaulted);
+            });
         }
 
         private static void AddC2BonusRoundInternal(string archiveName, LevelExplorer explorer)
