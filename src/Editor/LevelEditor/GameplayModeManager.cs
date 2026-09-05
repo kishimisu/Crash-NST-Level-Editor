@@ -481,9 +481,10 @@ namespace NST
 
                     case "hub":
                         Crash_Coco_ManagerData manager = igz.FindObject<Crash_Coco_ManagerData>()!;
-                        if      (crashMode == EGameYear.eGY_2017_Crash1) manager._Zone_Info_0x30.Reference!.namespaceName = zoneInfoName;
-                        else if (crashMode == EGameYear.eGY_2017_Crash2) manager._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
-                        else if (crashMode == EGameYear.eGY_2017_Crash3) manager._Zone_Info_0x40.Reference!.namespaceName = zoneInfoName;
+                        manager._Zone_Info_0x30.Reference!.namespaceName = zoneInfoName;
+                        // if      (crashMode == EGameYear.eGY_2017_Crash1) manager._Zone_Info_0x40.Reference!.namespaceName = zoneInfoName;
+                        // else if (crashMode == EGameYear.eGY_2017_Crash2) manager._Zone_Info_0x30.Reference!.namespaceName = zoneInfoName;
+                        // else if (crashMode == EGameYear.eGY_2017_Crash3) manager._Zone_Info_0x38.Reference!.namespaceName = zoneInfoName;
                         break;
 
                     // case "jetski":

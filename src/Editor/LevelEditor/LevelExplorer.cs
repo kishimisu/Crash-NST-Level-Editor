@@ -940,7 +940,7 @@ namespace NST
         {
             if (IsOpen) return false;
 
-            if (ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
+            if (ArchiveRenderer != null && ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
             {
                 ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
                 IsOpen = true;

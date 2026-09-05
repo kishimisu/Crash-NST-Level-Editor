@@ -25,6 +25,13 @@ namespace NST
         public abstract THREE.Vector3 GetPosition();
         public abstract THREE.Matrix4 ObjectToWorld();
 
+        private static readonly uint[] _gizmoColors =
+        [
+            ImGui.ColorConvertFloat4ToU32(new System.Numerics.Vector4(0.80f, 0.22f, 0.22f, 1.0f)),
+            ImGui.ColorConvertFloat4ToU32(new System.Numerics.Vector4(0.30f, 0.72f, 0.30f, 1.0f)),
+            ImGui.ColorConvertFloat4ToU32(new System.Numerics.Vector4(0.28f, 0.48f, 0.88f, 1.0f))
+        ];
+
         public NamedReference ToReference() => GetObject().ToNamedReference(FileNamespace);
 
         public static THREE.Matrix4 ObjectToWorld(THREE.Vector3 position, THREE.Vector3 rotation)
@@ -222,7 +229,7 @@ namespace NST
             return RenderVector3(name, ref vec, out _, out onRelease, speed);
         }
 
-        public static bool RenderVector3(string name, ref igVec3fMetaField vec, out bool onPress, out bool onRelease, float speed = 1.0f)
+        private static bool RenderVector3(string name, ref igVec3fMetaField vec, out bool onPress, out bool onRelease, float speed = 1.0f)
         {
             System.Numerics.Vector3 num = vec.ToNumericsVector3();
             bool changed = false;
@@ -238,6 +245,11 @@ namespace NST
             {
                 vec = num.ToVec3MetaField();
                 changed = true;
+            }
+
+            if (name == "Position")
+            {
+                RenderGizmoColorHeader();
             }
             
             onPress = ImGui.IsItemActivated();
@@ -266,6 +278,27 @@ namespace NST
             ImGui.PopID();
 
             return changed;
+        }
+
+        private static void RenderGizmoColorHeader()
+        {
+            var min = ImGui.GetItemRectMin();
+            var max = ImGui.GetItemRectMax();
+
+            const float height = 2.5f;
+            float width = max.X - min.X;
+            float spacing = ImGui.GetStyle().ItemInnerSpacing.X;
+            float componentWidth = (width - spacing * 2.0f) / 3.0f;
+            float y = min.Y - height;
+
+            ImDrawListPtr drawList = ImGui.GetWindowDrawList();
+
+            for (int i = 0; i < 3; i++)
+            {
+                float x = min.X + i * (componentWidth + spacing);
+
+                drawList.AddLine(new(x, y), new(x + componentWidth, y), _gizmoColors[i], height);
+            }
         }
     }
 }

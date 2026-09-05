@@ -266,7 +266,6 @@ namespace NST
             File.WriteAllText(GetStoragePath("collection.json"), json);
 
             _collection = entities.Values.ToList();
-            _hasCustom = entities.Values.Any(e => e.ArchivePath != null);
         }
 
         private static void CreatePreviewImage(IgArchive archive, string name, Dictionary<THREE.Matrix4, string> objects)
@@ -314,6 +313,8 @@ namespace NST
             foreach (CollectionEntry e in _collection)
             {
                 string levelType = GetLevelType(e.ArchiveName);
+
+                if (e.ArchivePath != null) _hasCustom = true;
 
                 if (levelType == "level" && !_settings.filterLevel) continue;
                 if (levelType == "boss" && !_settings.filterBoss) continue;
@@ -512,13 +513,6 @@ namespace NST
 
             string json = File.ReadAllText(collectionPath);
             _collection = JsonSerializer.Deserialize<List<CollectionEntry>>(json) ?? [];
-            for (int i = 0; i < _collection.Count; i++) // handle legacy name
-            {
-                if (_collection[i].Type == "Decoration")
-                {
-                    var item = _collection[i]; item.Type = "Scenery"; _collection[i] = item;
-                }
-            }
             _initialized = true;
             LoadSettings();
             UpdateSearch(false);
@@ -567,6 +561,7 @@ namespace NST
                     {
                         File.Delete(GetStoragePath("collection.json"));
                         _initialized = false;
+                        _hasCustom = false;
                         _collection.Clear();
                     });
                 }
@@ -676,8 +671,6 @@ namespace NST
                             ModalRenderer.CloseLoadingModal();
                         });
                     }
-
-                    bool hovered = ImGui.IsItemHovered();
                     
                     if (ImGui.BeginPopupContextItem())
                     {
@@ -746,7 +739,7 @@ namespace NST
                         {
                             ImGui.Image(textureId, new Vector2(_settings.previewSize, _settings.previewSize), Vector2.Zero, Vector2.One, Vector4.One);
 
-                            if (hovered)
+                            if (ImGui.IsItemHovered())
                             {
                                 ImGui.BeginTooltip();
                                 ImGui.Text(e.DisplayName);

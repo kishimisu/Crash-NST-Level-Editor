@@ -312,9 +312,9 @@ namespace NST
                             strings.Add(d.path);
                         }
 
-                        foreach (var objects in igz.Objects)
+                        foreach (var obj in igz.Objects)
                         {
-                            foreach (var str in objects.GetStrings(file.GameVersion))
+                            foreach (var str in obj.GetStrings(file.GameVersion))
                             {
                                 strings.Add(str);
                             }
@@ -608,7 +608,7 @@ namespace NST
             int index = pkg.Path.IndexOf("maps/");
             if (index == -1) throw new Exception("The current archive is not a level.");
 
-            if (LocalStorage.IsFileLocked(Path.Join(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe")))
+            if (LocalStorage.IsFileLocked(Path.Combine(LocalStorage.GamePath, "CrashBandicootNSaneTrilogy.exe")))
             {
                 throw new Exception("The game is already running.");
             }
@@ -620,9 +620,9 @@ namespace NST
             string levelName = levelPath.Substring(levelPath.LastIndexOf("/") + 1);       // L101_NSanityBeach
             string levelIdentifier = levelPath.ToLowerInvariant();                        // crash1/l101_nsanitybeach/l101_nsanitybeach
             string zoneInfoPath = $"maps/{levelIdentifier}_zoneinfo.igz";                 // maps/crash1/l101_nsanitybeach/l101_nsanitybeach_zoneinfo.igz
-            string archivePath = Path.Join(LocalStorage.ArchivePath, levelName + ".pak"); // <game_folder>/archives/L101_NSanityBeach.pak
+            string archivePath = Path.Combine(LocalStorage.ArchivePath, levelName + ".pak"); // <game_folder>/archives/L101_NSanityBeach.pak
 
-            IgArchive chunkInfosArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, "chunkInfos.pak"));
+            IgArchive chunkInfosArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "chunkInfos.pak"));
             IgArchiveFile packageFile = chunkInfosArchive.FindPackageFile()!;
             IgzFile? packageIgz = packageFile.ToIgzFile();
             igStreamingChunkInfo chunkInfos = packageIgz.FindObject<igStreamingChunkInfo>()!;
@@ -668,10 +668,20 @@ namespace NST
 
             Console.WriteLine("Running custom level...");
 
-            IgArchive update = File.Exists(LocalStorage.UpdateFilePath)
-                ? IgArchive.Open(LocalStorage.UpdateFilePath)
-                : new IgArchive(LocalStorage.UpdateFilePath, GameVersion.NST);
-                
+            IgArchive? update = null;
+
+            try
+            {
+                if (File.Exists(LocalStorage.UpdateFilePath))
+                {
+                    update = IgArchive.Open(LocalStorage.UpdateFilePath);
+                }
+            }
+            finally
+            {
+                update ??= new IgArchive(LocalStorage.UpdateFilePath, GameVersion.NST);
+            }
+
             foreach (IgArchiveFile file in update.Files.ToList())
             {
                 if (file.GetName(false).EndsWith("_zoneinfo"))
@@ -701,16 +711,22 @@ namespace NST
 
             IgArchiveFile? previousCharacterFileCrash = update.FindFile($"Crash_CharacterData.igz");
             IgArchiveFile? previousCharacterFileCoco = update.FindFile($"Coco_CharacterData.igz");
+            IgArchiveFile? previousCrashSystemData = update.FindFile($"CrashBandicootSystemData.igz");
+            IgArchiveFile? previousZoneInfoSystemData = update.FindFile($"zoneInfoSystemData.igz");
 
             if (previousCharacterFileCrash != null) update.RemoveFile(previousCharacterFileCrash);
             if (previousCharacterFileCoco != null) update.RemoveFile(previousCharacterFileCoco);
+            if (previousCrashSystemData != null) update.RemoveFile(previousCrashSystemData);
+            if (previousZoneInfoSystemData != null) update.RemoveFile(previousZoneInfoSystemData);
 
+            string zoneInfoIdentifier = zoneInfoFile.GetName(false);
             List<string> options = GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build);
+
             if (options.Count > 0)
             {
                 try
                 {
-                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfo._year, zoneInfoFile.GetName(false), zoneInfo._overrideCharacter);
+                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfo._year, zoneInfoIdentifier, zoneInfo._overrideCharacter);
                     update.AddFile(characterData);
                 }
                 catch (Exception e)
@@ -723,6 +739,38 @@ namespace NST
 
             if (options.Contains("jetski")) zoneInfo._zoneVehicle = "CocoJetski";
             else if (options.Contains("plane")) zoneInfo._zoneVehicle = "CrashCocoPlane";
+
+            if (options.Contains("hub"))
+            {
+                IgArchive permanentArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "permanent.pak"));
+                IgArchiveFile crashSystemDataFile = permanentArchive.FindFile("CrashBandicootSystemData.igz")!;
+                IgzFile crashSystemDataIgz = crashSystemDataFile.ToIgzFile();
+
+                var systemData = crashSystemDataIgz.FindObject<CCrashBandicootSystemData>()!;
+                systemData._crash1Hub.Reference!.namespaceName = zoneInfoIdentifier;
+                systemData._crash2Hub.Reference!.namespaceName = zoneInfoIdentifier;
+                systemData._crash3Hub.Reference!.namespaceName = zoneInfoIdentifier;
+
+                crashSystemDataFile.SetData(crashSystemDataIgz.Save());
+                update.AddFile(crashSystemDataFile);
+
+                IgArchiveFile zoneInfoSystemDataFile = permanentArchive.FindFile("zoneInfoSystemData.igz")!;
+                IgzFile zoneInfoSystemDataIgz = zoneInfoSystemDataFile.ToIgzFile();
+
+                for (int i = 1; i <= 3; i++)
+                {
+                    var zoneInfoList = zoneInfoSystemDataIgz.FindObject<CZoneInfoHandleList>($"c{i}StoryModeZoneInfos")!;
+                    zoneInfoList._data[0].Reference!.namespaceName = zoneInfoIdentifier;
+                }
+
+                zoneInfoSystemDataFile.SetData(zoneInfoSystemDataIgz.Save());
+                update.AddFile(zoneInfoSystemDataFile);
+
+                int crashMode = LevelBuilder.GetGameYearInt(zoneInfo._year) + 1;
+                zoneInfo._juiceDomain.Reference ??= new NamedReference("JuiceDomain_Story", "");
+                zoneInfo._juiceDomain.Reference.objectName = $"L{crashMode}00_Hub_JuiceDomainStory";
+                zoneInfo._progressionGroup = EZoneInfoProgressionGroup.eZIPG_Hub;
+            }
 
             zoneInfoFile.SetData(zoneInfoIgz.Save());
 
