@@ -356,8 +356,8 @@ namespace NST
             RenderSlot("Slot 1", component._Entity_0x40, ref component._Bool_0x30);
             RenderSlot("Slot 2", component._Entity_0x48, ref component._Bool_0x31);
             RenderSlot("Slot 3", component._Entity_0x50, ref component._Bool_0x32);
-            RenderSlot("Slot 4", component._Entity_0x58, ref component._Bool_0x33);
-            RenderSlot("Slot 5", component._Entity_0x60, ref component._Bool_0x34);
+            RenderSlot("Slot 4", component._Entity_0x58, ref component._Bool_0x34);
+            RenderSlot("Slot 5", component._Entity_0x60, ref component._Bool_0x33);
             ImGui.Spacing();
 
             RenderObjectReference("Final slot:", component._Entity_0x68.Reference, typeof(CEntity), manager.Explorer, (value) => 
@@ -586,6 +586,33 @@ namespace NST
             RenderEnum("2nd Gem:", ref component._E_Zone_Collectible_Type, component, manager);
 
             manager.RenderAdvancedProperties(component, component.GetFields(manager.GameVersion).Skip(2).ToList());
+        }
+
+        private static void RenderComponent(common_LevelEnd_CrateCounterData component, NSTComponent manager)
+        {  
+            RenderObjectReference("Gem Clear: ", component._EntityVariable_id_qqdf2er0_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Blue:  ", component._EntityVariable_id_3xc19dte_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Yellow:", component._EntityVariable_id_654izvrc_variable, typeof(CEntity), manager);
+            ImGui.Spacing();
+            RenderEnum("C2 override:      ", ref component._NewEnum13_id_jtw9zr4w, component, manager);
+            RenderEnum("C2 Gem override:  ", ref component._NewEnum14_id_6osrh3mf, component, manager);
+            RenderInt("C2 Count override:", ref component._Int, component, manager);
+
+            var fields = component.GetFields(manager.GameVersion);
+            manager.RenderAdvancedProperties(component, [ fields[0], fields[1], fields[9], fields[12] ]);
+        }
+
+        private static void RenderComponent(common_LevelEnd_CrateCounter_SpawnedData component, NSTComponent manager)
+        {  
+            RenderObjectReference("Gem Red:   ", component._EntityVariable_id_9ain62l1_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Green: ", component._EntityVariable_id_fg3hgoji_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Orange:", component._EntityVariable_id_ksn4av7w_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Purple:", component._EntityVariable_id_o0ssz7rc_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Yellow:", component._EntityVariable_id_pprcr4hm_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Blue:  ", component._EntityVariable_id_rbaicuto_variable, typeof(CEntity), manager);
+            RenderObjectReference("Gem Clear: ", component._EntityVariable_id_zzvydgsi_variable, typeof(CEntity), manager);
+
+            manager.RenderAdvancedProperties(component, component.GetFields(manager.GameVersion).Skip(10).ToList());
         }
 
 #endregion

@@ -774,7 +774,7 @@ namespace NST
 
             saveAs |= ForceSaveAs | string.IsNullOrEmpty(path);
 
-            if (saveAs || compress)
+            if (saveAs || (compress && !ImGui.IsKeyDown(ImGuiKey.LeftShift)))
             {
                 path = FileExplorer.SaveFile(FileExplorer.EXT_ARCHIVES, Archive.GetName());
 

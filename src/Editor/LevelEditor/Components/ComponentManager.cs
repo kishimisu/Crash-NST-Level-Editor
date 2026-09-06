@@ -34,7 +34,8 @@ namespace NST
             typeof(common_Level_ManagerData),
             typeof(common_BonusRoundTeleporterData),
             typeof(Egypt_Hazard_FloodWater_BehaviorData),
-            typeof(common_C2_WarpRoom_LevelPortal)
+            typeof(common_C2_WarpRoom_LevelPortal),
+            typeof(common_LevelEndTeleporterData)
         ];
 
         public bool IsSetup => _components != null;

@@ -129,7 +129,7 @@ namespace NST
             {"Hub", "hub"}
         };
         
-        public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Creating new level...") + "##" + GetHashCode();
+        public string GetWindowName() => (ArchiveRenderer?.Archive.GetName(false) ?? "Custom_Level") + "##" + GetHashCode();
         public bool IsLayerActive(string name) => _layers[name];
 
         /// <summary>
@@ -318,23 +318,22 @@ namespace NST
         {
             _zoneInfoFile = Archive.FindCustomZoneInfoFile();
 
-            if (_zoneInfoFile != null)
+            if (_zoneInfoFile == null) return;
+
+            IgzFile zoneInfoIgz = _zoneInfoFile.ToIgzFile();
+            FileManager.Add(_zoneInfoFile, zoneInfoIgz, true);
+
+            _zoneInfo = zoneInfoIgz.FindObject<CZoneInfo>();
+            _crashMode = _zoneInfo?._year == EGameYear.eGY_2017_Crash1 ? 0 : _zoneInfo?._year == EGameYear.eGY_2017_Crash3 ? 2 : 1;
+            _defaultCharacter = int.Max(0, LevelBuilder.CrashCharacters.ToList().IndexOf(_zoneInfo?._overrideCharacter ?? ""));
+
+            if (_zoneInfo != null)
             {
-                IgzFile zoneInfoIgz = _zoneInfoFile.ToIgzFile();
-                FileManager.Add(_zoneInfoFile, zoneInfoIgz, true);
-
-                _zoneInfo = zoneInfoIgz.FindObject<CZoneInfo>();
-                _crashMode = _zoneInfo?._year == EGameYear.eGY_2017_Crash1 ? 0 : _zoneInfo?._year == EGameYear.eGY_2017_Crash3 ? 2 : 1;
-                _defaultCharacter = int.Max(0, LevelBuilder.CrashCharacters.ToList().IndexOf(_zoneInfo?._overrideCharacter ?? ""));
-
-                if (_zoneInfo != null)
-                {
-                    var options = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
-                    if      (options.Contains("swim"))   _gameplayMode = 1;
-                    else if (options.Contains("bike"))   _gameplayMode = 2;
-                    else if (options.Contains("jetski")) _gameplayMode = 3;
-                    else if (options.Contains("plane"))  _gameplayMode = 4;
-                }
+                var options = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
+                if      (options.Contains("swim"))   _gameplayMode = 1;
+                else if (options.Contains("bike"))   _gameplayMode = 2;
+                else if (options.Contains("jetski")) _gameplayMode = 3;
+                else if (options.Contains("plane"))  _gameplayMode = 4;
             }
         }
 
@@ -673,7 +672,7 @@ namespace NST
                         THREE.Vector3 entityPosition = new THREE.Vector3();
                         entity.ObjectToWorld().Decompose(entityPosition, new THREE.Quaternion(), new THREE.Vector3());
 
-                        float distance = havokPosition.DistanceTo(entityPosition * 0.0254f);
+                        float distance = havokPosition.DistanceTo(entityPosition * StaticCollisionsUtils.HAVOK_SCALE);
                         
                         if (distance < 0.01f)
                         {
@@ -928,6 +927,11 @@ namespace NST
 
             Action onPostSave = () =>
             {
+                if (_zoneInfoFile == null)
+                {
+                    LoadZoneInfo();
+                }
+                
                 LoadCollisions(InstanceManager.AllEntities);
 
                 foreach (Action callback in postSaveCallbacks)

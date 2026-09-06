@@ -64,6 +64,23 @@ namespace NST
             public bool filterPrefab = true;
             public bool filterNoCollisions = true;
             public bool filterCustom = true;
+
+            public void ResetFilters()
+            {
+                filterC1 = true;
+                filterC2 = true;
+                filterC3 = true;
+                filterLevel = true; 
+                filterBoss = false;
+                filterHub = false;
+                filterCEntity = true;
+                filterCGameEntity = true;
+                filterCPhysicalEntity = true;
+                filterCActor = true;
+                filterPrefab = true;
+                filterNoCollisions = true;
+                filterCustom = true;
+            }
         }
         
         private static Settings _settings = new Settings();
@@ -197,7 +214,7 @@ namespace NST
 
                                 HashedReference reference = entity.ToNamedReference(fileName).ToEXID();
                                 u64 collisionKey = ((u64)reference.fileHash << 32) | reference.objectHash;
-                                hasCollisions |= collisions?.ContainsKey(collisionKey) == true;
+                                hasCollisions = collisions?.ContainsKey(collisionKey) == true;
 
                                 if (models.Add(modelName))
                                 {
@@ -585,18 +602,7 @@ namespace NST
 
                 if (ImGui.SmallButton("Reset filters"))
                 {
-                    _settings.filterC1 = true;
-                    _settings.filterC2 = true;
-                    _settings.filterC3 = true;
-                    _settings.filterLevel = true; 
-                    _settings.filterBoss = false;
-                    _settings.filterHub = false;
-                    _settings.filterCEntity = true;
-                    _settings.filterCGameEntity = true;
-                    _settings.filterCPhysicalEntity = true;
-                    _settings.filterCActor = true;
-                    _settings.filterPrefab = true;
-                    _settings.filterNoCollisions = true;
+                    _settings.ResetFilters();
                     UpdateSearch();
                 }
 

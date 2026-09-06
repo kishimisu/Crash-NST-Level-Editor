@@ -8,6 +8,8 @@ namespace NST
     /// </summary>
     public static class StaticCollisionsUtils
     {
+        public const float HAVOK_SCALE = 0.0254f;
+
         /// <summary>
         /// Get static collision data from an IgArchive
         /// </summary>
@@ -59,7 +61,7 @@ namespace NST
             {
                 var havokPosition = new THREE.Vector3(shape._transform.M41, shape._transform.M42, shape._transform.M43);
 
-                float distance = havokPosition.DistanceTo(position * 0.0254f);
+                float distance = havokPosition.DistanceTo(position * HAVOK_SCALE);
 
                 if (distance < 0.01f)
                 {
@@ -249,7 +251,7 @@ namespace NST
             
             transform.Decompose(position, rotation, scale);
 
-            transform.Compose(position * 0.0254f, rotation, THREE.Vector3.One());
+            transform.Compose(position * HAVOK_SCALE, rotation, THREE.Vector3.One());
             
             System.Numerics.Matrix4x4 originalTransform = shapeInstance._transform;
 

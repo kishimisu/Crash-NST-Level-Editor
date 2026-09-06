@@ -719,7 +719,7 @@ namespace NST
 
             ClearSelection(true, updateHistory: false);
 
-            ModalRenderer.ShowLoadingModal("Pasting selection...");
+            ModalRenderer.ShowLoadingModal($"{(copyToSameFile ? "Duplicating" : "Importing")} selection...");
             int counter = 0;
 
             CrashHandler.TryRunTask("pasting objects", () =>
@@ -740,15 +740,13 @@ namespace NST
                         newFile = _explorer.GetOrCreateExternalIgzFile(file.Path, out dstFile, out dstIgz);
                     }
                     
-                    // Console.WriteLine($"Pasting ({entities.Count}) into {dstIgz.GetName()}: ({(copyToSameFile ? "same file" : "external file")})\n- " + string.Join("\n- ", _copyPaste.Select(x => x.Object)));
-
                     Dictionary<igObject, igObject> clones = [];
 
                     foreach (NSTObject obj in objects)
                     {
                         if (toCopyPaste.Count > 40)
                         {
-                            ModalRenderer.ShowLoadingModal($"Pasting selection... {++counter}/{toCopyPaste.Count}", counter / (float)toCopyPaste.Count);
+                            ModalRenderer.ShowLoadingModal($"{(copyToSameFile ? "Duplicating" : "Importing")} selection... {++counter}/{toCopyPaste.Count}", counter / (float)toCopyPaste.Count);
                         }
 
                         if (obj is not NSTEntity entity)

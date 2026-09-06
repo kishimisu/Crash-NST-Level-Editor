@@ -698,6 +698,8 @@ namespace NST
                 var outlineData = outlinedCrate.GetComponent<common_Crate_OutlineData>()!;
                 var triggerBox = outlinedCrate.GetComponent<CTriggerVolumeBoxComponentData>()!;
 
+                crate.ObjectName = crate.ObjectName?.Replace("Crate_", "Crate_Outlined_");
+
                 crate.AddComponent("archetype_CTriggerVolumeBoxComponentData", triggerBox);
                 crate.AddComponent("archetype_Scripts.Graph.common_Crate_OutlineData", outlineData);
 
