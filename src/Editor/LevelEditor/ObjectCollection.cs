@@ -411,7 +411,7 @@ namespace NST
         {
             var size = _initialized ? new Vector2(500, 600) : new Vector2(0, 0);
 
-            if (ImGui.BeginChild("Collection", size, ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY))
+            if (ImGui.BeginChild("Collection", size * SilkWindow.instance.scale, ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY))
             {
                 RenderCollection(explorer);
             }
@@ -644,7 +644,7 @@ namespace NST
 
                     ImGui.Separator();
 
-                    if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, new Vector2(0, _settings.previewSize)))
+                    if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, new Vector2(0, _settings.previewSize * SilkWindow.instance.scale)))
                     {
                         Task.Run(() =>
                         {
@@ -722,19 +722,19 @@ namespace NST
 
                         if (textureId != -1)
                         {
-                            ImGui.Image(textureId, new Vector2(_settings.previewSize, _settings.previewSize), Vector2.Zero, Vector2.One, Vector4.One);
+                            ImGui.Image(textureId, new Vector2(_settings.previewSize, _settings.previewSize) * SilkWindow.instance.scale, Vector2.Zero, Vector2.One, Vector4.One);
 
                             if (ImGui.IsItemHovered())
                             {
                                 ImGui.BeginTooltip();
                                 RenderName(e, false);
-                                ImGui.Image(textureId, new Vector2(RENDER_SIZE, RENDER_SIZE), Vector2.Zero, Vector2.One, Vector4.One);
+                                ImGui.Image(textureId, new Vector2(RENDER_SIZE, RENDER_SIZE) * SilkWindow.instance.scale, Vector2.Zero, Vector2.One, Vector4.One);
                                 ImGui.EndTooltip();
                             }
                         }
                         else
                         {
-                            ImGui.Dummy(new Vector2(_settings.previewSize, _settings.previewSize));
+                            ImGui.Dummy(new Vector2(_settings.previewSize, _settings.previewSize) * SilkWindow.instance.scale);
                         }
 
                         ImGui.SameLine();

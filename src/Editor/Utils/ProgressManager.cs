@@ -12,7 +12,7 @@ namespace NST
         /// </summary>
         private class ProgressEntry
         {
-            public static readonly System.Numerics.Vector2 size = new System.Numerics.Vector2(400, 20);
+            public static System.Numerics.Vector2 Size => new System.Numerics.Vector2(400, 20) * SilkWindow.instance.scale;
 
             public float progress = 0;
             public string message = "";
@@ -22,7 +22,7 @@ namespace NST
                 get 
                 {
                     float availWidth = ImGui.GetContentRegionAvail().X;
-                    return ImGui.GetCursorPosX() + (availWidth - size.X) / 2;
+                    return ImGui.GetCursorPosX() + (availWidth - Size.X) / 2;
                 }
             }
 
@@ -31,7 +31,7 @@ namespace NST
                 if (progress == 0) return;
 
                 ImGui.SetCursorPosX(StartX);
-                ImGui.ProgressBar(progress, size, message);
+                ImGui.ProgressBar(progress, Size, message);
             }
         }
 
@@ -64,7 +64,7 @@ namespace NST
         public void Render()
         {
             float availHeight = ImGui.GetContentRegionAvail().Y;
-            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (availHeight - ProgressEntry.size.Y) / 2 - ProgressEntry.size.Y * 2.5f);
+            ImGui.SetCursorPosY(ImGui.GetCursorPosY() + (availHeight - ProgressEntry.Size.Y) / 2 - ProgressEntry.Size.Y * 2.5f);
 
             foreach (ProgressEntry entry in _entries.Values)
             {
@@ -74,7 +74,7 @@ namespace NST
             if (IsCompleted())
             {
                 ImGui.SetCursorPosX(ProgressEntry.StartX);
-                ImGuiUtils.RightAlignedText("Done. Creating scene...", ProgressEntry.size.X);
+                ImGuiUtils.RightAlignedText("Done. Creating scene...", ProgressEntry.Size.X);
             }
         }
     }

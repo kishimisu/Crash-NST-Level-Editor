@@ -1828,7 +1828,7 @@ namespace NST
             ImGui.BeginGroup();
             ImGui.Text(name);
             if (align == 0) ImGui.SameLine();
-            else ImGui.SameLine(align);
+            else ImGui.SameLine(align * SilkWindow.instance.scale);
             bool changed = ImGui.Checkbox("##" + name, ref value);
             ImGui.EndGroup();
             return changed;

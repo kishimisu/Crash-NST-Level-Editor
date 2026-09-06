@@ -997,9 +997,9 @@ namespace NST
 
                 if (ImGui.BeginTable("LevelEditorTable" + GetHashCode(), 3, ImGuiTableFlags.Resizable))
                 {
-                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 300);
+                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 300 * SilkWindow.instance.scale);
                     ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthStretch);
-                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 350);
+                    ImGui.TableSetupColumn("", ImGuiTableColumnFlags.WidthFixed, 350 * SilkWindow.instance.scale);
                     ImGui.TableNextColumn();
 
                     // ImGui.Text($"IsWindowFocused: {IsWindowFocused} IsSceneFocused: {IsSceneFocused} IsDragging: {_isDragging} ClickInsideScene: {_clickInsideScene}");

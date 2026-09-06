@@ -50,7 +50,7 @@ namespace NST
         public static void Prefix(string text, float width = 0)
         {
             ImGui.Text(text);
-            ImGui.SameLine(width);
+            ImGui.SameLine(width * SilkWindow.instance.scale);
         }
 
         /// <summary>

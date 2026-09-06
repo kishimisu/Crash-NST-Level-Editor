@@ -255,7 +255,7 @@ namespace NST
             if (!base.Render()) return false;
 
             float p = _progress ?? (-1.0f * (float)ImGui.GetTime());
-            ImGui.ProgressBar(p, new Vector2(400, 15), _text);
+            ImGui.ProgressBar(p, new Vector2(400, 15) * SilkWindow.instance.scale, _text);
 
             ImGui.EndPopup();
             return true;

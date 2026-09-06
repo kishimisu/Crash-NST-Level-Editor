@@ -392,7 +392,7 @@ namespace NST
                 ImGui.PushStyleColor(ImGuiCol.Text, Object is NSTEntity e ? e.Color.ToImGuiColor() : Object.GetObject().GetType().GetUniqueColor());
                 ImGui.Text("\uEA1E");
                 ImGui.PopStyleColor();
-                ImGui.SameLine(0, 5);
+                ImGui.SameLine(0, 5 * SilkWindow.instance.scale);
             }
 
             if (Color != null) ImGui.PushStyleColor(ImGuiCol.Text, Color.Value);

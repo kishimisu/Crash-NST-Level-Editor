@@ -47,11 +47,11 @@ namespace NST
 
                 ImGui.Columns(3);
 
-                Vector2 firstSectionSize = new Vector2(0, 140);
+                Vector2 firstSectionSize = new Vector2(0, 140) * SilkWindow.instance.scale;
                 
                 // Level editor
 
-                ImGui.BeginChild("LevelMenu", firstSectionSize + new Vector2(0, LevelBuilder._newLevelOpen ? 30 : 0));
+                ImGui.BeginChild("LevelMenu", firstSectionSize + new Vector2(0, LevelBuilder._newLevelOpen ? 30 * SilkWindow.instance.scale : 0));
                 LevelBuilder.Render();
                 ImGui.EndChild();
 
@@ -97,7 +97,7 @@ namespace NST
         /// </summary>
         private static void RenderArchiveMenu()
         {
-            Vector2 size = new Vector2(200, 0);
+            Vector2 size = new Vector2(200 * SilkWindow.instance.scale, 0);
 
             ImGui.SeparatorText("Archive Editor    ");
 

@@ -21,6 +21,8 @@ namespace NST
 
         public static void Render()
         {
+            float width = 100 * SilkWindow.instance.scale;
+
             if (!_newLevelOpen)
             {
                 ImGui.SeparatorText("Level Editor    ");
@@ -31,7 +33,7 @@ namespace NST
                 ImGui.SetItemTooltip("Create, edit and play custom levels (.pak):\n\n- New Level: Create a new level from scratch or based on an existing level\n- Open Level Editor: Open an existing level using the level editor\n- Play Custom Level: Launch the game and load the selected level");
                 ImGuiUtils.VerticalSpacing(10);
 
-                System.Numerics.Vector2 size = new System.Numerics.Vector2(200, 0);
+                System.Numerics.Vector2 size = new System.Numerics.Vector2(width * 2, 0);
 
                 if (ImGuiUtils.CenteredButton("New Level...", size))
                 {
@@ -78,7 +80,7 @@ namespace NST
                 ImGuiUtils.VerticalSpacing(10);
 
                 ImGui.Text("Base Level:");
-                ImGui.SameLine(100);
+                ImGui.SameLine(width);
                 if (ImGui.Combo("##SelectedBaseLevel", ref _selectedLevel, _baseLevels, _baseLevels.Length))
                 {
                     if (_selectedLevel != 0)
@@ -97,24 +99,24 @@ namespace NST
                 if (_selectedLevel != 0) ImGui.BeginDisabled();
 
                 ImGui.Text("Lighting:");
-                ImGui.SameLine(100);
+                ImGui.SameLine(width);
                 ImGui.Combo("##SelectedLighting", ref _selectedLighting, _levels, _levels.Length);
                 ImGui.SameLine(); ImGui.TextDisabled("(?)");
                 ImGui.SetItemTooltip("These options are only available if the base level is set to \"none\".");
 
                 ImGui.Text("Music:");
-                ImGui.SameLine(100);
+                ImGui.SameLine(width);
                 ImGui.Combo("##SelectedMusic", ref _selectedMusic, _musicLevels, _musicLevels.Length);
 
                 ImGui.Text("Mode:");
-                ImGui.SameLine(100);
+                ImGui.SameLine(width);
                 ImGui.Combo("##SelectedMode", ref _currentMode, CrashModes, CrashModes.Length);
 
                 if (_selectedLevel != 0) ImGui.EndDisabled();
 
                 ImGui.Spacing();
-                ImGui.SameLine(100);
-                if (ImGui.Button("Cancel", new System.Numerics.Vector2(90, 0)))
+                ImGui.SameLine(width);
+                if (ImGui.Button("Cancel", new System.Numerics.Vector2(width * 0.9f, 0)))
                 {
                     _newLevelOpen = false;
                 }

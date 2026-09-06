@@ -21,8 +21,9 @@ namespace NST
 
         public GL _gl;
         public IWindow _window;
-
         public IInputContext _input;
+
+        public float scale = 1.0f;
 
         private ImGuiController _imgui;
         private ImGuiIOPtr _io;
@@ -92,7 +93,7 @@ namespace NST
 
         private void SetupImGUI()
         {
-            float scale = _window.Size.Y > 2000 ? 2.0f : _window.Size.Y > 1080 ? 1.5f : 1.0f;
+            scale = _window.Size.Y > 2000 ? 2.0f : _window.Size.Y > 1080 ? 1.5f : 1.0f;
 
             _imgui = new ImGuiController(_gl, _window, _input, null, () => LoadIconFont(scale));
 
