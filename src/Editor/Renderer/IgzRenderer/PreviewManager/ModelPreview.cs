@@ -104,6 +104,13 @@ namespace NST
         /// </summary>
         public void Render(IgzRenderer renderer)
         {
+            ImGui.Spacing();
+            if (ImGui.Button("Export to .gltf"))
+            {
+                ModelExporter.Export(renderer.ArchiveRenderer.Archive, _model);
+            }
+            ImGui.SameLine(0, 10 * SilkWindow.instance.scale);
+
             if (ImGui.Checkbox("No culling", ref _noCulling))
             {
                 _object.Traverse((obj) => {
@@ -111,8 +118,9 @@ namespace NST
                     obj.Material.Side = _noCulling ? THREE.Constants.DoubleSide : THREE.Constants.FrontSide;
                 });
             }
-            ImGui.SameLine();
+            ImGui.SameLine(0, 10 * SilkWindow.instance.scale);
 
+            ImGui.SetNextItemWidth(100 * SilkWindow.instance.scale);
             if (ImGui.Combo("Render mode", ref _renderMode, _renderModes, _renderModes.Length))
             {
                 UpdateRenderMode();

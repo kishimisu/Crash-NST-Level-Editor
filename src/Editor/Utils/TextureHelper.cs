@@ -36,10 +36,56 @@ namespace NST
         /// <summary>
         /// Save an image to the disk
         /// </summary>
-        public static void SaveImageToFile(byte[] pixels, int width, int height, string filePath, bool flipY = true)
+        public static void SaveImageToFile(byte[] pixels, int width, int height, string filePath, bool flipY = true, bool normal = false, bool roughness = false)
         {
             using var image = Image.LoadPixelData<Rgba32>(pixels, width, height);
-            if (flipY) image.Mutate(x => x.Flip(FlipMode.Vertical));
+
+            if (flipY)
+            {
+                image.Mutate(x => x.Flip(FlipMode.Vertical));
+            }
+
+            if (normal)
+            {
+                image.ProcessPixelRows(accessor =>
+                {
+                    for (int y = 0; y < accessor.Height; y++)
+                    {
+                        Span<Rgba32> row = accessor.GetRowSpan(y);
+
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            // (x, y, 0) => (y, -x, z)
+                            float nx =   row[x].G / 127.5f - 1.0f;
+                            float ny = -(row[x].R / 127.5f - 1.0f);
+
+                            float nzSquared = 1.0f - nx * nx - ny * ny;
+                            float nz = nzSquared > 0.0f ? MathF.Sqrt(nzSquared) : 0.0f;
+
+                            row[x].R = (byte)Math.Clamp((nx * 0.5f + 0.5f) * 255.0f, 0, 255);
+                            row[x].G = (byte)Math.Clamp((ny * 0.5f + 0.5f) * 255.0f, 0, 255);
+                            row[x].B = (byte)Math.Clamp((nz * 0.5f + 0.5f) * 255.0f, 0, 255);
+                        }
+                    }
+                });
+            }
+
+            if (roughness)
+            {
+                image.ProcessPixelRows(accessor =>
+                {
+                    for (int y = 0; y < accessor.Height; y++)
+                    {
+                        Span<Rgba32> row = accessor.GetRowSpan(y);
+
+                        for (int x = 0; x < row.Length; x++)
+                        {
+                            row[x].G = (byte)(255 - row[x].G);
+                        }
+                    }
+                });
+            }
+            
             image.Save(filePath);
         }
 

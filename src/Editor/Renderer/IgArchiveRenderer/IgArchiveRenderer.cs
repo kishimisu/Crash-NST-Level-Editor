@@ -222,6 +222,13 @@ namespace NST
                             _treeView = new IgArchiveTreeView(this);
                             IsUpdated = true;
                         }
+                        if (fromLevelEditor && ImGui.MenuItem("Export level to .gltf"))
+                        {
+                            if (App.GetLevelExplorer(this) is LevelExplorer explorer)
+                            {
+                                ModelExporter.Export(explorer);
+                            }
+                        }
                         ImGui.Separator();
                         AudioPlayer.RenderAudioMenu();
                         if (ImGui.MenuItem("Rebuild package file", null, _rebuildPackageFile))

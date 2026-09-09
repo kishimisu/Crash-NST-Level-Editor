@@ -9,60 +9,97 @@ namespace NST
     public static class igMaterialExtensions
     {
         /// <summary>
-        /// Find the path of the material's diffuse texture file
+        /// Find all textures referenced by this material (diffuse, normal, gloss, metal, height...)
         /// </summary>
-        public static NamedReference? FindDiffuseTexture(this igMaterial material)
+        /// <param name="references">The dictionary to add new texture references to</param>
+        public static void FindTextureReferences(this igMaterial material, Dictionary<string, NamedReference> references)
         {
-            if (material.GetType() == typeof(CWaterMaterial) || material.GetType() == typeof(CFlowWaterMaterial))
+            var graphicsMaterial = material as igGraphicsMaterial ?? (material as igFxMaterial)?._graphicsMaterial;
+            if (graphicsMaterial?._graphicsObjects == null) return;
+
+            Dictionary<NamedReference, List<string>> graphicsTextures = [];
+
+            foreach (var obj in graphicsMaterial._graphicsObjects._objects._data)
             {
-                return null;
+                if (obj is not igGraphicsTexture attr || attr._imageHandle.Reference == null) continue;
+
+                string? fileName = attr._imageHandle.Reference.namespaceName;
+                if (fileName == null) continue;
+
+                graphicsTextures.Add(attr._imageHandle.Reference, ExpandFileNames(fileName));
             }
 
-            const string fieldName = "_textureName_diffuse";
+            if (graphicsTextures.Count == 0) return;
 
-            FieldInfo? field = material.GetType().GetField(fieldName, BindingFlags.Public | BindingFlags.Instance);
-            string? formattedPath = null;
+            const string prefix = "_textureName_";
 
-            if (field != null)
+            var textureFields = material
+                .GetType()
+                .GetFields(BindingFlags.Public | BindingFlags.Instance)
+                .Where(f => f.Name.StartsWith(prefix));
+
+            if (!textureFields.Any()) // CTR:NF support
             {
-                string diffusePath = (string)field.GetValue(material)!;
-                formattedPath = diffusePath.Replace(":", "@").Replace("\\", "!").Replace("/", "!").Replace(".", "`");
-            }
+                var diffuseRef = graphicsTextures.Keys.FirstOrDefault(e => e.namespaceName.StartsWith("ColorMap"));
 
-            igGraphicsMaterial? graphicsMaterial = material as igGraphicsMaterial ?? (material as igFxMaterial)?._graphicsMaterial;
-
-            List<NamedReference>? diffuseFileNames = graphicsMaterial?._graphicsObjects?._objects
-                .Select(e =>
+                if (diffuseRef != null)
                 {
-                    if (e is not igGraphicsTexture attr) return null;
-                    
-                    string? fileName = attr._imageHandle.Reference?.namespaceName;
+                    references.Add("diffuse", diffuseRef);
+                }
 
-                    if (string.IsNullOrEmpty(formattedPath))
-                    {
-                        if (fileName?.StartsWith("ColorMap") == true)
-                        {
-                            return attr._imageHandle.Reference;
-                        }
-                    }
-                    else if (fileName?.Contains(formattedPath) == true) // || fileName?.StartsWith("CavityBakedColorMap") == true)
-                    {
-                        return attr._imageHandle.Reference;
-                    }
-
-                    return null;
-                })
-                .Where(e => e != null)
-                .Cast<NamedReference>()
-                .ToList();
-
-            if (diffuseFileNames == null || diffuseFileNames.Count == 0)
-            {
-                Console.Error.WriteLine($"No igGraphicsTexture attribute found on type {material.GetType().Name} for path: {formattedPath}.");
-                return null;
+                return;
             }
 
-            return diffuseFileNames[0]; //.FirstOrDefault(e => e.StartsWith("CavityBakedColorMap")) ?? diffuseFileNames[0];
+            foreach (var field in textureFields)
+            {
+                string? texturePath = (string?)field.GetValue(material);
+                if (string.IsNullOrEmpty(texturePath)) continue;
+
+                string textureName = NamespaceUtils.GetFileName(texturePath, false);
+                if (textureName.StartsWith("default_")) continue;
+
+                string textureType = field.Name.Substring(prefix.Length);
+
+                foreach (var (textureRef, parts) in graphicsTextures)
+                {
+                    if (parts.Any(p => p.Contains(textureName, StringComparison.InvariantCultureIgnoreCase)))
+                    {
+                        references.Add(textureType, textureRef);
+                        break;
+                    }
+                }
+            }
+        }
+
+        private static List<string> ExpandFileNames(string input)
+        {
+            int open = input.LastIndexOf('{');
+
+            if (open == -1)
+                return [ input ];
+
+            int close = input.IndexOf('}', open);
+            if (close == -1)
+            {
+                Console.WriteLine("Warning: unmatched '{'.");
+                return [ input ];
+            }
+
+            string prefix = input[..open];
+            string suffix = input[(close + 1)..];
+
+            string contents = input[(open + 1)..close];
+            string[] parts = contents.Split(',');
+
+            var result = new List<string>();
+
+            foreach (string part in parts)
+            {
+                string expanded = prefix + part + suffix;
+                result.AddRange(ExpandFileNames(expanded));
+            }
+
+            return result;
         }
 
         /// <summary>

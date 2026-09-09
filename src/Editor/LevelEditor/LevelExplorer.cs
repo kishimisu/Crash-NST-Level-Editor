@@ -514,11 +514,10 @@ namespace NST
                 materials.Add(materialRef, mat);
                 _cachedMaterials.Add(materialRef, mat);
 
-                NamedReference? textureRef = mat.diffuseTexture;
-                if (textureRef != null)
+                if (mat.textureReferences.TryGetValue("diffuse", out var textureRef))
                 {
                     if (!_textureToMaterials.ContainsKey(textureRef)) {
-                        _textureToMaterials.Add(textureRef, new List<NSTMaterial>());
+                        _textureToMaterials.Add(textureRef, []);
                     }
                     _textureToMaterials[textureRef].Add(mat);
                 }

@@ -20,11 +20,12 @@ namespace NST
         public static string ArchivePath => Path.Join(GamePath ?? DEFAULT_GAME_PATH, "archives"); // Path to the archives folder
         public static string UpdateFilePath => Path.Join(ArchivePath, "update.pak"); // Path to the update file
         public static string AutoBackupPath => GetStoragePath("backups");
+        private static string StorageFilePath => GetStoragePath("localstorage.json"); // Path to the local storage file
 
-        private static string _storageFilePath = ""; // Path to the main local storage file
         public static string AutoBackupSize { get; private set; } = "";
-
         public static bool SkipSteamPopup { get; set; } = false;
+
+        private static Dictionary<string, string> _dataCache; // In-memory copy of the storage file
 
         private static readonly JsonSerializerOptions _jsonSerializerOptions = new() { WriteIndented = true };
 
@@ -32,7 +33,7 @@ namespace NST
         /// Initialize the local storage.
         /// Checks for the game executable and creates the local storage folder if it doesn't exist
         /// </summary>
-        public static void Initialize(string storageFileName = "localstorage.json")
+        public static void Initialize()
         {
             string folderPath = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
             string appFolder = Path.Combine(folderPath, STORAGE_FOLDER_NAME);
@@ -42,7 +43,7 @@ namespace NST
                 Directory.CreateDirectory(appFolder);
             }
 
-            _storageFilePath = Path.Combine(appFolder, storageFileName);
+            _dataCache = ReadStorageData();
 
             GamePath = Get<string>("game_path");
 
@@ -242,9 +243,8 @@ namespace NST
         /// </summary>
         public static void Set(string key, object value)
         {
-            var data = GetAll();
-            data[key] = value is string str ? str : JsonSerializer.Serialize(value);
-            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data, _jsonSerializerOptions));
+            _dataCache[key] = value is string str ? str : JsonSerializer.Serialize(value);
+            File.WriteAllText(StorageFilePath, JsonSerializer.Serialize(_dataCache, _jsonSerializerOptions));
         }
 
         /// <summary>
@@ -252,13 +252,11 @@ namespace NST
         /// </summary>
         public static T? Get<T>(string key, T? defaultValue = default)
         {
-            var data = GetAll();
-            
-            if (!data.ContainsKey(key)) return defaultValue;
+            if (!_dataCache.ContainsKey(key)) return defaultValue;
 
-            if (typeof(T) == typeof(string)) return (T)(object)data[key];
+            if (typeof(T) == typeof(string)) return (T)(object)_dataCache[key];
 
-            return JsonSerializer.Deserialize<T>(data[key]);
+            return JsonSerializer.Deserialize<T>(_dataCache[key]);
         }
 
         /// <summary>
@@ -266,19 +264,18 @@ namespace NST
         /// </summary>
         public static void Remove(string key)
         {
-            var data = GetAll();
-            data.Remove(key);
-            File.WriteAllText(_storageFilePath, JsonSerializer.Serialize(data, _jsonSerializerOptions));
+            _dataCache.Remove(key);
+            File.WriteAllText(StorageFilePath, JsonSerializer.Serialize(_dataCache, _jsonSerializerOptions));
         }
 
         /// <summary>
         /// Read all values from the local storage
         /// </summary>
-        private static Dictionary<string, string> GetAll()
+        private static Dictionary<string, string> ReadStorageData()
         {
-            if (!File.Exists(_storageFilePath)) return [];
+            if (!File.Exists(StorageFilePath)) return [];
 
-            string json = File.ReadAllText(_storageFilePath);
+            string json = File.ReadAllText(StorageFilePath);
             return JsonSerializer.Deserialize<Dictionary<string, string>>(json) ?? [];
         }
     }

@@ -1,4 +1,5 @@
 using Alchemy;
+using System.Diagnostics;
 
 namespace NST
 {
@@ -89,6 +90,15 @@ namespace NST
             }
 
             return null;
+        }
+
+        public static void OpenFolderInExplorer(string directory)
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = directory,
+                UseShellExecute = true
+            });
         }
 
         private static string SanitizeFileName(string fileName)

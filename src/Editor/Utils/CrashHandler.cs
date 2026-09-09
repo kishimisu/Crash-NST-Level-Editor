@@ -1,5 +1,3 @@
-using System.Diagnostics;
-
 namespace NST
 {
     public static class CrashHandler
@@ -36,12 +34,7 @@ namespace NST
 
             Directory.CreateDirectory(logDir);
             File.WriteAllText(filePath, stackTrace);
-
-            Process.Start(new ProcessStartInfo
-            {
-                FileName = logDir,
-                UseShellExecute = true
-            });
+            FileExplorer.OpenFolderInExplorer(logDir);
         }
 
         private static string WriteLogsToFile()

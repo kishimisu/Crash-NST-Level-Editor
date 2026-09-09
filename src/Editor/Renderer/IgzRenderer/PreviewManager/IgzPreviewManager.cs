@@ -161,6 +161,13 @@ namespace NST
 
             ImGui.BeginGroup();
 
+            bool showAll = LocalStorage.Get("showAllTextures", false);
+            ImGuiUtils.Prefix("Show all textures");
+            if (ImGui.Checkbox("##showAllTextures", ref showAll))
+            {
+                LocalStorage.Set("showAllTextures", showAll);
+            }
+
             if (ImGui.TreeNodeEx($"{title} Infos ({_materials.Count})", ImGuiTreeNodeFlags.DefaultOpen | ImGuiTreeNodeFlags.SpanAvailWidth | ImGuiTreeNodeFlags.NoTreePushOnOpen))
             {
                 int i = 0;

@@ -12,8 +12,10 @@ namespace NST
     {
         public Type? type; // Material type
         public NamedReference? materialHandle; // igFxMaterial reference
-        public NamedReference? diffuseTexture = null; // igImage2 reference
         public NamedReference? effectHandle = null; // igGraphicsMaterial shader reference
+
+        public readonly Dictionary<string, NamedReference> textureReferences = []; // igImage2 texture references
+
         public THREE.Texture? texture = null; // GPU diffuse texture
 
         public string shaderName = "";
@@ -45,6 +47,8 @@ namespace NST
         public THREE.Vector4 color = new THREE.Vector4(1, 1, 1, 1);
 
         public static float DefaultShininess = 5.0f;
+
+        private static readonly Dictionary<NamedReference, (int textureId, int width, int height)> _texturePreviews = [];
 
         private static readonly Dictionary<EIG_GFX_BLENDING_FUNCTION, int> _BLENDING_FACTOR_MAP = new()
         {
@@ -110,9 +114,10 @@ namespace NST
         /// </summary>
         private void SetupFromIgMaterial(igMaterial material)
         {
-            type           = material.GetType();
-            editorOnly     = material is CUnlitMaterial unlit && unlit._onlyDrawInTools;
-            diffuseTexture = material.FindDiffuseTexture();
+            type       = material.GetType();
+            editorOnly = material is CUnlitMaterial unlit && unlit._onlyDrawInTools;
+
+            material.FindTextureReferences(textureReferences);
 
             if (material is igFxMaterial fx)
             {
@@ -148,34 +153,6 @@ namespace NST
             {
                 Console.Error.WriteLine("Unknown material type:" + material.GetType());
             }
-        }
-
-        /// <summary>
-        /// Finds the material's diffuse texture
-        /// </summary>
-        /// <param name="archive">The parent archive if open (searched first to improve performance)</param>
-        /// <returns>The texture's data</returns>
-        private TextureData? FindDiffuseTexture(IgArchive archive)
-        {
-            if (diffuseTexture == null) return null;
-
-            igImage2? image = (igImage2?)AlchemyUtils.FindObjectInArchives(diffuseTexture, archive);
-
-            if (image == null || !image.HasPixels())
-            {
-                if (image == null) Console.Error.WriteLine($"Warning: igImage2 object not found for {diffuseTexture}.");
-                else if (!image.HasPixels()) Console.Error.WriteLine($"Warning: No pixels found for {diffuseTexture}.");
-                return null;
-            }
-
-            TextureData data = new TextureData()
-            {
-                pixels = image.GetPixels(),
-                width = image._width,
-                height = image._height,
-            };
-
-            return data;
         }
 
         /// <summary>
@@ -220,7 +197,10 @@ namespace NST
         /// <param name="archive">The parent archive if open (searched first to improve performance)</param>
         private void InitializeTexture(IgArchive archive)
         {
-            TextureData? textureData = FindDiffuseTexture(archive);
+            if (!textureReferences.TryGetValue("diffuse", out var diffuseTexture)) 
+                return;
+
+            TextureData? textureData = FindTextureData(archive, diffuseTexture);
 
             if (textureData == null)
             {
@@ -375,22 +355,25 @@ namespace NST
                 }
             }
 
-            if (diffuseTexture != null)
+            if (renderName && !LocalStorage.Get("showAllTextures", false))
             {
-                if (ImGui.Selectable("##OpenTexture" + GetHashCode()))
+                if (textureReferences.TryGetValue("diffuse", out var diffuseTexture))
                 {
-                    App.FocusObject(diffuseTexture, renderer); // Open diffuse texture file
+                    RenderTexture(renderer, "diffuse", diffuseTexture);
                 }
-                ImGui.SameLine();
-                ImGui.Text($"> Diffuse:");
-                ImGui.SameLine();
-                ImGui.TextColored(MathUtils.UIntToVector4Numerics(0xffff90f4), diffuseTexture.namespaceName);
+            }
+            else
+            {
+                bool dim = false;
+                foreach (var (type, texture) in textureReferences)
+                {
+                    RenderTexture(renderer, type, texture, dim);
+                    dim = true;
+                }
             }
 
             if (effectHandle != null)
-            {
                 ImGui.BulletText($"Shader: {effectHandle}");
-            }
 
             if (alphaTest && alphaRef != 0.5f)
                 ImGui.BulletText($"Alpha Clip Threshold: {alphaRef}");
@@ -430,6 +413,86 @@ namespace NST
 
             ImGui.Separator();
             ImGui.Spacing();
+        }
+
+        private void RenderTexture(IgzRenderer renderer, string name, NamedReference? textureRef, bool dim = true)
+        {
+            if (textureRef == null) return;
+
+            if (ImGui.Selectable("##OpenTexture" + name + GetHashCode()))
+            {
+                App.FocusObject(textureRef, renderer); // Open texture file
+            }
+
+            if (ImGui.IsItemHovered(ImGuiHoveredFlags.DelayShort))
+            {
+                if (!_texturePreviews.TryGetValue(textureRef, out var preview))
+                {
+                    var data = FindTextureData(renderer.ArchiveRenderer.Archive, textureRef);
+
+                    if (data != null)
+                    {
+                        int textureId = TextureHelper.CreateOpenGLTexture(SilkWindow.instance._gl, data.width, data.height, data.pixels, flipY: true, overwrite: false);
+                        _texturePreviews.Add(textureRef, (textureId, data.width, data.height));
+                    }
+                    else
+                    {
+                        _texturePreviews.Add(textureRef, (-1, 0, 0));
+                    }
+                }
+
+                if (preview.textureId != -1)
+                {
+                    const float previewSize = 512;
+
+                    float scale = Math.Min(
+                        previewSize / preview.width, 
+                        previewSize / preview.height
+                    );
+
+                    var size = new System.Numerics.Vector2(
+                        MathF.Round(preview.width * scale), 
+                        MathF.Round(preview.height * scale)
+                    );
+
+                    ImGui.BeginTooltip();
+                    ImGui.Image(preview.textureId, size);
+                    ImGui.EndTooltip();
+                }
+            }
+
+            ImGui.SameLine();
+            ImGui.Text($"> {name}:");
+            ImGui.SameLine();
+            ImGui.TextColored(MathUtils.UIntToVector4Numerics(dim ? 0xffb0a0ac : 0xffff90f4), textureRef.namespaceName);
+        }
+
+        /// <summary>
+        /// Finds the data corresponding to a texture reference
+        /// </summary>
+        /// <param name="archive">The parent archive if open (searched first to improve performance)</param>
+        /// <returns>The texture's data</returns>
+        public static TextureData? FindTextureData(IgArchive archive, NamedReference? textureReference)
+        {
+            if (textureReference == null) return null;
+            
+            igImage2? image = (igImage2?)AlchemyUtils.FindObjectInArchives(textureReference, archive);
+
+            if (image == null || !image.HasPixels())
+            {
+                if (image == null) Console.Error.WriteLine($"Warning: igImage2 object not found for {textureReference}.");
+                else if (!image.HasPixels()) Console.Error.WriteLine($"Warning: No pixels found for {textureReference}.");
+                return null;
+            }
+
+            TextureData data = new TextureData()
+            {
+                pixels = image.GetPixels(),
+                width = image._width,
+                height = image._height,
+            };
+
+            return data;
         }
     }
 }
