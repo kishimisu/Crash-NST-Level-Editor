@@ -1056,6 +1056,28 @@ namespace NST
             if (ImGui.Selectable("Delete"))    RemoveFile(file);
         }
 
+        public void RenderOpenModel(string? modelPath, IgzRenderer? lastRenderer = null)
+        {
+            if (string.IsNullOrEmpty(modelPath)) return;
+
+            string modelName = NamespaceUtils.GetFileName(modelPath, false) + ".igz";
+
+            if (ImGui.Button($"Open model file", new Vector2(-1, 0)))
+            {
+                IgArchiveFile? modelFile = Archive.FindFile(modelName);
+                IgArchiveTreeNode? fileNode = modelFile == null ? null : TreeView.FindNode(modelFile);
+                if (fileNode != null)
+                {
+                    App.OpenArchiveRenderer(this);
+                    FocusNode(fileNode, lastRenderer: lastRenderer);
+                }
+                else
+                {
+                    ModalRenderer.ShowMessageModal("Error", "Model file not found.");
+                }
+            }
+        }
+
         private static readonly HashSet<string> _jetpackExternalDependencies = new()
         {
             "proxy_Alarm.igz", "common_AlarmLightVFX.igz", "common_JetPackVehicle.igz", "common_JetPackIntroOutroSequence.igz", 

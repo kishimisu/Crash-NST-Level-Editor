@@ -111,7 +111,7 @@ namespace NST
             }
             else
             {
-                RenderObjectNode(tree, parentNodes, parent, flags.Value, recursion);
+                RenderObjectNode(tree, parent, flags.Value, recursion);
             }
 
             tree.PreviousNode = this;
@@ -137,7 +137,7 @@ namespace NST
         /// <summary>
         /// Renders this node as an object node
         /// </summary>
-        private void RenderObjectNode(IgzTreeView tree, List<IgzTreeNode> parentNodes, IgzTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
+        private void RenderObjectNode(IgzTreeView tree, IgzTreeNode? parent, ImGuiTreeNodeFlags flags, bool recursion)
         {
             if (Object == null)
             {
@@ -146,7 +146,7 @@ namespace NST
             }
 
             bool multiReferences = Parents.Count > 1 || (Parents.Count == 1 && RootNode);
-            bool subselected = (tree.SelectedNode == this && NodePath != tree.SelectedNodePath);
+            bool subselected = tree.SelectedNode == this && NodePath != tree.SelectedNodePath;
 
             if (multiReferences)
             {
@@ -155,7 +155,7 @@ namespace NST
             }
             if (subselected)
             {
-                ImGui.PushStyleColor(ImGuiCol.Header, new System.Numerics.Vector4(1, 1, 1, 0.15f));
+                ImGui.PushStyleColor(ImGuiCol.Header, new Vector4(1, 1, 1, 0.15f));
             }
 
             IsOpen = ImGui.TreeNodeEx("###" + _uuid, flags);
@@ -381,20 +381,7 @@ namespace NST
             {
                 ImGui.Spacing();
                 ImGui.SetNextItemWidth(-1);
-                if (ImGui.Button("Open model file", new Vector2(-1, 0)))
-                {
-                    string modelName = NamespaceUtils.GetFileName(modelComponent._fileName, false) + ".igz";
-                    IgArchiveFile? modelFile = renderer.ArchiveRenderer.Archive.FindFile(modelName);
-                    IgArchiveTreeNode? fileNode = modelFile == null ? null : renderer.ArchiveRenderer.TreeView.FindNode(modelFile);
-                    if (fileNode != null)
-                    {
-                        renderer.ArchiveRenderer.FocusNode(fileNode, lastRenderer: renderer);
-                    }
-                    else
-                    {
-                        ModalRenderer.ShowMessageModal("Error", "Model file not found.");
-                    }
-                }
+                renderer.ArchiveRenderer.RenderOpenModel(modelComponent._fileName, renderer);
                 ImGui.Spacing();
             }
         }

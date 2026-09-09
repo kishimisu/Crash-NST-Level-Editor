@@ -151,23 +151,30 @@ namespace NST
 
             string displayName = string.IsNullOrEmpty(component._fileName) ? "(null)" : NamespaceUtils.GetFileName(component._fileName, false);
 
-            ImGuiUtils.RenderComboWithSearch("##model" + manager.Entity.Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, firstOption: "(null)", callback: (index, name) =>
-            {
-                if (index < 0)
+            ImGuiUtils.RenderComboWithSearch("##model" + manager.Entity.Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, 
+                firstOption: "(null)", 
+                callback: (index, name) =>
                 {
-                    component._fileName = "";
+                    if (index < 0)
+                    {
+                        component._fileName = "";
+                        manager.SetUpdated();
+                        manager.Entity.RefreshModel(manager.Explorer, null, false);
+                        return;
+                    }
+
+                    NSTModel model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
+
+                    component._fileName = model.OriginalPath;
+                    
                     manager.SetUpdated();
-                    manager.Entity.RefreshModel(manager.Explorer, null, false);
-                    return;
+                    manager.Entity.RefreshModel(manager.Explorer, model);
+                },
+                renderHeaderCallback: () =>
+                {
+                    manager.Explorer.ArchiveRenderer.RenderOpenModel(component._fileName);
                 }
-
-                NSTModel model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
-
-                component._fileName = model.OriginalPath;
-                
-                manager.SetUpdated();
-                manager.Entity.RefreshModel(manager.Explorer, model);
-            });
+            );
         }
 
         private static void RenderComponent(CStaticCollisionComponentData component, NSTComponent manager)

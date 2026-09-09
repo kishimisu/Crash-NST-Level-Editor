@@ -844,36 +844,43 @@ namespace NST
                 ImGui.SameLine();
                 ImGui.SetNextItemWidth(-1);
 
-                string displayName = Model?.Name ?? "(null)";
+                string modelName = Model?.Name ?? "(null)";
 
-                ImGuiUtils.RenderComboWithSearch("##entityDataModel" + Object.ObjectName, displayName, LevelExplorer.CachedModelNames, true, firstOption: "(null)", callback: (i, name) =>
-                {
-                    MakeUnique(explorer);
-
-                    NSTModel? model = null;
-                    string modelPath = "";
-
-                    if (i >= 0)
+                ImGuiUtils.RenderComboWithSearch("##entityDataModel" + Object.ObjectName, modelName, LevelExplorer.CachedModelNames, true, 
+                    firstOption: "(null)", 
+                    callback: (i, name) =>
                     {
-                        model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
-                        modelPath = model.OriginalPath;
-                    }
+                        MakeUnique(explorer);
 
-                    if (entityData._modelName != null)
+                        NSTModel? model = null;
+                        string modelPath = "";
+
+                        if (i >= 0)
+                        {
+                            model = LevelExplorer.CachedModels[name.ToLowerInvariant()];
+                            modelPath = model.OriginalPath;
+                        }
+
+                        if (entityData._modelName != null)
+                        {
+                            entityData._modelName = modelPath;
+                        }
+                        else
+                        {
+                            entityData._skinName = modelPath;
+                        }
+
+                        explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
+
+                        RefreshModel(explorer, model, i >= 0);
+
+                        GetParentSpawners().ToList().ForEach(p => p.RefreshModel(explorer, model, i >= 0));
+                    },
+                    renderHeaderCallback: () =>
                     {
-                        entityData._modelName = modelPath;
+                        explorer.ArchiveRenderer.RenderOpenModel(modelName);
                     }
-                    else
-                    {
-                        entityData._skinName = modelPath;
-                    }
-
-                    explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, Object);
-
-                    RefreshModel(explorer, model, i >= 0);
-
-                    GetParentSpawners().ToList().ForEach(p => p.RefreshModel(explorer, model, i >= 0));
-                });
+                );
             }
 
             ImGui.PushID("EntityData" + Object.ObjectName);
