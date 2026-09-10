@@ -52,7 +52,7 @@ namespace NST
                     }
                     catch (Exception e)
                     {
-                        ModalRenderer.ShowMessageModal("Error", e.Message);
+                        ModalRenderer.Show("Error", e.Message);
                     }
                 }
                 

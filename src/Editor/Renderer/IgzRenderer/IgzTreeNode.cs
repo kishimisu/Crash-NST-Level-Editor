@@ -513,12 +513,11 @@ namespace NST
             // Paste in a different archive
             else
             {
-                ModalRenderer.ShowConfirmationModal($"Automatically import all dependencies for\n{IgzRenderer.CopyObject}?", 
-                    () =>
-                    {
-                        AddClone();
-                    },
-                    () =>
+                ModalRenderer.ShowModal3(
+                    title: "Import", 
+                    message: $"Automatically import all dependencies for\n{IgzRenderer.CopyObject}?", 
+                    onSafeAction: () => AddClone(),
+                    onContinue: () =>
                     {
                         igObject clone = tree.Renderer.ArchiveRenderer.Clone(IgzRenderer.CopyObject,
                             IgzRenderer.CopyRenderer.ArchiveRenderer.Archive,
@@ -527,8 +526,7 @@ namespace NST
 
                         IgzTreeNode newNode = tree.Add(clone, true)[0];
                         tree.SetSelectedNode(newNode);
-                    },
-                    "No", "Yes"
+                    }
                 );
             }
         }

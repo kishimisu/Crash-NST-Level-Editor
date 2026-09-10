@@ -53,8 +53,8 @@ namespace NST
                 viewer.Render(deltaTime);
             }
 
-            // Render modals if any
-            ModalRenderer.RenderModals();
+            // Render active modal
+            ModalRenderer.Render();
 
             if (_showDemo) ImGui.ShowDemoWindow();
         }
@@ -156,7 +156,7 @@ namespace NST
                         }
                         catch (Exception e)
                         {
-                            ModalRenderer.ShowMessageModal("Error", e.Message);
+                            ModalRenderer.Show("Error", e.Message);
                         }
                     }
                     if (ImGui.IsItemHovered()) ImGui.SetTooltip(path);
@@ -327,12 +327,12 @@ namespace NST
 
             if (infos == null)
             {
-                ModalRenderer.ShowMessageModal("Failed to open file", $"File not found for {reference}.");
+                ModalRenderer.Show("Failed to open file", $"File not found for {reference}.");
                 return;
             }
             if (LocalStorage.GamePath == null)
             {
-                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                ModalRenderer.Show("Could not complete operation", "Game path is not set.");
                 return;
             }
 
@@ -346,7 +346,7 @@ namespace NST
             catch (Exception e)
             {
                 Console.WriteLine($"ERROR: Failed to open file {reference}: {e.Message}.");
-                ModalRenderer.ShowMessageModal("Failed to open file", $"An error occured while opening {reference}.");
+                ModalRenderer.Show("Failed to open file", $"An error occured while opening {reference}.");
             }
         }
 
@@ -393,7 +393,7 @@ namespace NST
             catch (Exception e)
             {
                 Console.WriteLine(e);
-                ModalRenderer.ShowMessageModal("Error", e.Message);
+                ModalRenderer.Show("Error", e.Message);
             }
 
             _mainMenu.IsOpen = false;

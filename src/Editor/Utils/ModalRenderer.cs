@@ -3,66 +3,103 @@ using System.Numerics;
 
 namespace NST
 {
-    /// <summary>
-    /// Interface for modal windows
-    /// </summary>
-    public interface IModalBase
+    public static class ModalRenderer
     {
-        public bool IsOpen();
-        public bool Render();
-    }
-    
-    /// <summary>
-    /// Base class for modal windows
-    /// </summary>
-    public class ModalBase<TAction> : IModalBase where TAction : Delegate
-    {
-        protected string _title; // Modal title
-        protected string _text = ""; // Modal message
-        protected TAction? _callback; // Confirm callback
-        protected bool _isOpen = false; // Whether the modal is currently visible
-        private bool _requestOpen = false;
-        private bool _requestClose = false;
+        private sealed record ModalData(string Title, string? Text, List<ModalButton> Buttons, Action? RenderCallback = null);
+        private sealed record ModalButton(string Text, Action? Callback = null);
 
-        public bool IsOpen() => _isOpen;
-        public bool Close() => _requestClose = _isOpen;
+        private static ModalData? _current = null;
+        private static ModalData? _last = null;
 
-        public ModalBase(string title) => _title = title;
+        private static bool _requestOpen = false;
+        private static bool _isLoading = false;
 
-        /// <summary>
-        /// Show the modal
-        /// </summary>
-        public void Open(string text, TAction? callback = null, bool forceOpen = true)
+        private const string loadingTitle = "In progress...";
+
+        private static void Open(string title, string? text, List<ModalButton> buttons, Action? renderCallback = null, bool open = true)
         {
-            _text = text;
-            _callback = callback;
-            _requestOpen = forceOpen || !_isOpen;
-            _isOpen = true;
+            _last = _current;
+            _current = new ModalData(title, text, buttons, renderCallback);
+            _requestOpen = open;
         }
 
-        /// <summary>
-        /// Close the modal and invoke the confirm callback
-        /// </summary>
-        protected void OnClickOK(params object[] args)
+        private static void Close(bool closeCurrentPopup = true)
         {
-            _isOpen = false;
-            _callback?.DynamicInvoke(args);
-            ImGui.CloseCurrentPopup();
+            _current = null;
+            _requestOpen = false;
+
+            if (closeCurrentPopup)
+                ImGui.CloseCurrentPopup();
         }
 
-        /// <summary>
-        /// Close the modal
-        /// </summary>
-        protected void OnClickCancel()
+        public static void Restore()
         {
-            _isOpen = false;
-            ImGui.CloseCurrentPopup();
+            if (_last == null || !_isLoading) return;
+            Open(_last.Title, _last.Text, _last.Buttons, _last.RenderCallback);
         }
 
-        /// <summary>
-        /// Get the size of each button based on the button count
-        /// </summary>
-        protected static Vector2 ComputeButtonSize(int count = 1)
+        public static void Render()
+        {
+            if (_current == null) return;
+
+            string popupId = $"{_current.Title}###PopupModal";
+
+            if (_requestOpen)
+            {
+                var center = ImGui.GetMainViewport().GetCenter();
+                ImGui.SetNextWindowPos(center, ImGuiCond.Always, new Vector2(0.5f, 0.5f));
+                ImGui.OpenPopup(popupId);
+                _requestOpen = false;
+            }
+
+            if (!ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings))
+            {
+                Close(false);
+                return;
+            }
+
+            RenderContent(_current);
+
+            ImGui.EndPopup();
+        }
+
+        private static void RenderContent(ModalData modal)
+        {
+            if (!string.IsNullOrEmpty(modal.Text))
+            {
+                if (modal.Buttons.Count >= 3)
+                {
+                    ImGui.PushTextWrapPos(ImGui.GetFontSize() * 40);
+                    ImGui.TextWrapped(modal.Text);
+                    ImGui.PopTextWrapPos();
+                    ImGuiUtils.VerticalSpacing(10);
+                }
+                else
+                {
+                    ImGui.Text(modal.Text);
+                    ImGui.Spacing();
+                }
+            }
+
+            modal.RenderCallback?.Invoke();
+
+            for (int i = 0; i < modal.Buttons.Count; i++)
+            {
+                var btn = modal.Buttons[i];
+
+                if (i > 0)
+                    ImGui.SameLine();
+
+                if (ImGui.Button(btn.Text, ComputeButtonSize(modal.Buttons.Count)))
+                {
+                    Close();
+                    btn.Callback?.Invoke();
+                    break;
+                }
+            }
+        }
+
+        private static Vector2 ComputeButtonSize(int count)
         {
             float availWidth = ImGui.GetContentRegionAvail().X;
             Vector2 buttonSize = new Vector2(float.Max(availWidth * 0.2f, 100), 0);
@@ -72,276 +109,87 @@ namespace NST
         }
 
         /// <summary>
-        /// Render the modal
+        /// Show a modal with 1 button
         /// </summary>
-        /// <returns>Whether the modal is currently open</returns>
-        public virtual bool Render()
+        public static void Show(string title, string message, Action? action = null)
         {
-            if (_requestOpen)
-            {
-                ImGui.OpenPopup(_title);
-                _requestOpen = false;
-            }
-
-            bool open = ImGui.BeginPopupModal(_title, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings);
-
-            if (_requestClose)
-            {
-                ImGui.CloseCurrentPopup();
-                _requestClose = false;
-                _isOpen = false;
-            }
-
-            return open;
-        }
-    }
-
-    /// <summary>
-    /// Modal for displaying a message (OK button)
-    /// </summary>
-    public class MessageModal() : ModalBase<Action>("Message")
-    {
-        public void Open(string title, string message, Action? action)
-        {
-            base.Open(message, action);
-            _title = title;
-        }
-
-        public override bool Render()
-        {
-            if (!base.Render()) return false;
-
-            ImGui.Text(_text);
-
-            if (ImGui.Button("OK", ComputeButtonSize())) 
-                OnClickOK();
-
-            ImGui.EndPopup();
-
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Modal for confirming an action (Confirm / Safe Choice / Cancel)
-    /// </summary>
-    public class ConfirmationModal() : ModalBase<Action>("Warning")
-    {
-        private Action? _safeCallback;
-
-        private string _safeTitle = "Save as...";
-        private string _continueTitle = "Overwrite";
-
-        public void Open(string message, Action? onSafeAction, Action? onContinue, string? onSafeTitle, string? onContinueTitle)
-        {
-            base.Open(message, onContinue);
-            _safeCallback = onSafeAction;
-            _safeTitle = onSafeTitle ?? _safeTitle;
-            _continueTitle = onContinueTitle ?? _continueTitle;
-        }
-
-        private void OnClickContinue()
-        {
-            _isOpen = false;
-            _safeCallback?.DynamicInvoke();
-            ImGui.CloseCurrentPopup();
-        }
-
-        public override bool Render()
-        {
-            if (!base.Render()) return false;
-
-            ImGui.PushTextWrapPos(ImGui.GetFontSize() * 40);
-            ImGui.TextWrapped(_text);
-            ImGui.PopTextWrapPos();
-
-            ImGuiUtils.VerticalSpacing(10);
-
-            Vector2 buttonSize = ComputeButtonSize(3);
-
-            if (ImGui.Button("Cancel", buttonSize)) OnClickCancel();
-            ImGui.SameLine();
-
-            if (ImGui.Button(_safeTitle, buttonSize)) OnClickContinue();
-            ImGui.SameLine();
-
-            if (ImGui.Button(_continueTitle, buttonSize)) OnClickOK();
-            ImGui.EndPopup();
-
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Modal for deleting a file (Yes / No)
-    /// </summary>
-    public class DeleteModal(string text = "Delete File") : ModalBase<Action>(text)
-    {
-        public void Open(string title, string message, Action? callback)
-        {
-            base.Open(message, callback);
-            _title = title;
-        }
-
-        public override bool Render()
-        {
-            if (!base.Render()) return false;
-
-            ImGui.Text(_text);
-            ImGui.Spacing();
-
-            Vector2 buttonSize = ComputeButtonSize(2);
-
-            if (ImGui.Button("No", buttonSize)) OnClickCancel();
-            ImGui.SameLine();
-
-            if (ImGui.Button("Yes", buttonSize)) OnClickOK();
-            ImGui.EndPopup();
-
-            return true;
-        }
-    }
-
-    public class WarningModal() : DeleteModal("Warning") { }
-
-    /// <summary>
-    /// Modal for renaming a file (OK / Cancel)
-    /// </summary>
-    public class RenameModal() : ModalBase<Action<string>>("Rename File")
-    {
-        public override bool Render()
-        {
-            if (!base.Render()) return false;
-
-            ImGui.Text("Select a new file name:");
-            ImGui.Spacing();
-
-            float textWidth = ImGui.CalcTextSize(_text).X + ImGui.GetStyle().FramePadding.X * 2;
-
-            ImGui.SetNextItemWidth(textWidth);
-            ImGui.InputText("##RenameInput", ref _text, 256);
-            ImGui.Spacing();
-
-            Vector2 buttonSize = ComputeButtonSize(2);
-
-            if (ImGui.Button("Cancel", buttonSize)) OnClickCancel();
-            ImGui.SameLine();
-
-            if (ImGui.Button("OK", buttonSize)) OnClickOK(_text);
-            ImGui.EndPopup();
-
-            return true;
-        }
-    }
-
-    public class LoadingModal() : ModalBase<Action>("In Progress...")
-    {
-        private float? _progress = null;
-
-        public void Open(string message, float? progress = null)
-        {
-            _progress = progress;
-            base.Open(message, forceOpen: false);
-        }
-
-        public new void Close()
-        {
-            _progress = null;
-            base.Close();
-        }
-        
-        public override bool Render()
-        {
-            if (!base.Render()) return false;
-
-            float p = _progress ?? (-1.0f * (float)ImGui.GetTime());
-            ImGui.ProgressBar(p, new Vector2(400, 15) * SilkWindow.instance.scale, _text);
-
-            ImGui.EndPopup();
-            return true;
-        }
-    }
-
-    /// <summary>
-    /// Handles rendering of blocking modals/popups
-    /// </summary>
-    public class ModalRenderer
-    {
-        private static MessageModal _textModal = new MessageModal();
-        private static ConfirmationModal _confirmationModal = new ConfirmationModal();
-        private static DeleteModal _deleteModal = new DeleteModal();
-        private static RenameModal _renameModal = new RenameModal();
-        private static WarningModal _warningModal = new WarningModal();
-        private static LoadingModal _loadingModal = new LoadingModal();
-        private static List<IModalBase> _modals = [ _textModal, _confirmationModal, _deleteModal, _renameModal, _warningModal, _loadingModal ];
-
-        /// <summary>
-        /// Show a message modal (OK button)
-        /// </summary>
-        public static void ShowMessageModal(string title, string message, Action? action = null)
-        {
-            _textModal.Open(title, message, action);
+            Open(title, message, [ new ModalButton("OK", action) ]);
         }
 
         /// <summary>
-        /// Show a confirmation modal (Confirm / Safe Choice / Cancel)
+        /// Show a modal with 2 buttons
         /// </summary>
-        public static void ShowConfirmationModal(string message, Action? onSafeAction, Action? onContinue, string? onSafeTitle = null, string? onContinueTitle = null)
+        public static void ShowModal2(string title, string message, Action confirmAction, string cancelTitle = "No", string confirmTitle = "Yes")
         {
-            _confirmationModal.Open(message, onSafeAction, onContinue, onSafeTitle, onContinueTitle);
+            ShowModal2(title, message, null, confirmAction, cancelTitle, confirmTitle);
+        }
+
+        public static void ShowModal2(string title, string message, Action? cancelAction, Action? confirmAction, string cancelTitle = "No", string confirmTitle = "Yes")
+        {
+            Open(title, message, 
+            [ 
+                new ModalButton(cancelTitle, cancelAction),
+                new ModalButton(confirmTitle, confirmAction),
+            ]);
         }
 
         /// <summary>
-        /// Show a delete modal (Yes / No)
+        /// Show a modal with 3 buttons
         /// </summary>
-        public static void ShowDeleteModal(string fileName, Action action)
+        public static void ShowModal3(string title, string message, Action onSafeAction, Action onContinue, string onSafeTitle = "No", string onContinueTitle = "Yes")
         {
-            _deleteModal.Open(fileName, action);
+            Open(title, message, 
+            [ 
+                new ModalButton("Cancel"),
+                new ModalButton(onSafeTitle, onSafeAction),
+                new ModalButton(onContinueTitle, onContinue)
+            ]);
         }
 
         /// <summary>
-        /// Show a warning modal (Yes / No)
-        /// </summary>
-        public static void ShowWarningModal(string fileName, Action action)
-        {
-            _warningModal.Open("Warning", fileName, action);
-        }
-        public static void ShowWarningModal(string title, string fileName, Action action)
-        {
-            _warningModal.Open(title, fileName, action);
-        }
-
-        /// <summary>
-        /// Show a rename modal (OK / Cancel)
+        /// Show a rename modal
         /// </summary>
         public static void ShowRenameModal(string fileName, Action<string> action)
         {
-            _renameModal.Open(fileName, action);
+            Open("Rename file", null,
+            [
+                new ModalButton("Cancel"),
+                new ModalButton("OK", () => action.Invoke(fileName)),
+            ], 
+            () =>
+            {
+                ImGui.Text("Select a new file name:");
+                ImGui.Spacing();
+
+                float textWidth = ImGui.CalcTextSize(fileName).X + ImGui.GetStyle().FramePadding.X * 2;
+
+                ImGui.SetNextItemWidth(textWidth);
+                ImGui.InputText("##RenameModalInput", ref fileName, 256);
+                ImGui.Spacing();
+            });
         }
 
+        /// <summary>
+        /// Show a modal with a progress bar
+        /// </summary>
         public static void ShowLoadingModal(string message, float? progress = null)
         {
-            _loadingModal.Open(message, progress);
+            _isLoading = true;
+
+            Open(loadingTitle, null, [], () =>
+            {
+                float p = progress ?? (-1.0f * (float)ImGui.GetTime());
+                ImGui.ProgressBar(p, new Vector2(400, 15) * SilkWindow.instance.scale, message); 
+            }, 
+            open: _current?.Title != loadingTitle);
         }
 
         public static void CloseLoadingModal()
         {
-            _loadingModal.Close();
-        }
+            _isLoading = false;
 
-        /// <summary>
-        /// Render any open modals
-        /// </summary>
-        public static void RenderModals()
-        {
-            foreach (IModalBase modal in _modals)
-            {
-                if (modal.IsOpen())
-                {
-                    modal.Render();
-                    break;
-                }
-            }
+            if (_current?.Title == loadingTitle)
+                Close();
         }
     }
 }

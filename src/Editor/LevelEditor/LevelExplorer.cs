@@ -948,7 +948,12 @@ namespace NST
 
             if (ArchiveRenderer != null && ArchiveRenderer.IsUpdated && !ArchiveRenderer.IsOpen)
             {
-                ModalRenderer.ShowWarningModal("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => { ArchiveRenderer.IsUpdated = false; IsOpen = false; });
+                ModalRenderer.ShowModal2("This archive has pending changes!", $"Are you sure you want to close {Archive.GetName()} without saving?", () => 
+                { 
+                    ArchiveRenderer.IsUpdated = false; 
+                    IsOpen = false; 
+                });
+
                 IsOpen = true;
             }
             else
@@ -1195,19 +1200,17 @@ namespace NST
                     message += "- deleting objects\n";
                     message += "- editing components\n";
 
-                    ModalRenderer.ShowConfirmationModal(
-                        message,
-                        () =>
+                    ModalRenderer.ShowModal3(
+                        title: "Information", 
+                        message: message,
+                        onSafeAction: () =>
                         {
                             LocalStorage.Set("first_undo", false);
                             UndoManager.Undo();
                         },
-                        () =>
-                        {
-                            UndoManager.Undo();
-                        },
-                        "Don't show",
-                        "OK"
+                        onContinue: UndoManager.Undo,
+                        onSafeTitle: "Don't show",
+                        onContinueTitle: "OK"
                     );
                 }
                 else

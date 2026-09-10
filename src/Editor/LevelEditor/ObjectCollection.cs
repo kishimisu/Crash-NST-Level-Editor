@@ -254,7 +254,7 @@ namespace NST
 
                 if (entityIndex == 0)
                 {
-                    ModalRenderer.ShowMessageModal("No object found", "No object found to import");
+                    ModalRenderer.Show("No object found", "No object found to import");
                     return;
                 }
             }
@@ -559,7 +559,7 @@ namespace NST
 
                 if (ImGui.Button("Clear library data"))
                 {
-                    ModalRenderer.ShowWarningModal("Are you sure you want to remove all objects from the library?\n\nNote that previews won't be deleted, which should speed up\nfuture initializations.", () =>
+                    ModalRenderer.ShowModal2("Confirmation", "Are you sure you want to remove all objects from the library?\n\nNote that previews won't be deleted, which should speed up\nfuture initializations.", () =>
                     {
                         File.Delete(GetStoragePath("collection.json"));
                         _initialized = false;
@@ -681,7 +681,7 @@ namespace NST
                             }
                             catch (Exception ex)
                             {
-                                ModalRenderer.ShowMessageModal("Error", ex.Message);
+                                ModalRenderer.Show("Error", ex.Message);
                             }
                         }
 

@@ -225,7 +225,7 @@ namespace NST
 
             if (LocalStorage.GamePath == null)
             {
-                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                ModalRenderer.Show("Could not complete operation", "Game path is not set.");
                 return;
             }
 
@@ -242,7 +242,7 @@ namespace NST
             update.SafeSave();
 
             _isGameModded = true;
-            ModalRenderer.ShowMessageModal("Information", $"{enabledMods.Count} mod{(enabledMods.Count > 1 ? "s were" : " was")} applied to the game!");
+            ModalRenderer.Show("Information", $"{enabledMods.Count} mod{(enabledMods.Count > 1 ? "s were" : " was")} applied to the game!");
         }
 
         /// <summary>
@@ -252,7 +252,7 @@ namespace NST
         {
             if (LocalStorage.GamePath == null)
             {
-                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                ModalRenderer.Show("Could not complete operation", "Game path is not set.");
                 return;
             }
 
@@ -264,7 +264,7 @@ namespace NST
             }
 
             _isGameModded = false;
-            ModalRenderer.ShowMessageModal("Information", "The game has been reverted to its original state!");
+            ModalRenderer.Show("Information", "The game has been reverted to its original state!");
         }
         
         /// <summary>
@@ -356,7 +356,7 @@ namespace NST
         {
             if (LocalStorage.GamePath == null)
             {
-                ModalRenderer.ShowMessageModal("Could not complete operation", "Game path is not set.");
+                ModalRenderer.Show("Could not complete operation", "Game path is not set.");
                 return;
             }
 

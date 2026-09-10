@@ -164,7 +164,7 @@ namespace NST
             igImage2? image = _renderer.Igz.FindObject<igImage2>();
             if (image == null)
             {
-                ModalRenderer.ShowMessageModal("Information", "No igImage2 object found");
+                ModalRenderer.Show("Information", "No igImage2 object found");
                 return;
             }
 
@@ -188,7 +188,7 @@ namespace NST
             igImage2? image = _renderer.Igz.FindObject<igImage2>();
             if (image == null)
             {
-                ModalRenderer.ShowMessageModal("Information", "No igImage2 object found");
+                ModalRenderer.Show("Information", "No igImage2 object found");
                 return;
             }
 

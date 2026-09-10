@@ -21,7 +21,7 @@ namespace NST
         {
             if (explorer.InstanceManager.AllEntities.Find(e => e.Object is CWorldEntity) is not NSTEntity worldEntity) return;
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically update WorldInstance?", () =>
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically update WorldInstance?", () =>
             {
                 IgArchive srcArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "L224_PackAttack.pak"));
                 IgzFile srcIgz = srcArchive.FindFile("L224_PackAttack.igz")!.ToIgzFile();
@@ -49,7 +49,7 @@ namespace NST
 
             ChangeZoneInfoGameMode(explorer, "swim");
             
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically update WorldInstance and IntroCutscene?", () =>
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically update WorldInstance and IntroCutscene?", () =>
             {
                 ResetToTraditional(explorer, worldEntity);
 
@@ -105,7 +105,7 @@ namespace NST
 
             ChangeZoneInfoGameMode(explorer, "bike");
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically update WorldInstance and PlayerStart?", () =>
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically update WorldInstance and PlayerStart?", () =>
             {
                 ResetToTraditional(explorer, worldEntity);
 
@@ -174,7 +174,7 @@ namespace NST
                 worldEntityData._startingGameplayMode = EWorldGameplayMode.eWGM_JetSki;
             }
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically import JetSkiTransition?", () =>
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically import JetSkiTransition?", () =>
             {
                 ResetToTraditional(explorer, worldEntity);
 
@@ -213,7 +213,7 @@ namespace NST
                 worldEntityData._startingGameplayMode = EWorldGameplayMode.eWGM_Plane;
             }
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically import AirVehicleTransition?", () =>
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically import AirVehicleTransition?", () =>
             {
                 ResetToTraditional(explorer, worldEntity);
 
@@ -250,7 +250,7 @@ namespace NST
                 worldEntityData._startingGameplayMode = EWorldGameplayMode.eWGM_Traditional;
             }
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically clean up WorldInstance?", () => ResetToTraditional(explorer, worldEntity));
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically clean up WorldInstance?", () => ResetToTraditional(explorer, worldEntity));
         }
 
         private static void ResetToTraditional(LevelExplorer explorer, NSTEntity worldEntity)
@@ -323,7 +323,7 @@ namespace NST
             if (explorer.InstanceManager.AllEntities.Find(e => e.Object is CWorldEntity) is not NSTEntity worldEntity) return;
             if (explorer.FileManager.GetIgz(worldEntity.ArchiveFile) is not IgzFile dstIgz) return;
 
-            ModalRenderer.ShowWarningModal("Auto-update?", "Automatically import C3 IntroCutsceneSequence?", () => AddC3IntroCutscene(explorer, worldEntity, dstIgz));
+            ModalRenderer.ShowModal2("Auto-update?", "Automatically import C3 IntroCutsceneSequence?", () => AddC3IntroCutscene(explorer, worldEntity, dstIgz));
         }
 
         private static void UpdateC3IntroCutscene(LevelExplorer explorer, NSTEntity worldEntity, IgzFile dstIgz, string? behaviorEvent = null)

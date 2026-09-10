@@ -381,7 +381,7 @@ namespace NST
                 }
 
                 ModalRenderer.CloseLoadingModal();
-                ModalRenderer.ShowMessageModal("Success", $"Removed {removedCount} files");
+                ModalRenderer.Show("Success", $"Removed {removedCount} files");
             });
         }
 
@@ -514,7 +514,7 @@ namespace NST
                 
                 if (!isLevel)
                 {
-                    ModalRenderer.ShowMessageModal("Could not launch the level", "This archive is not a level archive.");
+                    ModalRenderer.Show("Could not launch the level", "This archive is not a level archive.");
                 }
                 else
                 {
@@ -536,7 +536,7 @@ namespace NST
             {
                 Console.WriteLine($"Error while launching the game: {e.Message}\n{e.StackTrace}");
                 ModalRenderer.CloseLoadingModal();
-                ModalRenderer.ShowMessageModal("Could not launch the level", e.Message);
+                ModalRenderer.Show("Could not launch the level", e.Message);
             }
         }
 
@@ -594,7 +594,7 @@ namespace NST
                 }
                 str += $"\n\nPlace them in \"{LocalStorage.ArchivePath}\"";
                 ModalRenderer.CloseLoadingModal();
-                ModalRenderer.ShowMessageModal("Incomplete modpack", str);
+                ModalRenderer.Show("Incomplete modpack", str);
                 return false;
             }
 
@@ -648,18 +648,21 @@ namespace NST
 
                     if (File.Exists(archivePath) && !File.Exists(archivePath + ".backup"))
                     {
-                        ModalRenderer.ShowConfirmationModal($"You're about to overwrite a game file and no backup has been found:\n\n{archivePath}", 
-                        () => {
-                            File.Copy(archivePath, archivePath + ".backup"); // Backup
-                            File.Copy(archive.Path, archivePath, true); // Overwrite
-                            ModManager.LaunchLevel(levelIdentifier);
-                        },
-                        () => {
-                            File.Copy(archive.Path, archivePath, true);
-                            ModManager.LaunchLevel(levelIdentifier);
-                        },
-                        "Backup first",
-                        "Overwrite");
+                        ModalRenderer.ShowModal3(
+                            title: "Warning", 
+                            message: $"You're about to overwrite a game file and no backup has been found:\n\n{archivePath}", 
+                            onSafeAction: () => {
+                                File.Copy(archivePath, archivePath + ".backup"); // Backup
+                                File.Copy(archive.Path, archivePath, true); // Overwrite
+                                ModManager.LaunchLevel(levelIdentifier);
+                            },
+                            onContinue: () => {
+                                File.Copy(archive.Path, archivePath, true);
+                                ModManager.LaunchLevel(levelIdentifier);
+                            },
+                            onSafeTitle: "Backup first",
+                            onContinueTitle: "Overwrite"
+                        );
                         return;
                     }
                     else

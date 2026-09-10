@@ -281,10 +281,9 @@ namespace NST
             // Drag from another archive to the root (copy file)
             if (targetNode == null)
             {
-                ModalRenderer.ShowConfirmationModal($"Automatically import all dependencies for\n{file.GetName()}?", 
+                ModalRenderer.ShowModal3("Import", $"Automatically import all dependencies for\n{file.GetName()}?", 
                     () => Renderer.AddFile(file.Clone(), true, true),
-                    () => Renderer.AddFileWithDependencies(_dragAndDropSource, file, true),
-                    "No", "Yes"
+                    () => Renderer.AddFileWithDependencies(_dragAndDropSource, file, true)
                 );
             }
             // Drag from another archive to a folder (copy file)

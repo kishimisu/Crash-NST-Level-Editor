@@ -172,7 +172,7 @@ namespace NST
                 }
                 else
                 {
-                    ModalRenderer.ShowMessageModal("An error occurred", "Could not set the game path.");
+                    ModalRenderer.Show("An error occurred", "Could not set the game path.");
                 }
             }
         }

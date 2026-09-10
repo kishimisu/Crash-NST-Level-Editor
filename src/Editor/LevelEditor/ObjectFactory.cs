@@ -637,7 +637,7 @@ namespace NST
             }
             catch (Exception e)
             {
-                ModalRenderer.ShowMessageModal("Could not create the object", "An error occured while creating the object(s):\n\n" + e.Message);
+                ModalRenderer.Show("Could not create the object", "An error occured while creating the object(s):\n\n" + e.Message);
                 Console.WriteLine($"{e.Message}\n\n{e.StackTrace}");
             }
         }

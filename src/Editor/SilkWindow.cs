@@ -273,7 +273,7 @@ namespace NST
             else
             {
                 _window.IsClosing = false;
-                ModalRenderer.ShowWarningModal("Exit confirmation", "Are you sure you want to exit?", () => _confirmClose = true);
+                ModalRenderer.ShowModal2("Exit confirmation", "Are you sure you want to exit?", ModalRenderer.Restore, () => _confirmClose = true);
             }
         }
     }
