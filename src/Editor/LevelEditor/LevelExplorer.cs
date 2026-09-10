@@ -72,6 +72,7 @@ namespace NST
             Hidden = 16,
             StaticCollision = 17,
             BorderCollision = 18,
+            HiddenTemplates = 29,
             TriggersOn = 30,
         };
 
@@ -567,18 +568,27 @@ namespace NST
                 entity.Model = models[modelName];
             }
 
-            // (Step 7a) Remove duplicate cloud meshes
+            // (Step 7a) Remove debug meshes
             foreach (NSTModel model in models.Values)
             {
-                if (model.Meshes.Count > 1 && model.Meshes.All(m => m.Material.type == typeof(CCloudParticleSortedMaterial)))
+                bool isCloud = true;
+
+                foreach (var mesh in model.Meshes.ToList())
+                {
+                    if (mesh.Material.type != typeof(CCloudParticleSortedMaterial))
+                    {
+                        isCloud = false;
+                    }
+                    if (mesh.Material.editorOnly)
+                    {
+                        model.Meshes.Remove(mesh);
+                    }
+                }
+
+                if (isCloud && model.Meshes.Count > 1)
                 {
                     model.Meshes.RemoveRange(1, model.Meshes.Count - 1);
                 }
-            }
-            // Remove ghost mesh from the checkpoint crate
-            if (models.TryGetValue("Crash_Crate_Checkpoint", out NSTModel? checkpointModel) && checkpointModel.Meshes.Count > 10)
-            {
-                checkpointModel.Meshes.RemoveAt(0);
             }
 
             // (Step 7b) Fix missing crate colors
@@ -712,6 +722,11 @@ namespace NST
             {
                 spawnPoint = GetIntersectionPoint();
 
+                if (SelectionManager.Selection.FirstOrDefault()?.GetObject().ObjectName?.StartsWith("Collectible_") == true)
+                {
+                    spawnPoint.Z += 44.0f;
+                }
+
                 if (moveSelection)
                 {
                     SelectionManager.SelectionContainer.Position.Copy(spawnPoint);
@@ -723,7 +738,7 @@ namespace NST
             // Paste selection
             SelectionManager.Paste(spawnPoint, (NSTObject? newObject) =>
             {
-                _treeView.RebuildTree(InstanceManager.AllObjects);
+                _treeView.RebuildTree();
 
                 if (newObject != null)
                 {
@@ -878,8 +893,10 @@ namespace NST
 
             if (rebuildTree)
             {
-                _treeView.RebuildTree(InstanceManager.AllObjects);
+                _treeView.RebuildTree();
             }
+
+            UndoManager.AddAction(UndoManager.UndoActionType.Delete);
 
             RenderNextFrame = true;
         }
@@ -1838,7 +1855,7 @@ namespace NST
                 return GetOrCreateIgzFile("Camera", out file, out igz);
             }
             
-            IgArchiveFile? existing = Archive.FindFile(path, FileSearchType.Path);
+            IgArchiveFile? existing = Archive.FindFile(NamespaceUtils.GetFileName(path));
 
             if (existing == null)
             {
@@ -1953,7 +1970,7 @@ namespace NST
 
             if (addToSelection == null) return allObjects;
 
-            _treeView.RebuildTree(InstanceManager.AllObjects);
+            _treeView.RebuildTree();
 
             NSTObject? selected = allObjects[0];
             
@@ -1980,7 +1997,7 @@ namespace NST
             SelectionManager.SelectionContainer.Position = GetIntersectionPoint(camDistance * 2);
             SelectionManager.ApplyChanges();
             
-            _treeView.RebuildTree(InstanceManager.AllObjects);
+            _treeView.RebuildTree();
         }
         
         private THREE.Vector3 GetIntersectionPoint(float maxDistance = 5000.0f)

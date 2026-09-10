@@ -193,7 +193,14 @@ namespace NST
 
             if (!selected && IsTemplate)
             {
-                layer = LevelExplorer.CameraLayer.Templates;
+                if (Object._parentSpacePosition._x != 0 || Object._parentSpacePosition._y != 0 || Object._parentSpacePosition._z != 0)
+                {
+                    layer = LevelExplorer.CameraLayer.Templates;
+                }
+                else
+                {
+                    layer = LevelExplorer.CameraLayer.HiddenTemplates;
+                }
             }
             else if (!selected && IsHidden)
             {
@@ -542,6 +549,15 @@ namespace NST
             })
             .Where(e => e.Value.Count > 0)
             .ToDictionary();
+        }
+
+        public Havok.hknpShapeInstance? GetExternalHavokShape(LevelExplorer explorer)
+        {
+            if (explorer.FileManager.GetInfos(ArchiveFile)!.updatedCollisions.TryGetValue(this, out CollisionUpdateInfos? infos))
+            {
+                return infos.shapeInstance;
+            }
+            return null;
         }
 
         public THREE.Matrix4 ObjectToWorld(bool useOverrideScale = false)
@@ -914,9 +930,34 @@ namespace NST
                 renderEntityDataSeparator();
                 ComponentRenderer.RenderObjectReference("Camera:", playerStart._camera?.Reference, typeof(CCamera), explorer, (value) =>
                 {
+                    // Remove previous camera
+                    if (playerStart._camera?.Reference != null)
+                    {
+                        var prevCamera = Children.FirstOrDefault(c => NamedReference.Compare(c.ToReference(), playerStart._camera.Reference));
+                        if (prevCamera != null)
+                        {
+                            prevCamera.Parents.Remove(this);
+                            Children.Remove(prevCamera);
+                        }
+                    }
+
+                    // Update camera
                     playerStart._camera ??= new CCamera();
                     playerStart._camera.Reference = value;
                     explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, playerStart, true);
+                    
+                    // Add new camera
+                    if (value != null)
+                    {
+                        var newCamera = explorer.InstanceManager.AllObjects.Find(o => NamedReference.Compare(o.ToReference(), value));
+                        if (newCamera != null)
+                        {
+                            newCamera.Parents.Add(this);
+                            Children.Add(newCamera);
+                        }
+                    }
+
+                    explorer.TreeView.RebuildTree();
                 });
             }
             else if (Object._entityData is CWorldEntityData worldEntityData)

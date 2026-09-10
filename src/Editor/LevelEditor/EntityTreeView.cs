@@ -88,7 +88,12 @@ namespace NST
             }
         }
 
-        public void RebuildTree(List<NSTObject> objects)
+        public override void RebuildTree()
+        {
+            RebuildTree(Explorer.InstanceManager.AllObjects);
+        }
+
+        private void RebuildTree(List<NSTObject> objects)
         {
             Dictionary<string, List<NSTObject>> types = [];
             Dictionary<string, uint> colors = [];

@@ -530,6 +530,11 @@ namespace NST
 
             if (entity.CollisionShapeIndex == -1 && shapeInstance == null) return;
 
+            if (shapeInstance != null)
+            {
+                entity.CollisionShapeIndex = int.MaxValue;
+            }
+
             if (infos.updatedCollisions.TryGetValue(entity, out CollisionUpdateInfos? collisionInfos))
             {
                 collisionInfos.removed |= removed;

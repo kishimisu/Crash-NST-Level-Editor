@@ -49,6 +49,7 @@ namespace NST
             public HashSet<string> favorites = [];
             public int previewSize = 40;
             public string sortBy = "Archive";
+            public bool showArchiveName = true;
             public bool showFileName = true;
             public bool showObjectType = true;
             public bool filterC1 = true;
@@ -116,135 +117,142 @@ namespace NST
 
             foreach ((string archiveName, string archivePath) in archives)
             {
-                var archive = IgArchive.Open(archivePath);
-                var mapFiles = archive.GetFiles(FileSearchParams.MapIgz);
-                var collisions = archive.FindCollisionFile(".igz")?.ToIgzFile().FindObject<CStaticCollisionHashInstanceIdHashTable>()?.Dict;
-                var compoundShape = archive.FindCollisionFile(".hkx")?.ToHavokFile().GetAllObjects().Find(e => e is Havok.hknpStaticCompoundShape) as Havok.hknpStaticCompoundShape;
-                
-                archiveIndex++;
-
-                foreach (IgArchiveFile file in mapFiles)
+                try 
                 {
-                    try 
+                    var archive = IgArchive.Open(archivePath);
+                    var mapFiles = archive.GetFiles(FileSearchParams.MapIgz);
+                    var collisions = archive.FindCollisionFile(".igz")?.ToIgzFile().FindObject<CStaticCollisionHashInstanceIdHashTable>()?.Dict;
+                    var compoundShape = archive.FindCollisionFile(".hkx")?.ToHavokFile().GetAllObjects().Find(e => e is Havok.hknpStaticCompoundShape) as Havok.hknpStaticCompoundShape;
+                    
+                    archiveIndex++;
+
+                    foreach (IgArchiveFile file in mapFiles)
                     {
-                        IgzFile igz = file.ToIgzFile();
-                        string fileName = igz.GetName(false);
-
-                        foreach (igEntity entity in igz.FindObjects<igEntity>())
+                        try 
                         {
-                            bool staticObject = entity.GetType() == typeof(igEntity);
-                            if (!entity._bitfield._canSpawn || entity._bitfield._isArchetype && !staticObject) continue;
-                            if (entity.ObjectName!.StartsWith("Crate_") || entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
+                            IgzFile igz = file.ToIgzFile();
+                            string fileName = igz.GetName(false);
 
-                            string key = "";
-                            string type = "Scenery";
-                            string objectType = entity.GetType().Name;
-                            string displayName = entity.ObjectName;
-                            string modelName;
-
-                            bool isPrefab = entity.TryGetComponent(out igPrefabComponentData? prefabComponent);
-                            bool hasCollisions = false;
-
-                            if (isPrefab)
+                            foreach (igEntity entity in igz.FindObjects<igEntity>())
                             {
-                                var prefabChildren = prefabComponent!._prefabEntities?._data;
-                                if (prefabChildren == null) continue;
+                                bool staticObject = entity.GetType() == typeof(igEntity);
+                                if (!entity._bitfield._canSpawn || entity._bitfield._isArchetype && !staticObject) continue;
+                                if (entity.ObjectName!.StartsWith("Crate_") || entity.TryGetComponent(out common_Crate_StackCheckerData? _)) continue;
 
-                                Dictionary<THREE.Matrix4, string> prefabModels = [];
+                                string key = "";
+                                string type = "Scenery";
+                                string objectType = entity.GetType().Name;
+                                string displayName = entity.ObjectName;
+                                string modelName;
 
-                                foreach (var child in prefabChildren)
+                                bool isPrefab = entity.TryGetComponent(out igPrefabComponentData? prefabComponent);
+                                bool hasCollisions = false;
+
+                                if (isPrefab)
                                 {
-                                    if (!child._bitfield._canSpawn) continue;
+                                    var prefabChildren = prefabComponent!._prefabEntities?._data;
+                                    if (prefabChildren == null) continue;
+
+                                    Dictionary<THREE.Matrix4, string> prefabModels = [];
+
+                                    foreach (var child in prefabChildren)
+                                    {
+                                        if (!child._bitfield._canSpawn) continue;
+                                        
+                                        string? childModelPath = child.GetModelName(igz, archive: archive);
+                                        if (childModelPath == null) continue;
+
+                                        string childModelName = NamespaceUtils.GetFileName(childModelPath, false);
+                                        var childTransform = child.GetTransformMatrix();
+                                        
+                                        key += childModelName;
+
+                                        prefabModels.Add(childTransform, childModelName);
+
+                                        if (compoundShape == null || hasCollisions) continue;
+
+                                        hasCollisions = StaticCollisionsUtils.FindPrefabCollision(entity, child, compoundShape) != null;
+                                    }
+
+                                    if (prefabModels.Count == 0) continue;
+                                    if (entities.ContainsKey(key)) continue;
+
+                                    modelName = $"Prefab_{fileName}_{displayName}";
+
+                                    if (prefabChildren.Any(e => e.GetType() != typeof(igEntity)))
+                                    {
+                                        type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? "Other";
+                                    }
+
+                                    if (models.Add(modelName))
+                                    {
+                                        _createPreviewsTotalCount++;
+                                        _createPreviewsMainThread.Enqueue((archive, modelName, prefabModels));
+                                    }
+                                }
+                                else
+                                {
+                                    string? modelPath = entity.GetModelName(igz, archive: archive);
+                                    if (modelPath == null) continue;
+
+                                    displayName = GetDisplayName(igz, entity);
+                                    modelName = NamespaceUtils.GetFileName(modelPath, false);
+
+                                    if (staticObject)
+                                    {
+                                        displayName = modelName;
+                                    }
+
+                                    key = $"{modelName}_{displayName}_{objectType}".ToLowerInvariant();
                                     
-                                    string? childModelPath = child.GetModelName(igz, archive: archive);
-                                    if (childModelPath == null) continue;
-
-                                    string childModelName = NamespaceUtils.GetFileName(childModelPath, false);
-                                    var childTransform = child.GetTransformMatrix();
+                                    if (key == "turtle_01_jungle_enemy_tracking_turtle_centity") continue;
+                                    if (key == "flytrap_01_jr_enemy_flytrapinstance_centity") continue;
+                                    if (key == "flytrap_01_jungle_enemy_basic_flytrap_cphysicalentity") continue;
+                                    if (entities.ContainsKey(key)) continue;
                                     
-                                    key += childModelName;
+                                    if (!staticObject)
+                                    {
+                                        type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? GetType(modelPath) ?? "Other";
+                                    }
 
-                                    prefabModels.Add(childTransform, childModelName);
+                                    HashedReference reference = entity.ToNamedReference(fileName).ToEXID();
+                                    u64 collisionKey = ((u64)reference.fileHash << 32) | reference.objectHash;
+                                    hasCollisions = collisions?.ContainsKey(collisionKey) == true;
 
-                                    if (compoundShape == null || hasCollisions) continue;
-
-                                    hasCollisions = StaticCollisionsUtils.FindPrefabCollision(entity, child, compoundShape) != null;
+                                    if (models.Add(modelName))
+                                    {
+                                        _createPreviewsTotalCount++;
+                                        _createPreviewsMainThread.Enqueue((archive, modelName, null));
+                                    }
                                 }
 
-                                if (prefabModels.Count == 0) continue;
-                                if (entities.ContainsKey(key)) continue;
+                                CollectionEntry entry = new(key, archiveName, fileName, entity.ObjectName, objectType, displayName, modelName, type, isPrefab, hasCollisions);
 
-                                modelName = $"Prefab_{fileName}_{displayName}";
-
-                                if (prefabChildren.Any(e => e.GetType() != typeof(igEntity)))
+                                if (customFolder)
                                 {
-                                    type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? "Other";
+                                    entry.ArchivePath = archivePath;
                                 }
 
-                                if (models.Add(modelName))
+                                entities.Add(key, entry);
+
+                                entityIndex++;
+
+                                if (entityIndex == 1 || entityIndex % 50 == 0)
                                 {
-                                    _createPreviewsTotalCount++;
-                                    _createPreviewsMainThread.Enqueue((archive, modelName, prefabModels));
+                                    float progress = (float)archiveIndex / (archives.Count() - 1);
+                                    ModalRenderer.ShowLoadingModal($"{archiveName}.pak | {entityIndex} objects found ({archiveIndex}/{archives.Count()})", progress);
                                 }
-                            }
-                            else
-                            {
-                                string? modelPath = entity.GetModelName(igz, archive: archive);
-                                if (modelPath == null) continue;
-
-                                displayName = GetDisplayName(igz, entity);
-                                modelName = NamespaceUtils.GetFileName(modelPath, false);
-
-                                if (staticObject)
-                                {
-                                    displayName = modelName;
-                                }
-
-                                key = $"{modelName}_{displayName}_{objectType}".ToLowerInvariant();
-                                
-                                if (key == "turtle_01_jungle_enemy_tracking_turtle_centity") continue;
-                                if (key == "flytrap_01_jr_enemy_flytrapinstance_centity") continue;
-                                if (key == "flytrap_01_jungle_enemy_basic_flytrap_cphysicalentity") continue;
-                                if (entities.ContainsKey(key)) continue;
-                                
-                                if (!staticObject)
-                                {
-                                    type = GetType(displayName) ?? GetType(entity.ObjectName) ?? GetType(fileName) ?? GetType(modelPath) ?? "Other";
-                                }
-
-                                HashedReference reference = entity.ToNamedReference(fileName).ToEXID();
-                                u64 collisionKey = ((u64)reference.fileHash << 32) | reference.objectHash;
-                                hasCollisions = collisions?.ContainsKey(collisionKey) == true;
-
-                                if (models.Add(modelName))
-                                {
-                                    _createPreviewsTotalCount++;
-                                    _createPreviewsMainThread.Enqueue((archive, modelName, null));
-                                }
-                            }
-
-                            CollectionEntry entry = new(key, archiveName, fileName, entity.ObjectName, objectType, displayName, modelName, type, isPrefab, hasCollisions);
-
-                            if (customFolder)
-                            {
-                                entry.ArchivePath = archivePath;
-                            }
-
-                            entities.Add(key, entry);
-
-                            entityIndex++;
-
-                            if (entityIndex == 1 || entityIndex % 50 == 0)
-                            {
-                                float progress = (float)archiveIndex / (archives.Count() - 1);
-                                ModalRenderer.ShowLoadingModal($"{archiveName}.pak | {entityIndex} objects found ({archiveIndex}/{archives.Count()})", progress);
                             }
                         }
+                        catch (Exception e)
+                        {
+                            Console.WriteLine(e.Message);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        Console.WriteLine(e.Message);
-                    }
+                }
+                catch (Exception e)
+                {
+                    throw new Exception($"Failed to open {archiveName}.pak: {e.Message}\n\n{e.StackTrace}");
                 }
             }
 
@@ -534,10 +542,18 @@ namespace NST
                     if (ImGui.Selectable("Model")) UpdateSort("Model");
                     ImGui.EndCombo();
                 }
-                ImGuiUtils.Prefix("Show file name:");
-                if (ImGui.Checkbox("##show_file_name", ref _settings.showFileName)) SaveSettings();
+
                 ImGuiUtils.Prefix("Show object type:");
                 if (ImGui.Checkbox("##show_object_type", ref _settings.showObjectType)) SaveSettings();
+
+                ImGuiUtils.Prefix("Show archive name:");
+                if (ImGui.Checkbox("##show_archive_name", ref _settings.showArchiveName)) SaveSettings();
+
+                if (!_settings.showArchiveName) ImGui.BeginDisabled();
+                ImGuiUtils.Prefix("Show file name:");
+                if (ImGui.Checkbox("##show_file_name", ref _settings.showFileName)) SaveSettings();
+                if (!_settings.showArchiveName) ImGui.EndDisabled();
+
                 ImGuiUtils.Prefix("Preview size:");
                 if (ImGui.SliderInt("##preview_size", ref _settings.previewSize, 0, 128)) SaveSettings();
 
@@ -632,6 +648,9 @@ namespace NST
 
         private unsafe static void RenderItemList(LevelExplorer explorer)
         {
+            float scaledRenderSize = RENDER_SIZE * SilkWindow.instance.scale;
+            float scaledPreviewSize = _settings.previewSize * SilkWindow.instance.scale;
+
             if (_tabChanged)
             {
                 ImGui.SetScrollY(0);
@@ -648,9 +667,16 @@ namespace NST
                 {
                     CollectionEntry e = _searchResults[i];
 
+                    int textRows = 1;
+                    if (_settings.showArchiveName) textRows++;
+                    if (_currentTab == "All" || _currentTab == "Favorites") textRows++;
+
+                    float textHeight = textRows * ImGui.GetTextLineHeight() + (textRows - 1) * ImGui.GetStyle().ItemSpacing.Y;
+                    var rowSize = new Vector2(0, Math.Max(textHeight, scaledPreviewSize));
+
                     ImGui.Separator();
 
-                    if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, new Vector2(0, _settings.previewSize * SilkWindow.instance.scale)))
+                    if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, rowSize))
                     {
                         Task.Run(() =>
                         {
@@ -726,21 +752,21 @@ namespace NST
                             _previews.Add(e.ModelName, textureId);
                         }
 
-                        if (textureId != -1)
+                        if (textureId == -1)
                         {
-                            ImGui.Image(textureId, new Vector2(_settings.previewSize, _settings.previewSize) * SilkWindow.instance.scale, Vector2.Zero, Vector2.One, Vector4.One);
+                            ImGui.Dummy(new Vector2(scaledPreviewSize, scaledPreviewSize));
+                        }
+                        else
+                        {
+                            ImGui.Image(textureId, new Vector2(scaledPreviewSize, scaledPreviewSize), Vector2.Zero, Vector2.One, Vector4.One);
 
                             if (ImGui.IsItemHovered())
                             {
                                 ImGui.BeginTooltip();
                                 RenderName(e, false);
-                                ImGui.Image(textureId, new Vector2(RENDER_SIZE, RENDER_SIZE) * SilkWindow.instance.scale, Vector2.Zero, Vector2.One, Vector4.One);
+                                ImGui.Image(textureId, new Vector2(scaledRenderSize, scaledRenderSize), Vector2.Zero, Vector2.One, Vector4.One);
                                 ImGui.EndTooltip();
                             }
-                        }
-                        else
-                        {
-                            ImGui.Dummy(new Vector2(_settings.previewSize, _settings.previewSize) * SilkWindow.instance.scale);
                         }
 
                         ImGui.SameLine();
@@ -757,7 +783,10 @@ namespace NST
 
                     RenderName(e);
 
-                    if (_settings.showFileName) ImGui.TextDisabled(e.FileName);
+                    if (_settings.showArchiveName)
+                    {
+                        ImGui.TextDisabled(_settings.showFileName ? e.FileName : e.ArchiveName);
+                    }
 
                     if (_currentTab == "All" || _currentTab == "Favorites")
                     {

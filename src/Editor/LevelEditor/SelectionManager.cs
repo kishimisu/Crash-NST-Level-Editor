@@ -605,8 +605,11 @@ namespace NST
             }
 
             // Refresh active collision previews
-            var collisionGizmos = _selection.OfType<NSTEntity>().Where(e => e.CollisionObject != null).ToList();
-            _explorer.InstanceManager.RefreshCollisionShapes(collisionGizmos);
+            if (_explorer.IsLayerActive("Static Collisions"))
+            {
+                var collisionGizmos = _selection.OfType<NSTEntity>().Where(e => e.CollisionObject != null).ToList();
+                _explorer.InstanceManager.RefreshCollisionShapes(collisionGizmos);
+            }
         }
 
         public bool Copy(LevelExplorer explorer)
@@ -1164,9 +1167,9 @@ namespace NST
                         if (copyToSameFile)
                         {
                             // If an updated collision shape is found for the original object, it means the collision index comes from another archive. Reuse this collision shape
-                            if (_explorer.FileManager.GetInfos(original.ArchiveFile)?.updatedCollisions.TryGetValue(original, out var infos) == true)
+                            if (original.GetExternalHavokShape(_explorer) is var shape)
                             {
-                                _explorer.ArchiveRenderer.SetEntityUpdated(newPrefabChild, infos.shapeInstance);
+                                _explorer.ArchiveRenderer.SetEntityUpdated(newPrefabChild, shape);
                             }
                             // No update collision shape found, the collision index points to a valid collision in this archive
                             else
@@ -1183,10 +1186,10 @@ namespace NST
                     }
                     else if (copyToSameFile)
                     {
-                        if (_explorer.FileManager.GetInfos(original.ArchiveFile)!.updatedCollisions.TryGetValue(original, out CollisionUpdateInfos? infos) && infos.shapeInstance != null)
+                        if (original.GetExternalHavokShape(_explorer) is var shape)
                         {
                             // Console.WriteLine("Paste external collision shape to same file: " + clone.Object.ObjectName);
-                            _explorer.ArchiveRenderer.SetEntityUpdated(clone, infos.shapeInstance);
+                            _explorer.ArchiveRenderer.SetEntityUpdated(clone, shape);
                         }
                         else
                         {
@@ -1216,6 +1219,13 @@ namespace NST
                 }
 
                 ApplyChanges();
+
+                // Add new collision previews
+                if (_explorer.IsLayerActive("Static Collisions"))
+                {
+                    var collisionGizmos = _selection.OfType<NSTEntity>().Where(e => e.CollisionObject == null).ToList();
+                    _explorer.InstanceManager.RefreshCollisionShapes(collisionGizmos);
+                }
                 
                 if (!copyToSameFile)
                 {

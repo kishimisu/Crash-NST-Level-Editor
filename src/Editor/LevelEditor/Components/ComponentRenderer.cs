@@ -656,6 +656,12 @@ namespace NST
 
             RenderNullableCEntityHandleList("Spawned entities", component._Spawn_Entity_List, component, manager);
 
+            if (!component._SpawnMultipleWaves)
+            {
+                ImGui.Spacing();
+                RenderNullableCEntityHandleList("Final entities", component._Entity_List, component, manager);
+            }
+
             manager.RenderAdvancedProperties(component, component.GetFields(manager.GameVersion));
         }
 

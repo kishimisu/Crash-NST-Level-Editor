@@ -132,7 +132,7 @@ namespace NST
         private static readonly Dictionary<string, (string fileName, string objectName, string suffix)> _splineCameraPaths = new ()
         {
             { "forward",    ("L210_TheEelDeal_Cameras",  "MainPath_SplineCam06", "") },
-            { "backward",   ("L104_Boulders_Camera",     "CSplineCamera012", "Chase") },
+            { "backward",   ("L304_BoneYard_Camera",     "Chase01_Cam01", "Chase") },
             { "sidescroll", ("L103_TheGreatGate_Camera", "Camera01_H", "Side") },
             { "vertical",   ("L103_TheGreatGate_Camera", "Camera01_V", "Vertical") },
         };
@@ -161,7 +161,7 @@ namespace NST
         private static bool _bonusCrate = false;
         private static string _deathTriggerType = "Fall_Fast";
         private static string _deathTriggerVFX = "None";
-        private static int _splineCameraSegments = 1;
+        private static int _splineCameraSegments = 5;
         private static int _splineCameraSegmentLength = 500;
         
         private static float _scaleDownCTR = 0.65f;
@@ -223,8 +223,6 @@ namespace NST
             {
                 if (ImGui.BeginMenu("New crate..."))
                 {
-                    ImGui.SeparatorText("Crate settings");
-
                     ImGui.Checkbox("Bonus crate", ref _bonusCrate);
                     ImGui.SameLine();
                     ImGui.Checkbox("Outline crate", ref _outlinedCrate);
@@ -304,7 +302,7 @@ namespace NST
                             ImGui.EndCombo();
                         }
                         ImGui.Separator();
-                        if (ImGui.MenuItem("Floating Gem Platform")) TryAddObject(() => AddGenericTemplate("Gem_Platform_" + _gemColor, "Platforms", explorer));
+                        if (ImGui.MenuItem("Static Gem Platform")) TryAddObject(() => AddGenericTemplate("Gem_Platform_" + _gemColor, "Platforms", explorer));
                         if (ImGui.MenuItem("Moving Gem Platform"))
                         {
                             string platformName = (_gemColor == "Orange" ? "C2_" : "") + "Gem_Path_Platform_Start_";
@@ -374,7 +372,7 @@ namespace NST
 
                 if (ImGui.BeginMenu("New bonus round..."))
                 {
-                    if (ImGui.BeginMenu("C1"))
+                    if (ImGui.BeginMenu("Crash 1"))
                     {
                         if (ImGui.MenuItem("Bonus Teleporter")) TryAddObject(() => AddBonusRoundTeleporter(explorer));
                         ImGui.Separator();
@@ -384,7 +382,7 @@ namespace NST
                         if (ImGui.MenuItem("Cortex"))      AddBonusRound("Cortex", explorer);
                         ImGui.EndMenu();
                     }
-                    if (ImGui.BeginMenu("C2"))
+                    if (ImGui.BeginMenu("Crash 2"))
                     {
                         // L202, L206, L218, L221, L225: Trigger Zone Drop (snow, machinery)
 
@@ -415,7 +413,7 @@ namespace NST
 
                         ImGui.EndMenu();
                     }
-                    if (ImGui.BeginMenu("C3"))
+                    if (ImGui.BeginMenu("Crash 3"))
                     {
                         ImGui.SeparatorText("Medieval");
                         if (ImGui.MenuItem("L301_ToadVillage"))     AddC2BonusRound("L301_ToadVillage", explorer);
@@ -870,12 +868,13 @@ namespace NST
 
             var points = splineComponent._spline?._data?._data;
             var keyframes = splineComponent._spline?._rotationTracks?.Values[0]._data?._data;
-            
-            points?.Clear();
-            keyframes?.Set(keyframes.Take(2).ToList());
-            
+
+            splineCamera._rotation = new igVec3fMetaField(0, 0, 0);
+
             if (points != null)
             {
+                points.Clear();
+
                 for (int i = 0; i < _splineCameraSegments + 1; i++)
                 {
                     var pos = new igVec3fMetaField(0, 0, -100);
@@ -901,7 +900,18 @@ namespace NST
                         _tangentIn = new igVec3fMetaField(100, 0, 0),
                         _tangentOut = new igVec3fMetaField(100, 0, 0),
                     });
-                }   
+                }
+            }
+
+            if (keyframes != null)
+            {
+                float yRot = type == "forward" ? 0 : 10;
+
+                var kf = keyframes[0];
+                kf._distance = 0;
+                kf._value = new igVec3fMetaField(0, yRot, 0);
+                keyframes.Clear();
+                keyframes.Add(kf);
             }
 
             splineCamera._position = new igVec3fMetaField(0, 0, 200);
@@ -1274,6 +1284,7 @@ namespace NST
 
             var collisionsDict = StaticCollisionsUtils.GetCollisionData(sourceArchive);
             var newEntities = newObjects.OfType<NSTEntity>().ToDictionary(e => e.Object, e => e);
+            string fileNamespace = sourceFile.GetName(false);
 
             obj.ObjectName = originalName;
 
@@ -1298,7 +1309,6 @@ namespace NST
 
                         // Console.WriteLine($"Add collision for {src} => {dst.ObjectName} / {srcChild} => {dstChild} [prefab]");
 
-                        nstEntity.CollisionShapeIndex = int.MaxValue;
                         explorer.ArchiveRenderer.SetEntityUpdated(nstEntity, shape);
 
                         explorer.InstanceManager.FakePrefabChilds.Add(nstEntity);
@@ -1307,7 +1317,7 @@ namespace NST
                 // Regular collisions
                 else
                 {
-                    var reference = src.ToNamedReference(sourceFile.GetName(false)).ToEXID();
+                    var reference = src.ToNamedReference(fileNamespace).ToEXID();
 
                     if (!collisionsDict.TryGetValue(reference, out int collisionId)) continue;
                     if (!newEntities.TryGetValue(dstEntity, out NSTEntity? nstEntity)) continue;
@@ -1316,10 +1326,12 @@ namespace NST
 
                     var shape = compoundShape._elements.GetElements()[collisionId];
 
-                    nstEntity.CollisionShapeIndex = int.MaxValue;
                     explorer.ArchiveRenderer.SetEntityUpdated(nstEntity, shape);
                 }
             }
+
+            if (explorer.IsLayerActive("Static Collisions"))
+                explorer.InstanceManager.RefreshCollisionShapes(newEntities.Values.ToList());
         }
 
         private static void AddGenericTemplate(string name, string identifier, LevelExplorer explorer)

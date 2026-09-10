@@ -25,7 +25,7 @@ namespace NST
 {
     public class UndoManager
     {
-        public enum UndoActionType { Select, Transform }
+        public enum UndoActionType { Select, Transform, Delete }
 
         public class UndoAction
         {
@@ -141,7 +141,16 @@ namespace NST
                 if (!valid) return;
             }
 
-            _history = _history.Slice(0, _index);
+            if (type == UndoActionType.Delete)
+            {
+                _history.Clear();
+                _index = 0;
+            }
+            else
+            {
+                _history = _history.Slice(0, _index);
+            }
+
             _history.Add(action);
 
             if (_history.Count <= MAX_HISTORY)
@@ -161,6 +170,12 @@ namespace NST
 
         public void Undo()
         {
+            if (_index == 1 && _history.Count > 0 && _history[0].Type == UndoActionType.Delete)
+            {
+                _explorer.Notify("Cannot undo deleting objects");
+                return;
+            }
+
             _index--;
 
             if (_index <= 0 || _index-1 >= _history.Count)

@@ -85,7 +85,7 @@ namespace NST
 
                     explorer.Clone([introCutscene], srcArchive, srcIgz, worldEntity.ArchiveFile, dstIgz, addToSelection: null, initializeObjects: true, clones: clones);
 
-                    explorer.TreeView.RebuildTree(explorer.InstanceManager.AllObjects);
+                    explorer.TreeView.RebuildTree();
                 }
                 else
                 {
@@ -157,7 +157,7 @@ namespace NST
                 worldEntity.Components?.Refresh();
                 playerStartEntity.Components?.Refresh();
 
-                explorer.TreeView.RebuildTree(explorer.InstanceManager.AllObjects);
+                explorer.TreeView.RebuildTree();
 
                 ChangeZoneInfoCharacter(explorer, "Crash");
             });
@@ -196,7 +196,7 @@ namespace NST
 
                 explorer.Clone([transitionEntity], srcArchive, srcIgz, worldEntity.ArchiveFile, dstIgz, addToSelection: null, initializeObjects: true);
 
-                explorer.TreeView.RebuildTree(explorer.InstanceManager.AllObjects);
+                explorer.TreeView.RebuildTree();
 
                 ChangeZoneInfoCharacter(explorer, "Coco");
             });
@@ -235,7 +235,7 @@ namespace NST
 
                 explorer.Clone([transitionEntity], srcArchive, srcIgz, worldEntity.ArchiveFile, dstIgz, addToSelection: null, initializeObjects: true);
 
-                explorer.TreeView.RebuildTree(explorer.InstanceManager.AllObjects);
+                explorer.TreeView.RebuildTree();
             });
         }
 
@@ -364,7 +364,7 @@ namespace NST
 
             explorer.Clone([newCutscene], srcArchive, srcIgz, worldEntity.ArchiveFile, dstIgz, addToSelection: null, initializeObjects: true);
 
-            explorer.TreeView.RebuildTree(explorer.InstanceManager.AllObjects);
+            explorer.TreeView.RebuildTree();
         }
 
         private static void ChangeZoneInfoGameMode(LevelExplorer explorer, string? mode)

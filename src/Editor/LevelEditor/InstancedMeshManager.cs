@@ -320,13 +320,11 @@ namespace NST
             {
                 AllEntities.Remove(entity);
                 entity.InstanceManager?.Remove(entity);
+                entity.CollisionObject?.Parent.Remove(entity.CollisionObject);
             }
 
-            if (obj.Object3D != null)
-            {
-                obj.Object3D.Parent.Remove(obj.Object3D);
-                obj.Object3D = null;
-            }
+            obj.Object3D?.Parent.Remove(obj.Object3D);
+            obj.Object3D = null;
         }
 
         public List<NSTObject> SelectFromRaycast(THREE.Intersection hit)
@@ -780,6 +778,10 @@ namespace NST
                     if (compoundShape != null && entity.CollisionShapeIndex < compoundShape._elements.Count)
                     {
                         CreateCollisionShape(entity, compoundShape._elements[entity.CollisionShapeIndex]._shape);
+                    }
+                    else if (entity.GetExternalHavokShape(_explorer) is hknpShapeInstance instance)
+                    {
+                        CreateCollisionShape(entity, instance._shape);
                     }
                 }
                 else if (entity.Object.TryGetComponent(out CLevelBorderComponentData? border))

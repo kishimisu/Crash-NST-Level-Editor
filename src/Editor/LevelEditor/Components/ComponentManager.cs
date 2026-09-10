@@ -35,7 +35,9 @@ namespace NST
             typeof(common_BonusRoundTeleporterData),
             typeof(Egypt_Hazard_FloodWater_BehaviorData),
             typeof(common_C2_WarpRoom_LevelPortal),
-            typeof(common_LevelEndTeleporterData)
+            typeof(common_LevelEndTeleporterData),
+            typeof(Spawner_Trigger_LogicData),
+            typeof(Jungle_Enemy_Basic_PitMole_BounceMushroomData)
         ];
 
         public bool IsSetup => _components != null;
