@@ -146,6 +146,7 @@ namespace NST
             base.Dispose();
             _renderTarget?.Dispose();
             _outlinePass.Dispose();
+            SilkWindow.instance.controls.Remove(this);
         }
 
         public static void DisposeRenderer()

@@ -41,7 +41,7 @@ namespace NST
 
             for (int i = 0; i < Meshes.Count; i++)
             {
-                group.Add(Meshes[i].Mesh);
+                group.Add(Meshes[i].CreateMesh());
             }
 
             return group;

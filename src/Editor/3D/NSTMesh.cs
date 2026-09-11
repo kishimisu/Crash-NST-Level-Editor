@@ -1,5 +1,3 @@
-using Alchemy;
-
 namespace NST
 {
     /// <summary>
@@ -9,17 +7,6 @@ namespace NST
     {
         // Material properties
         public NSTMaterial Material { get; set; } = new NSTMaterial(); 
-
-        // 3D mesh
-        private THREE.Mesh? _mesh;
-        public THREE.Mesh Mesh 
-        {
-            get
-            {
-                // if (_mesh != null) return new THREE.Mesh(_mesh);
-                return CreateMesh();
-            }
-        }
 
         public NSTMesh(DrawCallData data)
         {
@@ -35,14 +22,12 @@ namespace NST
         /// <summary>
         /// Create a new THREE.Mesh instance using the draw call geometry and material
         /// </summary>
-        private THREE.Mesh CreateMesh()
+        public THREE.Mesh CreateMesh()
         {
             var geo = CreateBufferGeometry();
             var mat = Material.CreateThreeMaterial(index);
 
-            _mesh = new THREE.Mesh(geo, mat) { RenderOrder = index };
-
-            return _mesh;
+            return new THREE.Mesh(geo, mat) { RenderOrder = index };
         }
 
         /// <summary>

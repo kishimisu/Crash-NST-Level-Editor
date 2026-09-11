@@ -297,7 +297,7 @@ namespace NST
 
             if (texture != null)
             {
-                material.Map = texture; // (THREE.Texture)texture.Clone();
+                material.Map = (THREE.Texture)texture.Clone();
                 material.Map.WrapS = _TEXTURE_WRAP_MAP[wrapS];
                 material.Map.WrapT = _TEXTURE_WRAP_MAP[wrapT];
                 material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];

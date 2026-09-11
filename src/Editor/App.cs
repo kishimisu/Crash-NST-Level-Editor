@@ -257,7 +257,6 @@ namespace NST
 
         public static void CloseExplorer(LevelExplorer explorer)
         {
-            SilkWindow.instance.controls.Remove(explorer);
             _editors.Remove(explorer);
             explorer.Dispose();
 
