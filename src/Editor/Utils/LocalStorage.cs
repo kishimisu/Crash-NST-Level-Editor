@@ -99,22 +99,21 @@ namespace NST
         /// </summary>
         public static bool IsFileLocked(string filePath)
         {
-            if (!File.Exists(filePath)) return false;
+            if (!File.Exists(filePath)) 
+                return false;
             
-            FileStream? stream = null;
-
             try
             {
-                stream = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.None);
+                using var stream = File.Open(filePath, FileMode.Open, FileAccess.ReadWrite, FileShare.None);
+                return false;
+            }
+            catch (UnauthorizedAccessException)
+            {
                 return false;
             }
             catch (IOException)
             {
                 return true;
-            }
-            finally
-            {
-                stream?.Close();
             }
         }
 

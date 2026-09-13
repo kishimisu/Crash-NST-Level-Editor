@@ -23,8 +23,10 @@ namespace NST
             _requestOpen = open;
         }
 
-        private static void Close(bool closeCurrentPopup = true)
+        private static void Close(ModalData? modal, bool closeCurrentPopup = true)
         {
+            if (_current != modal) return;
+
             _current = null;
             _requestOpen = false;
 
@@ -40,9 +42,10 @@ namespace NST
 
         public static void Render()
         {
-            if (_current == null) return;
+            ModalData? modal = _current;
+            if (modal == null) return;
 
-            string popupId = $"{_current.Title}###PopupModal";
+            string popupId = $"{modal.Title}###PopupModal";
 
             if (_requestOpen)
             {
@@ -54,11 +57,11 @@ namespace NST
 
             if (!ImGui.BeginPopupModal(popupId, ImGuiWindowFlags.AlwaysAutoResize | ImGuiWindowFlags.NoSavedSettings))
             {
-                Close(false);
+                Close(modal, false);
                 return;
             }
 
-            RenderContent(_current);
+            RenderContent(modal);
 
             ImGui.EndPopup();
         }
@@ -92,7 +95,7 @@ namespace NST
 
                 if (ImGui.Button(btn.Text, ComputeButtonSize(modal.Buttons.Count)))
                 {
-                    Close();
+                    Close(modal);
                     btn.Callback?.Invoke();
                     break;
                 }
@@ -189,7 +192,7 @@ namespace NST
             _isLoading = false;
 
             if (_current?.Title == loadingTitle)
-                Close();
+                Close(_current);
         }
     }
 }

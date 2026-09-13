@@ -59,13 +59,13 @@ namespace NST
         {
             _gl = _window.CreateOpenGLES();
 
+            App.Initialize();
+
             SetupInputs();
 
             SetupImGUI();
 
             OnResize(new Vector2D<int>(_window.Size.X, _window.Size.Y));
-
-            App.Initialize();
         }
 
         private void SetupInputs()
@@ -94,6 +94,7 @@ namespace NST
         private void SetupImGUI()
         {
             scale = _window.Size.Y > 2000 ? 2.0f : _window.Size.Y > 1080 ? 1.5f : 1.0f;
+            scale *= LocalStorage.Get("gui_scale", 1.0f);
 
             _imgui = new ImGuiController(_gl, _window, _input, null, () => LoadIconFont(scale));
 

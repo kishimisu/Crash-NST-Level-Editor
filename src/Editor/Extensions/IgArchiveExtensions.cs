@@ -507,7 +507,7 @@ namespace NST
 
         public static void TryRunLevel(this IgArchive archive)
         {
-            try
+            Task.Run(() => 
             {
                 IgArchiveFile? pkg = archive.FindPackageFile();
                 bool isLevel = pkg != null && pkg.GetName() != "chunkInfos_pkg.igz" && pkg.Path.Substring("packages/generated/".Length).StartsWith("maps/");
@@ -518,26 +518,26 @@ namespace NST
                 }
                 else
                 {
-                    Task.Run(() => 
+                    if (!CheckHub(archive, out List<string> subLevelPaths))
                     {
-                        if (!CheckHub(archive, out List<string> subLevelPaths))
-                        {
-                            return;
-                        }
+                        return;
+                    }
 
-                        archive.RunLevel(subLevelPaths);
-                        
-                        LocalStorage.AddRecentFile(archive.Path, true);
-                        ModalRenderer.CloseLoadingModal();
-                    });
+                    archive.RunLevel(subLevelPaths);
+                    
+                    LocalStorage.AddRecentFile(archive.Path, true);
+                    ModalRenderer.CloseLoadingModal();
                 }
             }
-            catch (Exception e)
+            ).ContinueWith(t =>
             {
-                Console.WriteLine($"Error while launching the game: {e.Message}\n{e.StackTrace}");
-                ModalRenderer.CloseLoadingModal();
-                ModalRenderer.Show("Could not launch the level", e.Message);
-            }
+                if (t.IsFaulted && t.Exception?.InnerException is Exception e)
+                {
+                    Console.WriteLine($"Error while launching the game: {e.Message}\n{e.StackTrace}");
+                    ModalRenderer.CloseLoadingModal();
+                    ModalRenderer.Show("Could not launch the level", e.Message);
+                }
+            });
         }
 
         private static bool CheckHub(IgArchive archive, out List<string> subLevelPaths)
