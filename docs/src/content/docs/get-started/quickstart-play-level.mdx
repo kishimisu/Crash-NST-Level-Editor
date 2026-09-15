@@ -1,0 +1,50 @@
+---
+title: "Quickstart: play a custom level"
+description: Create an empty level, add a few crates, move them around, then save and play the level in the game. About ten minutes.
+sidebar:
+  order: 4
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+:::note
+These steps assume that you have already downloaded one or more custom level (`.pak`). If not, you can find plenty of great custom levels on [Nexus Mods](https://www.nexusmods.com/games/crashbandicootnsanetrilogy/mods?categoryName=Levels)
+:::
+
+Playing custom levels is relatively straighforward:
+
+<Steps>
+
+1. Make sure you have the [latest version](/get-started/installation) of Crash NST Maker installed.
+
+2. In the [main menu](/get-started/first-launch/), click **Play Custom Level** and select a `.pak` file anywhere on your computer.
+
+3. The game starts and loads the level directly. On Steam, a confirmation popup appears before the game launches. To stop seeing it, enable `File → Skip Steam popup` in the main menu.
+
+</Steps>
+
+# Custom hubs and modpacks
+
+Some creators bundle several levels behind a **custom hub**, a level that works like a warp room. Hubs need their level archives to be installed in a specific folder.
+
+## Install a modpack
+
+<Steps>
+
+1. Put the **hub archive** anywhere on your PC.
+
+2. Put **all the level archives** directly in the game's `archives/` folder, inside the game installation directory. Do not create a subfolder, and keep the file names exactly as the creator provided them: the hub refers to each level by its archive name.
+
+3. In the main menu, click **Play Custom Level** and select the hub archive.
+
+</Steps>
+
+When a hub is launched, the tool checks that every level it references is available and tells you which ones are missing, if any. When you finish or exit a level, the game brings you back to the hub.
+
+## Remove a modpack
+
+Delete the level archives you added to the game's `archives/` folder, and the hub archive.
+
+## Make your own
+
+Creators can find the full procedure, including how to prepare each level archive and how to add level entrances, in [Custom hubs and modpacks](/level-editor/custom-hubs-and-modpacks/).

@@ -1,0 +1,33 @@
+---
+title: Glossary
+description: The terms used throughout Crash NST Maker and this documentation, from archives and IGZ files to spawners, templates, prefabs and hubs.
+sidebar:
+  order: 2
+---
+
+| Term | Meaning |
+| --- | --- |
+| **Alchemy** | The game engine used by the trilogy. Its data files are what the archive editor reads and writes. |
+| **Archive**, **`.pak`** | A container file holding the files of a level, a mod or a set of assets. Each level of the game is one archive in the game's `archives/` folder. Custom levels and mods are archives too. |
+| **`.igz`** | An Alchemy file inside an archive, containing objects such as entities, crates, cameras, materials or sounds. |
+| **`.hkx`**, **Havok** | Havok physics files, used for collisions and animations. |
+| **Custom level** | A level saved as its own archive, played through **Play Custom Level** without changing the game files. |
+| **Mod** | An archive applied to the game files with the **Mod Manager**. |
+| **Custom hub**, **modpack** | A hub is a level acting as a warp room with entrances to other custom levels. A modpack is a hub plus its levels. |
+| **Entity** | Any object placed in a level: `CEntity`, `CGameEntity`, `CPhysicalEntity`, `CActor` and others. |
+| **Component** | A piece of behaviour or data attached to an entity: model, collisions, animations, sounds, spline, trigger volume. |
+| **Static model** | An entity that is part of the level geometry, with optional baked-in collisions. |
+| **Spawner** and **template** | A spawner is an entity that spawns a hidden template entity at its position. The template holds the actual properties. |
+| **Prefab** | A group of child objects shared by every instance of the prefab. |
+| **Script trigger** | An invisible box (`CScriptTriggerEntity`) that spawns or activates other objects when the player enters it. |
+| **Trigger volume** | A component (`CTriggerVolumeBox`) that gives its own entity a triggering box. |
+| **Dynamic clip** | An invisible box (`CDynamicClipEntity`) that collides with the player or enemies. |
+| **Visual data box** | A box that overrides the lighting settings inside its bounds. |
+| **Camera box** | A zone that switches to another camera. |
+| **Spline** | A path of positions and rotations followed by cameras, enemies and platforms. |
+| **Death plane**, **kill plane** | The height below which the player dies, set in the `WorldInstance` object. |
+| **Camera layer** | A category of objects that can be shown or hidden in the scene view. |
+| **Object Library** | The searchable list of every object of the game, with previews. |
+| **NST** | Crash Bandicoot N. Sane Trilogy. |
+| **CTR:NF** | Crash Team Racing Nitro-Fueled, whose PS4 archives the editor can open. |
+| **C1, C2, C3** | Crash Bandicoot 1, 2 and 3, the three games of the trilogy. Level archives are named accordingly, for example `L101_NSanityBeach` for the first level of Crash 1. |

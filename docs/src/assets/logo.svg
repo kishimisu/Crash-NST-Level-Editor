@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Crash NST Maker">
+  <rect x="4" y="4" width="56" height="56" rx="9" fill="#E8862A" stroke="#7A3B0C" stroke-width="3"/>
+  <rect x="11" y="11" width="42" height="42" rx="4" fill="#C9661A"/>
+  <path d="M16 16 L48 48 M48 16 L16 48" stroke="#FFD29A" stroke-width="7" stroke-linecap="round"/>
+  <path d="M16 16 L48 48 M48 16 L16 48" stroke="#8A4511" stroke-width="2" stroke-linecap="round" opacity=".35"/>
+</svg>

@@ -1,0 +1,56 @@
+---
+title: Navigation and selection
+description: Camera controls, selection with the mouse and the object tree, box selection, and how to keep the editor responsive.
+---
+
+The scene view is where you move around the level and pick the objects to edit. The **Controls** panel in the left column always shows the complete list of controls.
+
+![The level editor: object tree on the left, 3D scene view in the centre, properties of the selected crate on the right](../../../assets/screenshots/level_editor/editor.jpg)
+
+## Camera
+
+| Action | Control |
+| --- | --- |
+| Move | <kbd>W</kbd> <kbd>A</kbd> <kbd>S</kbd> <kbd>D</kbd> |
+| Rotate | Hold the right mouse button and move the mouse |
+| Move faster | Hold <kbd>Shift</kbd> |
+| Move down / up | <kbd>Q</kbd> / <kbd>E</kbd> |
+| Zoom in / out | Mouse wheel |
+
+Camera speed, mouse sensitivity and field of view are adjustable in [Editor settings](/level-editor/editor-settings/). With **Gradual speed increase** enabled, the camera accelerates the longer you keep moving.
+
+A small dot is drawn at the centre of the view while the camera moves: it shows exactly where new objects will be created or pasted. When you reload a level (<kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd>), the camera goes back to where it was.
+
+## Select objects in the scene
+
+| Action | Control |
+| --- | --- |
+| Select an object | Left click |
+| Select its parent or children | Click the same object again. Works on prefabs, triggers, splines... |
+| Add to or remove from the selection | <kbd>Shift</kbd> + left click |
+| Box selection | Left click and drag. Hold <kbd>Shift</kbd> to add to the current selection |
+| Select everything | Right-click, then `Select All` |
+| Clear the selection | <kbd>Escape</kbd> |
+
+:::tip
+Clicking on the currently selected object will pass through it and select the next object behind it instead. This can be helpful if you want to select an object that's behind a trigger or dynamic clip.
+:::
+
+## Select objects from the tree
+
+The [object tree](/level-editor/object-tree-and-camera-layers/) on the left lists every object in the level. Click an entry to select it, double-click to focus the camera on it. Hold <kbd>Shift</kbd> to select several entries.
+
+## Copy and paste
+
+| Action | Shortcut |
+| --- | --- |
+| Copy the selection | <kbd>Ctrl</kbd>+<kbd>C</kbd> |
+| Paste where the camera aims | <kbd>Ctrl</kbd>+<kbd>V</kbd> |
+| Paste at the original position | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>V</kbd> |
+| Move the selection where the camera aims | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>X</kbd> |
+| Duplicate the selection | <kbd>Ctrl</kbd>+<kbd>D</kbd>, the same as copy then paste in place |
+| Delete the selection | <kbd>Del</kbd> |
+
+Copying works between any two level editors, even between different games: open the source level and the destination level in separate tabs or side by side, copy in one, paste in the other. Everything the objects need, models, textures, templates, splines, comes along. Objects are highlighted while they are being copied.
+
+Pasted objects land where the central dot is aiming. The placement uses a raycast against the scene, so objects sit on top of the object that is currently being looked at, and pasting can collide with [dynamic clips](/level-editor/special-objects/dynamic-clips/). Collectibles are pasted slightly above the ground so they do not sink into it.

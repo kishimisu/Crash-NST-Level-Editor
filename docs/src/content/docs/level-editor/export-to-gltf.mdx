@@ -1,0 +1,24 @@
+---
+title: Export to glTF
+description: Export a whole level or a single model to the glTF format, with PBR textures, to open it in Blender or any other 3D software.
+sidebar:
+  badge:
+    text: v1.42
+    variant: tip
+---
+
+Since v1.42 you can export levels and models to `.gltf`, a standard format understood by Blender and most 3D software.
+
+Models are exported with PBR materials including the diffuse, normal, metallic, roughness and emissive textures when they are available.
+
+## Export a level
+
+Open the level using the level editor, use `File → Archive → Export level to .gltf` and choose where to save the file. The whole level is exported.
+
+## Export a single model
+
+Open the model file in the [archive editor](/archive-editor/previews/#model-previews), then click **Export to .gltf**. From the level editor, the **Open model file** button of the Model dropdown takes you straight to the right file.
+
+:::note
+Exporting objects is currently a one-way operation. You cannot import .gltf files back into NST.
+:::
