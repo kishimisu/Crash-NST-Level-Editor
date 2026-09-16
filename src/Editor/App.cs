@@ -122,15 +122,14 @@ namespace NST
         {
             if (ImGui.BeginMenu("Help"))
             {
-                if (ImGui.MenuItem("Open project page (Github)")) {
-                    OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor");
-                }
-                if (ImGui.MenuItem("Editor documentation (Github)")) {
-                    OpenURL("https://github.com/kishimisu/Crash-NST-Level-Editor/blob/main/README_Level_Editor.md");
-                }
-                if (ImGui.MenuItem("Report an issue (Discord)")) {
-                    OpenURL("https://discord.gg/vsnVrPvVjc");
-                }
+                const string projectUrl = "https://github.com/kishimisu/Crash-NST-Level-Editor";
+                const string releaseUrl = "https://github.com/kishimisu/Crash-NST-Level-Editor/releases";
+                const string docsUrl = "https://kishimisu.github.io/Crash-NST-Level-Editor/level-editor/overview/";
+
+                if (ImGui.MenuItem("Open project page...")) OpenURL(projectUrl);
+                if (ImGui.MenuItem("Open documentation...")) OpenURL(docsUrl);
+                if (ImGui.MenuItem("Check for updates...")) OpenURL(releaseUrl);
+                
                 ImGui.EndMenu();
             }
         }
