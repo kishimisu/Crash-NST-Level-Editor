@@ -29,7 +29,7 @@
 
 You can either create a new level from scratch or duplicate an existing level:
 
-![New Level](assets/readme/level_editor/new_level.jpg)
+![New Level](../src/assets/screenshots/level_editor/new_level.jpg)
 
 - Choose any existing level as the base for your new level,
 
@@ -48,13 +48,13 @@ Choosing "`none`" also unlocks these additional parameters:
 
 _basic empty template_:
 
-<img src="assets/readme/level_editor/empty_level.jpg" alt="Empty Level" width="700"/>
+<img src="../src/assets/screenshots/level_editor/empty_level.jpg" alt="Empty Level" width="700"/>
 
 # Level Editor
 
 ## Key features
 
-![Editor Settings](assets/readme/demo.gif)
+![Editor Settings](../src/assets/screenshots/demo.gif)
 
 - Open multiple levels at once (click on the `Home` icon in the top left or `File -> Open` after opening a first level)
 - Select multiple objects using Shift
@@ -68,7 +68,7 @@ You can also find the list of the main enemies, hazards and platforms across eve
 
 You can play the current level by clicking this button at the top-right of the level editor:
 
-![Play](assets/readme/level_editor/play.jpg)
+![Play](../src/assets/screenshots/level_editor/play.jpg)
 
 It won't include unsaved changes.
 - Use `Ctrl+S` to save the level
@@ -84,7 +84,7 @@ It won't include unsaved changes.
 Settings & properties for the current level.
 These options are only available for custom levels.
 
-![Level Infos](assets/readme/level_editor/level_infos.jpg)
+![Level Infos](../src/assets/screenshots/level_editor/level_infos.jpg)
 
 Level Name
 - **Name**: Level's name (appears on level load)
@@ -100,7 +100,7 @@ Level settings:
 
 Debug settings for the level editor
 
-![Editor Settings](assets/readme/level_editor/editor_settings.jpg)
+![Editor Settings](../src/assets/screenshots/level_editor/editor_settings.jpg)
 
 - **Max texture res.**: Maximum resolution when loading textures, lower values decrease memory usage. Restart the editor for the change to take effect.
 
@@ -119,7 +119,7 @@ Debug settings for the level editor
 
 Contains the list of all objects in the level, grouped by type. Click on an element to open its properties, double click to focus it in the scene.
 
-![Objects](assets/readme/level_editor/objects.jpg)
+![Objects](../src/assets/screenshots/level_editor/objects.jpg)
 
 3D Game Objects:
 
@@ -157,17 +157,17 @@ Choose which object layers should be visible to increase performances and to cle
 
 This is where you can move around in the level, select one or multiple objects, edit their position/rotation/scale or copy/paste/delete them.
 
-![Level Editor](assets/readme/level_editor/editor.jpg)
+![Level Editor](../src/assets/screenshots/level_editor/editor.jpg)
 
 ### Controls
 
-![Controls](assets/readme/level_editor/controls.png)
+![Controls](../src/assets/screenshots/level_editor/controls.png)
 
 ### Gizmos
 
 When selecting one or multiple objects, you can use the 3D gizmos to translate, rotate and scale the selection.
 
-<img src="assets/readme/level_editor/gizmos.jpg" alt="Gizmos" height="300"/>
+<img src="../src/assets/screenshots/level_editor/gizmos.jpg" alt="Gizmos" height="300"/>
 
 #### Shortcuts
 - Ctrl + E: translate mode
@@ -181,11 +181,11 @@ When selecting one or multiple objects, you can use the 3D gizmos to translate, 
 
 Note: for technical reasons, scaling is always done in object space
 
-<img src="assets/readme/level_editor/space.jpg" alt="Space" height="300"/>
+<img src="../src/assets/screenshots/level_editor/space.jpg" alt="Space" height="300"/>
 
 ### Create new objects
 
-<img src="assets/readme/level_editor/qa_crates.jpg" alt="Create crates" height="400"/>
+<img src="../src/assets/screenshots/level_editor/qa_crates.jpg" alt="Create crates" height="400"/>
 
 Use the quick-access menu (right-click) to create various objects:
 - **New Crate**: Create all types of crates
@@ -198,7 +198,7 @@ Use the quick-access menu (right-click) to create various objects:
 
 ### Object library
 
-<img src="assets/readme/level_editor/library.png" alt="Object library" height="500"/>
+<img src="../src/assets/screenshots/level_editor/library.png" alt="Object library" height="500"/>
 
 Use the object library to quicky search through the game assets.
 
@@ -220,7 +220,7 @@ The first line contains the object's type and name, the second line contains the
 
 If the object has any parent or children, they will also be displayed (click to focus)
 
-![Object Transform](assets/readme/level_editor/object_transform.jpg)
+![Object Transform](../src/assets/screenshots/level_editor/object_transform.jpg)
 
 ### Transform
 
@@ -238,7 +238,7 @@ When applicable, the object's model can also be changed via a dropdown containin
 This is where the object's behavior, model, animations, sounds, properties and so on... are defined.
 You can copy, paste, delete or replace components between different objects.
 
-![Object Components](assets/readme/level_editor/object_components.jpg)
+![Object Components](../src/assets/screenshots/level_editor/object_components.jpg)
 
 The list of all components is located at the top, and the currently selected component at the bottom.
 
@@ -249,7 +249,7 @@ The list of all components is located at the top, and the currently selected com
 
 You can also copy/paste values from a component to another instead of pasting it as a new component:
 
-![Object Components Paste](assets/readme/level_editor/object_components_paste.jpg)
+![Object Components Paste](../src/assets/screenshots/level_editor/object_components_paste.jpg)
 
 # Special objects
 
@@ -257,7 +257,7 @@ You can also copy/paste values from a component to another instead of pasting it
 
 These objects represent most of the level's geometry and can have baked-in collisions.
 
-<img src="assets/readme/level_editor/c_static.jpg" alt="Static models" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/c_static.jpg" alt="Static models" width="700"/><br>
 
 Static models always have 3 components:
 
@@ -271,7 +271,7 @@ You can view precise collisions for all static models using `Editor settings -> 
 
 These objects are responsible for spawning most entities in the game (crates, enemies, platforms...)
 
-<img src="assets/readme/level_editor/c_template.jpg" alt="Template Spawners" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/c_template.jpg" alt="Template Spawners" width="700"/><br>
 
 You can spot them by their `Spawner_Template` component, which is selected and expanded by default.
 
@@ -281,7 +281,7 @@ The spawner itself usually contains very few components (such as splines or trig
 
 Template objects are hidden by default because their position is usually meaningless (it's the parent spawner that defines the spawn point). However for some very specific enemies, the position of the template is actually meaningful, this is why you can enable them using `Editor settings -> Visible Camera Layers -> Templates`
 
-<img src="assets/readme/level_editor/templates.jpg" alt="Templates" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/templates.jpg" alt="Templates" width="700"/><br>
 
 Templates with multiple references:
 
@@ -298,8 +298,8 @@ without affecting any other instance.
 
 - **Edit prefab child**: However if you click a second time on a child object (2nd picture), you'll see that every occurence of this object in other instances becomes highlighted. You now have control over the child object inside the prefab, you can still copy/paste, move and delete it but this will reflect across all other prefab instances.
 
-<img src="assets/readme/level_editor/prefab0.jpg" alt="Prefab instance" width="700"/>
-<img src="assets/readme/level_editor/prefab1.jpg" alt="Prefab child" width="700"/>
+<img src="../src/assets/screenshots/level_editor/prefab0.jpg" alt="Prefab instance" width="700"/>
+<img src="../src/assets/screenshots/level_editor/prefab1.jpg" alt="Prefab child" width="700"/>
 
 ## Script Triggers
 
@@ -307,7 +307,7 @@ without affecting any other instance.
 
 They're pretty flexible, they can either be a parent or a child of the object to trigger, and can reference/be referenced by multiple objects.
 
-<img src="assets/readme/level_editor/triggers.jpg" alt="Triggers" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/triggers.jpg" alt="Triggers" width="700"/><br>
 
 Among other things, they are used with [Spawner Templates](#spawner-templates) to trigger the actual spawn or make the object active. This is done for performance reasons, so that not all objects are loaded at once, but they can also be used to trigger other effects or behaviors.
 
@@ -328,7 +328,7 @@ Trigger and child copy/paste:
 
 `CDynamicClipEntity` objects are invisible boxes that collide with the player (and/or enemies), acting as invisible walls/floors.
 
-<img src="assets/readme/level_editor/clips.jpg" alt="Clips" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/clips.jpg" alt="Clips" width="700"/><br>
 
 ## Visual Boxes
 
@@ -344,7 +344,7 @@ It also contains the default lighting settings for the level (active when outsid
 
 *Handles visual settings. Can be found in the "Lighting" category.*
 
-<img src="assets/readme/level_editor/visual_box.jpg" alt="Visual Boxes" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/visual_box.jpg" alt="Visual Boxes" width="700"/><br>
 
 Objects containing this component are used to define a bounding box in which to apply custom lighting settings, overriding the default ones found in the `CWorldVisualData` object. 
 
@@ -359,7 +359,7 @@ They are also used in smaller sections of a level to override the main lighting.
 `CSplineComponent` are a special type of component that represent a path made of positions and rotations.
 They are primarily used for camera paths and enemy/platforms movement.
 
-<img src="assets/readme/level_editor/spline.jpg" alt="Spline" width="700"/><br>
+<img src="../src/assets/screenshots/level_editor/spline.jpg" alt="Spline" width="700"/><br>
 
 The GUI for the spline component consists of up to 4 sections:
 
@@ -390,7 +390,7 @@ The controls points (positions) are always visible in the 3D scene, however the 
 
 However, unlike script triggers which are separate objects, trigger volume components are part of the object to trigger. They are only visible when the component is selected.
 
-<img src="assets/readme/level_editor/c_trigger.jpg" alt="Trigger Volume" width="700"/>
+<img src="../src/assets/screenshots/level_editor/c_trigger.jpg" alt="Trigger Volume" width="700"/>
 
 ## Border collisions
 
@@ -402,25 +402,25 @@ You can view them using `Editor settings -> Visible Camera Layers -> Border Coll
 
 Editing these collisions isn't currently supported, but removing the parent object will remove the collisions.
 
-<img src="assets/readme/level_editor/border.jpg" alt="Border Collisions" width="700"/>
+<img src="../src/assets/screenshots/level_editor/border.jpg" alt="Border Collisions" width="700"/>
 
 ## Outline Switch Crate
 
 Outline switch crates have a custom GUI where you can add, remove or change children outlined crates.
 
-<img src="assets/readme/level_editor/c_outline.jpg" alt="Outline Switch Crate" width="700"/>
+<img src="../src/assets/screenshots/level_editor/c_outline.jpg" alt="Outline Switch Crate" width="700"/>
 
 ## Checkpoint Text
 
 It's possible to change the text that is displayed when breaking checkpoints, along with some other properties
 
-<img src="assets/readme/level_editor/c_checkpoint.jpg" alt="Checkpoint Text" width="700"/>
+<img src="../src/assets/screenshots/level_editor/c_checkpoint.jpg" alt="Checkpoint Text" width="700"/>
 
 ## On Start Music
 
 You can listen to the default music, and import your own audio files (.mp3) using this component.
 
-<img src="assets/readme/level_editor/c_music.jpg" alt="On Start Music" width="300"/>
+<img src="../src/assets/screenshots/level_editor/c_music.jpg" alt="On Start Music" width="300"/>
 
 # Custom hubs / modpacks
 
@@ -445,7 +445,7 @@ Here's how to add a custom level to a custom hub:
 2) Select the newly created Portal entity, and focus its `C2_WarpRoom_LevelPortal` component
 3) Change the "Level" property to match the archive's name (as set above)
 
-<img src="assets/readme/level_editor/entrance.png" alt="Level entrance" height="500"/>
+<img src="../src/assets/screenshots/level_editor/entrance.png" alt="Level entrance" height="500"/>
 
 ### Installing Custom Hubs
 
@@ -459,7 +459,7 @@ Here are the recommended indications for installing a custom hub/modpack after d
 
 You can use this editor to open levels from CTR:NF (PS4) and import their content to NST
 
-<img src="assets/readme/level_editor/ctr.jpg" alt="CTR Editor" width="1000"/>
+<img src="../src/assets/screenshots/level_editor/ctr.jpg" alt="CTR Editor" width="1000"/>
 
 Important notes:
 

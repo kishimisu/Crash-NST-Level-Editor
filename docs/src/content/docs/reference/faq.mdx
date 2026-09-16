@@ -1,0 +1,58 @@
+---
+title: FAQ
+description: Short answers to the questions people ask before and after installing Crash NST Maker.
+sidebar:
+  order: 3
+---
+
+## Does the tool modify my game?
+
+Not by itself. Custom levels are separate archives that are loaded when you use **Play Custom Level**. The only things that change the game files are **Apply mods** in the Mod Manager, which can be reverted with **Unmod game**, and saving over an original level in the editor, which always asks for confirmation.
+
+## Do players need the tool to play my level?
+
+Yes. Players launch custom levels and hubs through **Play Custom Level** in Crash NST Maker. They do not need the level editor itself.
+
+## Does it work on Game Pass?
+
+Yes, both the Steam and the Game Pass versions of the PC game are supported. The Steam confirmation popup, and the option to skip it, only concern Steam.
+
+## Does it run on macOS or Linux?
+
+The prebuilt executable is for Windows only. The source is a .NET 9 project; running it elsewhere is not supported.
+
+## My antivirus flags the executable
+
+A known false positive. The tool works entirely offline. You can [build it from source](/get-started/installation/#build-from-source) if you prefer.
+
+## Can I use my own music?
+
+Yes, import an `.mp3` in the [OnStartMusic](/level-editor/special-components/music-and-audio/) component of the level music. The archive editor can also import audio into sound samples and streams.
+
+## Can I import my own 3D models or textures?
+
+Models: no. The tool exports models to glTF but does not import them. Textures: yes, the [texture preview](/archive-editor/previews/#texture-previews) of the archive editor has a **Replace Image** button.
+
+## Can I create levels for CTR:NF?
+
+No. You can open, edit and save CTR:NF levels and copy their content into NST levels, but creating new CTR:NF levels, importing custom textures into them and rebuilding their collisions are not supported. See [CTR:NF support](/level-editor/ctr-nf-support/).
+
+## Where are the original levels?
+
+In the `archives/` folder of the game installation, one `.pak` per level. Open them with **Open Level Editor** or **Open Archive**. Level archives are named after the game and level number, for instance `L101_NSanityBeach.pak`.
+
+## Should I share my level compressed or uncompressed?
+
+Compressed. Levels are saved uncompressed by default because it is faster to test; `File → Compress & Save` produces a much smaller archive for sharing. See [Save, play and backups](/level-editor/save-play-and-backups/).
+
+## What can I undo?
+
+Selection, move, rotate and scale. Copy, paste, create, delete and component edits cannot be undone yet; use [backups](/level-editor/save-play-and-backups/#backups) before large changes.
+
+## Can I open several levels at the same time?
+
+Yes. Open another level from the Home icon or with <kbd>Ctrl</kbd>+<kbd>O</kbd>, and copy and paste between the editors. You can also run two instances of the application, for example while the Object Library initialises.
+
+## Where do I report a bug or ask for help?
+
+On the [Discord](https://discord.gg/vsnVrPvVjc) server, in `#nst-level-editor`, or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues). Include the editor version and the crash log if there is one. See [Troubleshooting](/level-editor/troubleshooting/) first.

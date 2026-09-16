@@ -1,0 +1,79 @@
+/* Crash NST Maker docs — theme overrides for Starlight */
+
+/* Dark theme (Starlight default) */
+:root {
+  --sl-color-accent-low: #3d1e04;
+  --sl-color-accent: #d86e12;
+  --sl-color-accent-high: #f7c69b;
+}
+
+/* Light theme */
+:root[data-theme='light'] {
+  --sl-color-accent-low: #fbe4cf;
+  --sl-color-accent: #b85400;
+  --sl-color-accent-high: #4d2402;
+}
+
+/* Keyboard shortcuts rendered with <kbd> */
+.sl-markdown-content kbd {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 0.82em;
+  line-height: 1;
+  padding: 0.2em 0.45em;
+  border: 1px solid var(--sl-color-gray-4);
+  border-bottom-width: 2px;
+  border-radius: 0.3rem;
+  background: var(--sl-color-gray-6);
+  color: var(--sl-color-white);
+  white-space: nowrap;
+}
+
+/* Screenshots: subtle frame so UI captures stand out from the page */
+.sl-markdown-content img:not([data-no-frame]) {
+  border-radius: 0.5rem;
+  border: 1px solid var(--sl-color-hairline);
+}
+
+/* Inline GUI paths like File → Archive → Update level name */
+.sl-markdown-content code {
+  overflow-wrap: anywhere;
+}
+
+/* Tables: keep shortcut/catalog tables readable on narrow screens */
+.sl-markdown-content table {
+  display: block;
+  overflow-x: auto;
+}
+
+/* Hero screenshot on the landing page */
+.hero img {
+  border-radius: 0.75rem;
+  box-shadow: 0 1rem 3rem rgb(0 0 0 / 0.35);
+  border: 1px solid var(--sl-color-hairline);
+}
+
+/* Images zoom-in/zoom-out overlay */
+
+.image-overlay {
+	position: fixed;
+	inset: 0;
+	z-index: 9999;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	padding: 2rem;
+	background: rgb(0 0 0 / 80%);
+	cursor: zoom-out;
+}
+
+.image-overlay img {
+	max-width: 95vw;
+	max-height: 95vh;
+	width: auto;
+	height: auto;
+	object-fit: contain;
+}
+
+.sl-markdown-content img {
+	cursor: zoom-in;
+}

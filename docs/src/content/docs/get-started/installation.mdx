@@ -1,0 +1,77 @@
+---
+title: Installation
+description: Requirements, download and first-run setup for Crash NST Maker on Windows, plus how to build it from source.
+sidebar:
+  order: 2
+---
+
+import { Steps } from '@astrojs/starlight/components';
+
+## Requirements
+
+- **Windows 64-bit** (or [Wine](https://www.winehq.org/) if you're using **Linux**).
+- **An original copy of Crash Bandicoot N. Sane Trilogy for PC**, installed through Steam or Xbox Game Pass.
+
+## Download the prebuilt executable
+
+<Steps>
+
+1. Open the [Releases page](https://github.com/kishimisu/Crash-NST-Level-Editor/releases) on GitHub and download the executable attached to the latest release (`Crash-NST-Maker-<version>.exe`).
+
+2. Run it to open the [main menu](/get-started/first-launch/). The tool looks for your game installation; if it is not found, use the `File` menu to set the game path.
+
+3. You can now [Play a custom level](/get-started/quickstart-play-level/) or [Create your own level](/get-started/quickstart-first-level/)!
+
+</Steps>
+
+:::note[Antivirus false positives]
+Some antivirus software may report a false positive for the prebuilt executable. This tool runs entirely offline and never accesses the network. Alternatively, you can [build the application yourself](#build-from-source) from source as described below.
+:::
+
+## Updating
+
+Check for new versions on the [Releases page](https://github.com/kishimisu/Crash-NST-Level-Editor/releases). You can keep multiple versions on your PC in case you encounter an issue with an update.
+
+## Crash logs
+
+When the application hits an unhandled error it writes the details to a log file. Condiser attaching it when you ask for help on Discord or open a GitHub issue.
+
+## Uninstalling
+
+Delete the executable. If you applied mods with the Mod Manager and want to uninstall them, click **Unmod game** first.
+To clear any data cached by the editor such as user settings, object library previews or automatic backups, remove the storage folder located at: 
+
+- `C:\Users\<username>\AppData\Local\NST_Modding_Tool`
+
+## Build from source
+
+<Steps>
+
+1. Install [Microsoft .NET SDK 9.0](https://dotnet.microsoft.com/en-us/download/dotnet/9.0).
+
+2. Clone the repository:
+
+   ```bash
+   git clone https://github.com/kishimisu/Crash-NST-Level-Editor.git
+   cd Crash-NST-Level-Editor
+   ```
+3. Run the app in debug mode:
+
+   ```bash
+   dotnet run
+   ```
+4. (Optional) Build an optimized executable in release mode:
+
+   ```bash
+   dotnet publish ./NST.csproj -c Release -r win-x64 --self-contained true -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true -p:IncludeAllContentForSelfExtract=true -p:EnableCompressionInSingleFile=true
+   ```
+
+</Steps>
+
+The source is organised in a few folders under `src/`: 
+- `Alchemy/` (`.pak` archives, `.igz` files and Alchemy objects)
+- `Havok/` (`.hkx` files and Havok objects)
+- `Editor/` (the application),
+- `Utils/`
+
+See [Alchemy API](/archive-editor/alchemy-api/) if you want to script the archives yourself.

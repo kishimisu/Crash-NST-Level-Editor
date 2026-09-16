@@ -1,0 +1,69 @@
+---
+title: Troubleshooting
+description: Fixes for the most common problems with Crash NST Maker, from antivirus warnings and launch errors to missing objects, instant deaths and slow performance.
+sidebar:
+  order: 4
+---
+
+Most problems fall in one of the cases below. When in doubt, first update to the [latest release](https://github.com/kishimisu/Crash-NST-Level-Editor/releases/latest): many of the issues listed here were fixed in a specific version.
+
+## My antivirus blocks or deletes the executable
+
+This is a known false positive. The tool works entirely offline and never accesses the network. Add an exception for the executable, or [build it from source](/get-started/installation/#build-from-source).
+
+## "The game is already running"
+
+The tool will not launch a level while the game is open. Close the game, then launch the level again.
+
+## Steam asks for confirmation every time I launch a level
+
+Enable `File → Skip Steam popup` in the main menu (v1.39 and later).
+
+## The application crashed
+
+When an unhandled error occurs, the tool writes a log file and shows a **Report issue** button. Share the log on the [Discord](https://discord.gg/vsnVrPvVjc) server or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues) along with what you were doing. The log includes the editor version.
+
+## The interface is tiny or huge on a 2K, 4K or Retina screen
+
+Fixed in v1.41.9. Update the tool.
+
+## The game shows a black screen or freezes when loading my level
+
+- Update the tool: several causes of black screens after importing objects were fixed between v1.19 and v1.33, and a freeze in custom levels was fixed in v1.16.
+- Remove the last objects you added and test again to find the culprit.
+
+## Crash dies as soon as the level starts
+
+The death plane is probably above the ground. Select `Other → WorldInstance` in the object tree and lower the death plane height. This is common in levels imported from CTR:NF, whose scale is about 1.5 times larger than NST.
+
+## An object shows in the editor but not in the game
+
+Most game objects are spawned by a [script trigger](/level-editor/special-objects/script-triggers/) when the player enters its volume. If the trigger is missing or badly placed, the object never spawns. Show the triggers with `Visible Camera Layers → Script Triggers` and check that one covers the area where the player arrives. Also keep the tool updated: entities whose template lives in another file did not spawn before v1.25.
+
+## Objects lose their collisions
+
+Static collisions are rebuilt when you save. Prefabs losing their collisions after being moved or pasted was fixed in v1.19 and v1.41.8. If a static model has no collisions to begin with, its `CStaticCollisionComponent` is greyed out: see [Static models](/level-editor/special-objects/static-models/).
+
+## A special object does not work in my custom level
+
+Rides, jetpack, boulders and hubs need to be enabled per level in **Level settings**: `Enable Hog Ride`, `Enable Bear Ride`, `Enable Tiger Ride`, `Enable Jetpack`, `Enable Boulder` and `Enable Hub`. See [Level settings](/level-editor/level-settings/).
+
+## The hub says some levels are missing
+
+The level archives must be directly in the game's `archives/` folder, with the exact file names the hub expects. See [Play a custom level](/get-started/quickstart-play-level/). If you renamed a level archive, its creator must run `File → Archive → Update level name` on it again.
+
+## The editor is slow
+
+- Lower `Editor settings → Max texture res.` (the default is 512) and restart the editor.
+- Lower `Editor settings → Render distance`.
+- Hide the camera layers you do not need, and press <kbd>Escape</kbd> to clear the selection, which greatly improves the frame rate.
+- Close the level editors you are not using.
+- Memory usage was cut by three to four times in v1.29, and again in v1.32 and v1.35. Update if you are on an older version.
+
+## The Object Library takes forever to open
+
+The first initialisation scans every archive of the game and takes 10 to 20 minutes. The window may look unresponsive during that time. You can open a second instance of the editor meanwhile. See [Object Library](/level-editor/object-library/).
+
+## Still stuck?
+
+Ask on the [Discord](https://discord.gg/vsnVrPvVjc) server or open a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues). Include the editor version, the log file if there was a crash, and the steps to reproduce.

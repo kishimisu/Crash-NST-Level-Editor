@@ -1,6 +1,6 @@
 # Archive Editor
 
-<img src="assets/readme/app.jpg" alt="App" width="800"/>
+<img src="../src/assets/screenshots/app.jpg" alt="App" width="800"/>
 
 ## Table of contents
 
@@ -16,7 +16,7 @@
 
 View and edit files in archives (mods)
 
-![Archive Manager](assets/readme/archive.jpg)
+![Archive Manager](../src/assets/screenshots/archive.jpg)
 
 Right-click on a file to open its context menu:
 - **Discard changes**: Revert any change made to the file
@@ -39,7 +39,7 @@ Display mode:
 - **Updated Objects**: Display objects that are currently updated
 - **All Objects**: Display all objects
 
-![IGZ Editor](assets/readme/object_edit.jpg)
+![IGZ Editor](../src/assets/screenshots/object_edit.jpg)
 
 You can right-click on any object to open a context menu:
 - **Copy name**: Copy the object's name to the clipboard
@@ -53,7 +53,7 @@ You can right-click on any object to open a context menu:
 
 ### Object properties
 
-![IGZ Editor](assets/readme/field_edit.jpg)
+![IGZ Editor](../src/assets/screenshots/field_edit.jpg)
 
 - **Navigation arrows**: Go back/forward in the history of visited objects
 - **Object name**: Display the object name and type
@@ -67,7 +67,7 @@ You can right-click on any object to open a context menu:
 
 A 3D interactive preview is available for model files (located in `actors/` and `models/`).
 
-![Model preview](assets/readme/model_preview.jpg)
+![Model preview](../src/assets/screenshots/model_preview.jpg)
 
 #### Render modes:
 - **No culling**: Disable culling for the model
@@ -91,7 +91,7 @@ Moreover, hovering a drawcall will force to render its mesh and hide every other
 
 When opening material files (located in `materialinstances/`), each material in the file is listed in the right panel. 
 
-![Material preview](assets/readme/material_preview.jpg)
+![Material preview](../src/assets/screenshots/material_preview.jpg)
 
 It contains information about attributes that differ from the default values (culling, transparency, color...) and it also contains a clickable reference to the material's diffuse texture.
 
@@ -99,7 +99,7 @@ It contains information about attributes that differ from the default values (cu
 
 When opening texture files (located in `textures/`), an image preview is displayed.
 
-![Texture preview](assets/readme/texture_preview.jpg)
+![Texture preview](../src/assets/screenshots/texture_preview.jpg)
 
 - **Extract Image**: Save the image to the disk
 - **Replace Image**: Replace the image by importing a new one from the file explorer
@@ -109,7 +109,7 @@ When opening texture files (located in `textures/`), an image preview is display
 
 For audio files, an audio player is available to listen to the track(s). It's also possible to extract each track to a .mp3 file. 
 
-![Texture preview](assets/readme/CSoundSample.jpg)
+![Texture preview](../src/assets/screenshots/CSoundSample.jpg)
 
 There are three type of audio files:
 
@@ -118,4 +118,4 @@ There are three type of audio files:
 - For `.snd` files (located in `sound_streams/`), the audio is played directly as the file is just a raw audio stream.
 
 - For `CAudioArchive` igz files (located in `sounds/banks/`), each `CSound` object in the file is listed in the right panel, along with its associated `CSubSound` playable audio tracks. You can click on a track name to open the corresponding object and extract the audio.
-![Texture preview](assets/readme/CAudioArchive.jpg)
+![Texture preview](../src/assets/screenshots/CAudioArchive.jpg)
