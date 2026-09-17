@@ -956,6 +956,9 @@ namespace NST
             {
                 portalComponent._Camera_Base.Reference = null;
                 portalComponent._Entity_0xd8.Reference!.namespaceName = hubFile.GetName(false);
+                
+                if (portalComponent._Zone_Info.Reference != null)
+                    portalComponent._Zone_Info.Reference.isEXID = false;
             }
 
             explorer.Clone([portal, frame], sourceArchive, sourceIgz, hubFile, hubIgz, addToSelection: true, initializeObjects: true);

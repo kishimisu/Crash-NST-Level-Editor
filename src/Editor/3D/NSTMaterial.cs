@@ -17,6 +17,7 @@ namespace NST
         public readonly Dictionary<string, NamedReference> textureReferences = []; // igImage2 texture references
 
         public THREE.Texture? texture = null; // GPU diffuse texture
+        public bool cloneTexture = true;
 
         public string shaderName = "";
 
@@ -297,7 +298,7 @@ namespace NST
 
             if (texture != null)
             {
-                material.Map = (THREE.Texture)texture.Clone();
+                material.Map = cloneTexture ? (THREE.Texture)texture.Clone() : texture;
                 material.Map.WrapS = _TEXTURE_WRAP_MAP[wrapS];
                 material.Map.WrapT = _TEXTURE_WRAP_MAP[wrapT];
                 material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];

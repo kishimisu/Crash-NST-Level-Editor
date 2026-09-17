@@ -258,9 +258,18 @@ namespace NST
                 template.Object.ObjectName = childName;
                 parent.Object.GetComponent<igPrefabComponentData>()?._prefabEntities?._data.Add(template.Object);
 
-                THREE.Matrix4 parentTransform = parent.Object.GetTransformMatrix().Inverted();
-                THREE.Vector3 localPos = parentTransform * template.Position;
+                var transform = parent.Object.GetTransformMatrix().Inverted() * template.ObjectToWorld();
+
+                transform.Decompose(out var localPos, out var localRot, out var localScale);
+
                 template.Object._parentSpacePosition = localPos.ToVec3MetaField();
+
+                if (template.Object._transform != null)
+                {
+                    template.Object._transform._parentSpaceRotation = localRot.ToVec3MetaField();
+                    template.Object._transform._nonUniformPersistentParentSpaceScale = localScale.ToVec3MetaField();
+                }
+
                 fakeTemplates.Add(template);
                 // Console.WriteLine($"Added fake child to prefab: {template.Object.ObjectName}, {parentName}, {childName}");
             }

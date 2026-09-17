@@ -912,22 +912,30 @@ namespace NST
                 {
                     if (!FileManager.IsFileUpdated(prefabChild.ArchiveFile)) continue;
 
-                    THREE.Vector3 worldPos = new THREE.Vector3();
-                    prefabChild.ObjectToWorld().Decompose(worldPos, new THREE.Quaternion(), new THREE.Vector3());
-
                     NSTEntity parentPrefab = prefabChild.ParentPrefabInstance!;
                     var prefabComponentData = parentPrefab.Object.GetComponent<igPrefabComponentData>()!._prefabEntities!._data;
 
                     var previousPosition = prefabChild.Object._parentSpacePosition;
+                    var previousTransform = (igEntityTransform?)prefabChild.Object._transform?.Clone(new());
                     var previousName = prefabChild.Object.ObjectName;
                     var previousArchetype = prefabChild.Object._bitfield._isArchetype;
+
+                    prefabChild.ObjectToWorld().Decompose(out var worldPos, out var worldEuler, out var worldScale);
 
                     prefabComponentData.Remove(prefabChild.Object);
 
                     prefabChild.Object.ObjectName = $"_FakePrefab_{parentPrefab.Object.ObjectName}___{prefabChild.Object.ObjectName}";
-                    prefabChild.Object._parentSpacePosition = worldPos.ToVec3MetaField();
                     prefabChild.Object._bitfield._isArchetype = false;
                     prefabChild.ParentPrefabInstance = null;
+
+                    prefabChild.Object._parentSpacePosition = worldPos.ToVec3MetaField();
+
+                    prefabChild.Object._transform ??= new igEntityTransform()
+                    {
+                        MemoryPool = prefabChild.Object.MemoryPool.WithAlignment(16)
+                    };
+                    prefabChild.Object._transform._parentSpaceRotation = worldEuler.ToVec3MetaField();
+                    prefabChild.Object._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
 
                     postSaveCallbacks.Add(() =>
                     {
@@ -935,6 +943,7 @@ namespace NST
 
                         prefabChild.Object.ObjectName = previousName;
                         prefabChild.Object._parentSpacePosition = previousPosition;
+                        prefabChild.Object._transform = previousTransform;
                         prefabChild.Object._bitfield._isArchetype = previousArchetype;
                         prefabChild.ParentPrefabInstance = parentPrefab;
                     });

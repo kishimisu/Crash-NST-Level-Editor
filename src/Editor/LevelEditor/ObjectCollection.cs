@@ -297,6 +297,7 @@ namespace NST
                 {
                     meshes.Add(mesh);
                     mesh.Material.InititializeMaterialAndTextures(archive);
+                    mesh.Material.cloneTexture = false;
                 }
 
                 var child = model.CreateObject();

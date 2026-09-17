@@ -20,6 +20,20 @@ namespace NST
         }
 
         /// <summary>
+        /// Decompose a matrix into its position, euler rotation and scale components
+        /// </summary>
+        public static void Decompose(this THREE.Matrix4 matrix, out THREE.Vector3 position, out THREE.Euler rotation, out THREE.Vector3 scale)
+        {
+            var quaternion = new THREE.Quaternion();
+            position = new THREE.Vector3();
+            scale = new THREE.Vector3();
+
+            matrix.Decompose(position, quaternion, scale);
+
+            rotation = new THREE.Euler().SetFromQuaternion(quaternion, THREE.RotationOrder.ZYX);
+        }
+
+        /// <summary>
         /// Get the scale component of the matrix
         /// </summary>
         public static THREE.Vector3 GetScale(this THREE.Matrix4 matrix)
