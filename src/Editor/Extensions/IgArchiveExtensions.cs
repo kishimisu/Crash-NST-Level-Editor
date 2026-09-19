@@ -367,16 +367,17 @@ namespace NST
                 }
 
                 int removedCount = 0;
+                
+                var uniquePaths = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
                 foreach (var file in renderer.Archive.Files.OrderBy(f => f.Path))
                 {
                     if (file.Path.StartsWith("update/")) continue;
                     
-                    if (!visited.Contains(file))
+                    if (!uniquePaths.Add(file.Path) || !visited.Contains(file))
                     {
                         removedCount++;
                         renderer.RemoveFile(file);
-                        // Console.WriteLine("Removed " + file.Path);
                     }
                 }
 
@@ -859,6 +860,8 @@ namespace NST
 
             bool hasCtrFiles = archive.Files.Any(f => f.Path.Contains("octane/", StringComparison.InvariantCultureIgnoreCase));
 
+            Dictionary<string, IgArchive> openArchives = [];
+
             foreach (var f in archive.Files.ToList())
             {
                 if (f.Path.StartsWith("maps/") || f.Path.StartsWith("packages/") || f.Path.StartsWith("update/") || f.Path == staticCollisionsPath)
@@ -867,8 +870,55 @@ namespace NST
                 if (hasCtrFiles && (f.Path.StartsWith("models/") || f.Path.StartsWith("materialinstances/")))
                     continue;
 
-                if (NamespaceUtils.GetInfos(f.GetName(false))?.Archive == null)
+                var infos = NamespaceUtils.GetInfos(f.GetName(false));
+
+                if (infos?.Archive == null)
                     continue;
+
+                if (f.Path.StartsWith("sound"))
+                {
+                    if (!openArchives.TryGetValue(infos.Archive, out var sourceArchive))
+                    {
+                        sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, infos.Archive));
+                        openArchives[infos.Archive] = sourceArchive;
+                    }
+
+                    var sourceFile = sourceArchive.FindFile(f.Path, FileSearchType.Path);
+
+                    if (sourceFile == null)
+                        continue;
+
+                    byte[] bytes;
+                    byte[] source;
+
+                    if (f.IsCompressed() == sourceFile.IsCompressed())
+                    {
+                        bytes = f.GetData();
+                        source = sourceFile.GetData();
+                    }
+                    else
+                    {
+                        bytes = f.Uncompress();
+                        source = sourceFile.Uncompress();
+                    }
+
+                    if (bytes.Length != source.Length)
+                        continue;
+
+                    bool exactMatch = true;
+
+                    for (int i = 0; i < bytes.Length; i++)
+                    {
+                        if (bytes[i] != source[i])
+                        {
+                            exactMatch = false;
+                            break;
+                        }
+                    }
+
+                    if (!exactMatch)
+                        continue;
+                }
 
                 archive.RemoveFile(f);
             }

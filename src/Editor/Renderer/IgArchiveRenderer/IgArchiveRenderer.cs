@@ -292,8 +292,12 @@ namespace NST
                             }
                             else
                             {
-                                Archive.ExportToMinipak(path);
-                                ModalRenderer.Show("Success", $"Successfully exported {NamespaceUtils.GetFileName(path)}");
+                                CrashHandler.TryRunTask("exporting .mini.pak", () =>
+                                {
+                                    ModalRenderer.ShowLoadingModal($"Saving {NamespaceUtils.GetFileName(path)}...");
+                                    Archive.ExportToMinipak(path);
+                                    ModalRenderer.CloseLoadingModal();
+                                });
                             }
                         }
                     }
