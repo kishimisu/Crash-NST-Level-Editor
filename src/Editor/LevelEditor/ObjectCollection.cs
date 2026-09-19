@@ -276,6 +276,7 @@ namespace NST
             File.WriteAllText(GetStoragePath("collection.json"), json);
 
             _collection = entities.Values.ToList();
+            UpdateSearch(false);
         }
 
         private static void CreatePreviewImage(IgArchive archive, string name, Dictionary<THREE.Matrix4, string> objects)
@@ -325,6 +326,8 @@ namespace NST
             {
                 string levelType = GetLevelType(e.ArchiveName);
 
+                bool checkCollision = (_currentTab == "All" || _currentTab == "Scenery") && e.Type == "Scenery";
+
                 if (e.ArchivePath != null) _hasCustom = true;
 
                 if (levelType == "level" && !_settings.filterLevel) continue;
@@ -338,7 +341,7 @@ namespace NST
                 if (e.ObjectType == "CGameEntity" && !_settings.filterCGameEntity) continue;
                 if (e.ObjectType == "CPhysicalEntity" && !_settings.filterCPhysicalEntity) continue;
                 if (e.ObjectType == "CActor" && !_settings.filterCActor) continue;
-                if (e.Type == "Scenery" && !e.HasCollisions && !_settings.filterNoCollisions) continue;
+                if (!e.HasCollisions && checkCollision && !_settings.filterNoCollisions) continue;
                 if (e.ArchivePath != null && !_settings.filterCustom) continue;
                 if (e.IsPrefab && !_settings.filterPrefab) continue;
 
@@ -447,7 +450,7 @@ namespace NST
 
         private static void RenderCollection(LevelExplorer explorer)
         {
-            if (!_initialized && !RenderInitialize()) return;
+            if (_collection.Count == 0 && !RenderInitialize()) return;
 
             ImGui.SetNextItemWidth(-1);
             if (ImGui.InputTextWithHint("##Collection", "Search...", ref _search, 256))
@@ -473,7 +476,8 @@ namespace NST
 
             ImGui.TextDisabled($"{_searchResults.Count} objects found");
 
-            if (_currentTab == "Scenery" && ImGui.Checkbox("Show objects with no collision", ref _settings.filterNoCollisions))
+            if ((_currentTab == "All" || _currentTab == "Scenery") && 
+                ImGui.Checkbox("Show objects with no collision", ref _settings.filterNoCollisions))
             {
                 UpdateSearch();
             }
@@ -679,13 +683,10 @@ namespace NST
 
                     if (ImGui.Selectable($"##row_{i}", false, ImGuiSelectableFlags.SpanAllColumns | ImGuiSelectableFlags.AllowOverlap, rowSize))
                     {
-                        Task.Run(() =>
+                        CrashHandler.TryRunTask("importing object", () =>
                         {
                             ModalRenderer.ShowLoadingModal($"Importing {e.DisplayName}...");
-                            ObjectFactory.TryAddObject(() =>
-                            {
-                                ObjectFactory.AddGenericCollection(e, explorer);
-                            });
+                            ObjectFactory.AddGenericCollection(e, explorer);
                             ModalRenderer.CloseLoadingModal();
                         });
                     }

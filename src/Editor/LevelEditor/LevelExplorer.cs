@@ -106,8 +106,9 @@ namespace NST
         private bool _isDragging = false;
         private bool _clickedInsideScene = false;
         private bool _shouldOpenContextMenu = false;
-        private static int _maxTextureSize = 512;
+        private string? _lastGizmoSpace = null;
 
+        private static int _maxTextureSize = 512;
         private float _gizmoTranslationSnap = 80;
         private float _gizmoRotationSnap = 45;
 
@@ -1195,21 +1196,27 @@ namespace NST
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.E))
             {
+                if (_lastGizmoSpace != null) _gizmos.space = _lastGizmoSpace;
+                _lastGizmoSpace = null;
                 _gizmos.mode = "translate";
                 RenderNextFrame = true;
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.R))
             {
+                if (_lastGizmoSpace != null) _gizmos.space = _lastGizmoSpace;
+                _lastGizmoSpace = null;
                 _gizmos.mode = "rotate";
                 RenderNextFrame = true;
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.T))
             {
+                _lastGizmoSpace = _gizmos.space;
                 _gizmos.mode = "scale";
                 RenderNextFrame = true;
             }
             else if (ImGui.Shortcut(ImGuiKey.ModCtrl | ImGuiKey.G))
             {
+                _lastGizmoSpace = null;
                 _gizmos.space = _gizmos.space == "world" ? "local" : "world";
                 RenderNextFrame = true;
             }

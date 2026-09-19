@@ -366,6 +366,9 @@ namespace NST
                         EnableGameMode("jetpack", explorer);
                         explorer.ChangeGameMode("Jetpack");
                     });
+                    ImGui.Separator();
+
+                    if (ImGui.MenuItem("Hog Level End")) TryAddObject(() => AddGenericExternal("L107_HogWild", [("L107_HogWild", "EndMountedLevelTrigger"), ("L107_HogWild_Crates", "AutoCollectGem")], explorer));
                     if (ImGui.MenuItem("Bear/Tiger Dismount")) TryAddObject(() => AddGeneric("L208_BearIt_EndingSequence", "PolarScriptTriggerEntity", "EndingSequence", explorer, addToSelection: true, newObjectName: "Dismount_Trigger"));
                     ImGui.EndMenu();
                 }
@@ -616,18 +619,18 @@ namespace NST
 
         private static void SetupTemplateArchive()
         {
-            if (templateArchive == null || templateFile == null || templateIgz ==  null)
-            {
-                templateArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "Crash_Crates.pak"));
-                templateFile = templateArchive.FindFile("Crash_Crates.igz")!;
-                templateIgz = templateFile.ToIgzFile();
-                templateIgz.FindObject<CEntityHandleList>("Crate_Switch_entityData_componentData_CommonCrateSwitchIron_OulinedCrates")!._data.Clear();
-                templateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Checkpoint";
-                templateIgz.FindObject<common_Collectible_TimeTrial_StartData>("Collectible_TimeTrial_Start_entityData_componentData_CommonCollectibleTimeTrialStart_gen")!._Bool = true;
-            }
+            templateArchive ??= IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "Crash_Crates.pak"));
+            
+            templateFile ??= templateArchive.FindFile("Crash_Crates.igz")!;
+
+            templateIgz ??= templateFile.ToIgzFile();
+
+            templateIgz.FindObject<CEntityHandleList>("Crate_Switch_entityData_componentData_CommonCrateSwitchIron_OulinedCrates")!._data.Clear();
+            templateIgz.FindObject<CVfxTextComponentData>("Crate_Checkpoint_entityData_componentData_VfxText_gen")!._displayText = "Checkpoint";
+            templateIgz.FindObject<common_Collectible_TimeTrial_StartData>("Collectible_TimeTrial_Start_entityData_componentData_CommonCollectibleTimeTrialStart_gen")!._Bool = true;
         }
 
-        public static void TryAddObject(Action callback)
+        private static void TryAddObject(Action callback)
         {
             try
             {
@@ -662,7 +665,7 @@ namespace NST
 
             if (_floatMode != "None" && _floatMode != "Water")
             {
-                templateIgz = templateFile?.ToIgzFile();
+                templateIgz = null;
             }
         }
 
@@ -764,7 +767,7 @@ namespace NST
             explorer.GetOrCreateIgzFile(fileIdentifier, out IgArchiveFile destination, out IgzFile crateIgz);
             explorer.Clone([crate], sourceArchive, sourceIgz, destination, crateIgz, initializeObjects: true);
 
-            templateIgz = templateFile?.ToIgzFile();
+            templateIgz = null;
         }
 
         private static void AddBigTNTCrate(LevelExplorer explorer)
@@ -801,7 +804,7 @@ namespace NST
                 }
             }
 
-            templateIgz = templateFile?.ToIgzFile();
+            templateIgz = null;
         }
 
         private static void AddFakeNitro(LevelExplorer explorer)

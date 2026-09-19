@@ -38,12 +38,16 @@ namespace NST
             _gizmos.Attach(_selectionContainer);
             _gizmos.Visible = false;
 
+            bool dragging = false;
+
             _gizmos._mouseUpEvent += (_) =>
             {
-                if (_gizmos.Visible)
+                if (_gizmos.Visible && dragging)
                 {
                     ApplyChanges(_gizmos.mode);
                 }
+
+                dragging = false;
             };
 
             _gizmos._changeEvent += (_) =>
@@ -53,6 +57,8 @@ namespace NST
                     UpdateScaleTransform(_selectionContainer.Scale, true);
                     HideSelectedSplines();
                 }
+
+                dragging = _gizmos.Visible;
             };
         }
 

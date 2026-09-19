@@ -512,12 +512,19 @@ namespace NST
                 IgArchiveFile? pkg = archive.FindPackageFile();
                 bool isLevel = pkg != null && pkg.GetName() != "chunkInfos_pkg.igz" && pkg.Path.Substring("packages/generated/".Length).StartsWith("maps/");
                 
-                if (!isLevel)
+                if (pkg == null || !isLevel)
                 {
                     ModalRenderer.Show("Could not launch the level", "This archive is not a level archive.");
                 }
                 else
                 {
+                    if (archive.Path.EndsWith(".mini.pak"))
+                    {
+                        ModalRenderer.ShowLoadingModal("Building level...");
+                        archive = ImportFromMinipak(archive, pkg);
+                        ModalRenderer.CloseLoadingModal();
+                    }
+
                     if (!CheckHub(archive, out List<string> subLevelPaths))
                     {
                         return;
@@ -844,6 +851,91 @@ namespace NST
             else Console.WriteLine("Archive name is the same as the level name, nothing to do.");
 
             ModManager.LaunchLevel(levelIdentifier);
+        }
+
+        public static void ExportToMinipak(this IgArchive archive, string path)
+        {
+            string? staticCollisionsPath = archive.FindCollisionFile(".hkx")?.Path;
+
+            foreach (var f in archive.Files.ToList())
+            {
+                if (f.Path.StartsWith("maps/") || f.Path.StartsWith("packages/") || f.Path.StartsWith("update/") || f.Path == staticCollisionsPath)
+                    continue;
+
+                if (NamespaceUtils.GetInfos(f.GetName(false))?.Archive == null)
+                    continue;
+
+                archive.RemoveFile(f);
+            }
+
+            archive.SafeSave(path, compress: true);
+        }
+
+        private static IgArchive ImportFromMinipak(IgArchive archive, IgArchiveFile package)
+        {
+            var igz = package.ToIgzFile();
+
+            var list = igz.FindObject<igStreamingChunkInfo>() 
+                        ?? throw new Exception("Could not find igStreamingChunkInfo object");
+
+            Dictionary<string, HashSet<string>> archives = [];
+            int total = 0;
+            int count = 0;
+
+            var existing = archive.Files.Select(f => f.Path.ToLowerInvariant()).ToHashSet();
+
+            foreach (var c in list._required._data)
+            {
+                if (string.IsNullOrEmpty(c._name) || c._name.StartsWith("packages/")) 
+                    continue;
+
+                if (!existing.Add(c._name.ToLowerInvariant())) 
+                    continue;
+
+                string name = NamespaceUtils.GetFileName(c._name, false);
+                var infos = NamespaceUtils.GetInfos(name);
+
+                if (infos?.Paths.TryGetValue(c._name, out string? archiveName) != true || string.IsNullOrEmpty(archiveName))
+                {
+                    throw new Exception($"No archive found for {c._name}");
+                }
+
+                if (!archives.TryGetValue(archiveName, out var names))
+                {
+                    names = [];
+                    archives[archiveName] = names;
+                }
+
+                total++;
+                names.Add(c._name.ToLowerInvariant());
+            }
+
+            foreach ((var sourceArchiveName, var sourceFilePaths) in archives)
+            {
+                string sourceArchivePath = Path.Combine(LocalStorage.ArchivePath, $"{sourceArchiveName}.pak");
+                var sourceArchive = IgArchive.Open(sourceArchivePath);
+
+                foreach (var path in sourceFilePaths)
+                {
+                    var f = sourceArchive.FindFile(path, FileSearchType.Path);
+                    if (f == null)
+                    {
+                        throw new Exception($"{sourceArchivePath}: File {path} not found");
+                    }
+
+                    count++;
+                    archive.AddFile(f);
+
+                    float progress = (float)count / total;
+                    ModalRenderer.ShowLoadingModal($"Building level... ({MathF.Round(progress*100)}%)", progress);
+                }
+            }
+
+            string outputPath = archive.Path.Replace(".mini.pak", ".full.pak");
+
+            archive.SafeSave(outputPath);
+
+            return IgArchive.Open(outputPath); 
         }
     }
 }

@@ -45,9 +45,12 @@ namespace NST
 
         private void Setup()
         {
-            foreach (var file in Archive.Files)
+            if (Archive.GameVersion == GameVersion.CTR)
             {
-                NamespaceUtils.AddInfos(file.GetName(false));
+                foreach (var file in Archive.Files)
+                {
+                    NamespaceUtils.AddInfos(file.GetName(false));
+                }
             }
 
             FileManager = new ActiveFileManager();
@@ -186,19 +189,13 @@ namespace NST
                     {
                         if (ImGui.MenuItem("Save", "Ctrl+S")) TrySaveArchive();
                         if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) TrySaveArchive(saveAs: true);
-                        if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(launchGame: true);
-                        ImGui.Separator();
-                        if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
-                        if (ImGui.MenuItem("Compress and save...")) TrySaveArchive(compress: true);
+                        if (IsLevelArchive && ImGui.MenuItem("Save and run", "Ctrl+L")) TrySaveArchive(launchGame: true);
                     }
                     else
                     {
                         if (ImGui.MenuItem("Save", "Ctrl+S")) customSaveMethod(false, false, false);
                         if (ImGui.MenuItem("Save as...", "Ctrl+Shift+S")) customSaveMethod(true, false, false);
-                        if (_hasPackageFile && ImGui.MenuItem("Save and run", "Ctrl+L")) customSaveMethod(false, true, false);
-                        ImGui.Separator();
-                        if (ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
-                        if (ImGui.MenuItem("Compress and save...")) customSaveMethod(false, false, true);
+                        if (IsLevelArchive && ImGui.MenuItem("Save and run", "Ctrl+L")) customSaveMethod(false, true, false);
                     }
 
                     ImGui.Separator();
@@ -209,10 +206,6 @@ namespace NST
                         {
                             App.OpenArchiveRenderer(this);
                         }
-                        else if (!fromLevelEditor && ImGui.MenuItem("Extract all files"))
-                        {
-                            ExtractAllFiles(Archive.Files, true);
-                        }
                         if (ImGui.MenuItem("Update level name"))
                         {
                             string previousName = Archive.FindPackageFile()!.GetName(false).Replace("_pkg", "");
@@ -221,13 +214,6 @@ namespace NST
                             ModalRenderer.Show("Success", $"Level name changed from {previousName} to {newName}");
                             _treeView = new IgArchiveTreeView(this);
                             IsUpdated = true;
-                        }
-                        if (fromLevelEditor && ImGui.MenuItem("Export level to .gltf"))
-                        {
-                            if (App.GetLevelExplorer(this) is LevelExplorer explorer)
-                            {
-                                ModelExporter.Export(explorer);
-                            }
                         }
                         ImGui.Separator();
                         AudioPlayer.RenderAudioMenu();
@@ -286,6 +272,47 @@ namespace NST
                             }
                         }
                     }
+                    ImGui.EndMenu();
+                }
+
+                if (ImGui.BeginMenu("Export"))
+                {
+                    if (IsLevelArchive && ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
+                    
+                    if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
+
+                    if (IsLevelArchive && ImGui.MenuItem("Export to .mini.pak"))
+                    {
+                        string? path = FileExplorer.SaveFile(FileExplorer.EXT_ARCHIVES, Archive.GetName().Replace(".pak", ".mini.pak"));
+                        if (!string.IsNullOrEmpty(path))
+                        {
+                            if (!path.EndsWith(".mini.pak"))
+                            {
+                                ModalRenderer.Show("Couldn't create mini-pak", "The archive name must ends with .mini.pak");
+                            }
+                            else
+                            {
+                                Archive.ExportToMinipak(path);
+                                ModalRenderer.Show("Success", $"Successfully exported {NamespaceUtils.GetFileName(path)}");
+                            }
+                        }
+                    }
+
+                    ImGui.Separator();
+
+                    if (ImGui.MenuItem("Extract all files"))
+                    {
+                        ExtractAllFiles(Archive.Files, true);
+                    }
+
+                    if (fromLevelEditor && ImGui.MenuItem("Export to .gltf"))
+                    {
+                        if (App.GetLevelExplorer(this) is LevelExplorer explorer)
+                        {
+                            ModelExporter.Export(explorer);
+                        }
+                    }
+
                     ImGui.EndMenu();
                 }
 
