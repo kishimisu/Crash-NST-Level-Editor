@@ -189,6 +189,10 @@ public static class ModelExporter
                 foreach (var n in m.normals)
                     mesh.Normals.Add(new (n.X, n.Y, n.Z));
 
+                if (m.Material.UseVertexColors)
+                    foreach (var c in m.colors)
+                        mesh.VertexColorChannels[0].Add(new (c.X, c.Y, c.Z, 1.0f));
+
                 foreach (var uv in m.uvs)
                     mesh.TextureCoordinateChannels[0].Add(new (uv.X, 1 - uv.Y, 0)); 
 

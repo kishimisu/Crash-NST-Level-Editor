@@ -14,71 +14,92 @@ namespace NST
             indices = data.indices;
             positions = data.positions;
             normals = data.normals;
+            colors = data.colors;
             uvs = data.uvs;
 
             materialHandle = Material.materialHandle = data.materialHandle;
         }
 
         /// <summary>
-        /// Create a new THREE.Mesh instance using the draw call geometry and material
+        /// Create a THREE.Mesh object from this mesh
         /// </summary>
         public THREE.Mesh CreateMesh()
         {
             var geo = CreateBufferGeometry();
             var mat = Material.CreateThreeMaterial(index);
 
+            mat.VertexColors = colors.Count > 0 && Material.UseVertexColors;
+
             return new THREE.Mesh(geo, mat) { RenderOrder = index };
+        }
+
+        /// <summary>
+        /// Create an instanced mesh from this mesh
+        /// </summary>
+        /// <param name="matrices">The matrices for each instance</param>
+        /// <param name="instanceColors">The colors for each instance</param>
+        public THREE.InstancedMesh CreateInstancedMesh(List<THREE.Matrix4> matrices, List<THREE.Color>? instanceColors = null)
+        {
+            THREE.BufferGeometry geometry = CreateBufferGeometry();
+            THREE.Material material = Material.CreateThreeMaterial();
+
+            material.VertexColors = colors.Count > 0 && Material.UseVertexColors;
+
+            THREE.InstancedMesh instancedMesh = new THREE.InstancedMesh(geometry, material, matrices.Count);
+
+            for (int i = 0; i < matrices.Count; i++)
+            {
+                instancedMesh.SetMatrixAt(i, matrices[i]);
+                if (instanceColors != null) instancedMesh.SetColorAt(i, instanceColors[i]);
+            }
+
+            instancedMesh.FrustumCulled = false;
+
+            return instancedMesh;
+        }
+
+        /// <summary>
+        /// Create a geometry made of instanced cubes
+        /// </summary>
+        public static THREE.Group CreateInstancedCubes(List<THREE.Matrix4> matrices, List<THREE.Color> instanceColors)
+        {
+            THREE.BufferGeometry geometry = new THREE.BoxBufferGeometry(20, 20, 20);
+            THREE.Material material = new THREE.MeshPhongMaterial();
+            THREE.InstancedMesh instancedMesh = new THREE.InstancedMesh(geometry, material, matrices.Count);
+
+            for (int i = 0; i < matrices.Count; i++)
+            {
+                instancedMesh.SetMatrixAt(i, matrices[i]);
+                instancedMesh.SetColorAt(i, instanceColors[i]);
+            }
+
+            instancedMesh.FrustumCulled = false;
+
+            return new THREE.Group() { instancedMesh };
         }
 
         /// <summary>
         /// Create a THREE.BufferGeometry from the draw call vertex data
         /// </summary>
-        /// <returns></returns>
         public THREE.BufferGeometry CreateBufferGeometry()
         {
             float[] posBuffer = positions.SelectMany(e => new float[] { e.X, e.Y, e.Z }).ToArray();
             float[] normalBuffer = normals.SelectMany(e => new float[] { e.X, e.Y, e.Z }).ToArray();
+            float[] colorBuffer = colors.SelectMany(e => new float[] { e.X, e.Y, e.Z }).ToArray();
             float[] uvBuffer = uvs.SelectMany(e => new float[] { e.X, e.Y }).ToArray();
-            List<int> indexBuffer = indices.Select(e => (int)e).ToList();
+            int[] indexBuffer = indices.Select(e => (int)e).ToArray();
 
             var geometry = new THREE.BufferGeometry();
             
             geometry.SetAttribute("position", new THREE.BufferAttribute<float>(posBuffer, 3));
             geometry.SetAttribute("normal", new THREE.BufferAttribute<float>(normalBuffer, 3));
             geometry.SetAttribute("uv", new THREE.BufferAttribute<float>(uvBuffer, 2));
-            geometry.SetIndex(indexBuffer);
+            geometry.SetIndex(new THREE.BufferAttribute<int>(indexBuffer, 1));
 
-            return geometry;
-        }
-
-        public THREE.BufferGeometry CreateInterleavedBufferGeometry()
-        {
-            List<int> indexBuffer = indices.Select(i => (int)i).ToList();
-            float[] interleavedAttributes = new float[positions.Count * 3 + normals.Count * 3 + uvs.Count * 2];
-
-            for (int i = 0; i < positions.Count; i++)
+            if (colors.Count > 0)
             {
-                System.Numerics.Vector3 position = positions[i];
-                System.Numerics.Vector3 normal = normals[i];
-                System.Numerics.Vector2 uv = uvs[i];
-
-                interleavedAttributes[i * 8 + 0] = position.X;
-                interleavedAttributes[i * 8 + 1] = position.Y;
-                interleavedAttributes[i * 8 + 2] = position.Z;
-                interleavedAttributes[i * 8 + 3] = normal.X;
-                interleavedAttributes[i * 8 + 4] = normal.Y;
-                interleavedAttributes[i * 8 + 5] = normal.Z;
-                interleavedAttributes[i * 8 + 6] = uv.X;
-                interleavedAttributes[i * 8 + 7] = uv.Y;
+                geometry.SetAttribute("color", new THREE.BufferAttribute<float>(colorBuffer, 3));
             }
-
-            var buffer = new THREE.InterleavedBuffer<float>(interleavedAttributes, 8);
-
-            var geometry = new THREE.BufferGeometry();
-            geometry.SetAttribute("position", new THREE.InterleavedBufferAttribute<float>(buffer, 3, 0));
-            geometry.SetAttribute("normal", new THREE.InterleavedBufferAttribute<float>(buffer, 3, 3));
-            geometry.SetAttribute("uv", new THREE.InterleavedBufferAttribute<float>(buffer, 2, 6));
-            geometry.SetIndex(indexBuffer);
 
             return geometry;
         }

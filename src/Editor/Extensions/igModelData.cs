@@ -13,6 +13,7 @@ namespace NST
         public List<uint> indices = [];
         public List<System.Numerics.Vector3> positions = [];
         public List<System.Numerics.Vector3> normals = [];
+        public List<System.Numerics.Vector3> colors = [];
         public List<System.Numerics.Vector2> uvs = [];
     }
 
@@ -21,7 +22,7 @@ namespace NST
     /// </summary>
     public static class igModelDataExtensions
     {
-        private static readonly uint[] _paddedElementSizes = [44, 52, 64, 76, 84, 140];
+        private static readonly uint[] _vertexColorSizes = [44, 52, 64, 76, 84, 140];
 
         /// <summary>
         /// Extracts draw calls from a model
@@ -113,7 +114,9 @@ namespace NST
             }
 
             uint elementSize = format._vertexSize;
-            bool hasPadding = _paddedElementSizes.Contains(elementSize);
+
+            bool hasNormals = elementSize > 24;
+            bool hasVertexColors = _vertexColorSizes.Contains(elementSize);
 
             using MemoryStream stream = new MemoryStream(buffer._data.ToArray());
             using BinaryReader reader = new BinaryReader(stream);
@@ -137,13 +140,21 @@ namespace NST
                 float ny = 0;
                 float nz = 0;
 
-                if (elementSize > 24)
+                if (hasNormals)
                 {
                     nx = reader.ReadSingle();
                     ny = reader.ReadSingle();
                     nz = reader.ReadSingle();
 
-                    if (hasPadding) reader.ReadUInt32();
+                    if (hasVertexColors)
+                    {
+                        u8 r = reader.ReadByte();
+                        u8 g = reader.ReadByte();
+                        u8 b = reader.ReadByte();
+                        u8 a = reader.ReadByte();
+                        
+                        data.colors.Add(new System.Numerics.Vector3(r, g, b) / 255.0f);
+                    }
                 }
 
                 float u = (float)reader.ReadHalf();

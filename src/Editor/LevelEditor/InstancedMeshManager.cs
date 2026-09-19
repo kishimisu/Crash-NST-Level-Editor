@@ -111,7 +111,7 @@ namespace NST
 
             if (_model == null)
             {
-                return NSTModel.CreateInstancedCubes(matrices, colors);
+                return NSTMesh.CreateInstancedCubes(matrices, colors);
             }
             else
             {

@@ -14,10 +14,10 @@ namespace NST
         private THREE.DirectionalLight _light;
 
         // Render options
-        private bool _noCulling = false;
-        private static string[] _renderModes = { "Shaded", "Albedo", "UV", "Normal", "Opacity", "Alpha Clip", "Wireframe" };
+        private static readonly string[] _renderModes = ["Shaded", "Albedo", "UV", "Normal", "Color", "Vertex Color", "Opacity", "Alpha Clip", "Wireframe"];
         private int _renderMode = 0;
         private int _renderDrawCall = -1;
+        private bool _noCulling = false;
 
         public ModelPreview(NSTModel model, int width, int height) : base(width, height)
         {
@@ -50,20 +50,34 @@ namespace NST
             _object.Position = center.Negate();
             _scene.Add(_object);
 
+            // Add missing vertex colors for shader material
+            foreach (var mesh in model.Meshes)
+            {
+                if (mesh.colors.Count > 0) continue;
+
+                for (int i = 0; i < mesh.positions.Count; i++)
+                    mesh.colors.Add(new System.Numerics.Vector3(1, 1, 1));
+            }
+
             // Create material for custom render modes
             _debugMaterial = new THREE.ShaderMaterial()
             {
+                VertexColors = true,
                 Uniforms = {
                     { "uMap", new THREE.GLUniform { { "value", null! }}},
                     { "uMode", new THREE.GLUniform { { "value", 0 }}},
-                    { "uAlphaTest", new THREE.GLUniform { { "value", 0.5f }}}
+                    { "uAlphaTest", new THREE.GLUniform { { "value", 0.5f }}},
+                    { "uColor", new THREE.GLUniform { { "value", new THREE.Color(1, 1, 1) }}}
                 },
                 VertexShader = """
                     varying vec2 vUv;
                     varying vec3 vNormal;
+                    varying vec3 vColor;
+
                     void main() {
                         vUv = uv;
                         vNormal = normal;
+                        vColor = color;
                         gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
                     }
                 """,
@@ -71,15 +85,20 @@ namespace NST
                     uniform sampler2D uMap;
                     uniform float uAlphaTest;
                     uniform int uMode;
+                    uniform vec3 uColor;
                     varying vec2 vUv;
                     varying vec3 vNormal;
+                    varying vec3 vColor;
+
                     void main() {
                         vec4 color = texture2D(uMap, vUv);
                         if      (uMode == 1 && color.a < uAlphaTest) discard;    // Albedo
                         else if (uMode == 2) color = vec4(vUv, 0, 1);            // UV
                         else if (uMode == 3) color = vec4(vNormal*.5+.5, 1);     // Normal
-                        else if (uMode == 4) color = vec4(color.aaa, 1);         // Opacity
-                        else if (uMode == 5) color = vec4(color.a > uAlphaTest); // Alpha clip
+                        else if (uMode == 4) color = vec4(uColor, 1);            // Color
+                        else if (uMode == 5) color = vec4(vColor, 1);            // Vertex color
+                        else if (uMode == 6) color = vec4(color.aaa, 1);         // Opacity
+                        else if (uMode == 7) color = vec4(color.a > uAlphaTest); // Alpha clip
                         gl_FragColor = color;
                     }
                 """
@@ -120,8 +139,8 @@ namespace NST
             }
             ImGui.SameLine(0, 10 * SilkWindow.instance.scale);
 
-            ImGui.SetNextItemWidth(100 * SilkWindow.instance.scale);
-            if (ImGui.Combo("Render mode", ref _renderMode, _renderModes, _renderModes.Length))
+            ImGui.SetNextItemWidth(120 * SilkWindow.instance.scale);
+            if (ImGui.Combo("Render mode", ref _renderMode, _renderModes, _renderModes.Length, _renderModes.Length))
             {
                 UpdateRenderMode();
             }
@@ -215,11 +234,10 @@ namespace NST
 
             _renderMode = Math.Clamp(_renderMode, 0, _renderModes.Length - 1);
 
-            if (_renderMode == 6) // Wireframe mode
+            if (_renderMode == 8) // Wireframe mode
             {
                 _object.Traverse((obj) => {
                     if (obj.Material == null) return;
-                    obj.Material = (THREE.Material)obj.Material.Clone();
                     obj.Material.Wireframe = true;
                 });
             }
@@ -230,12 +248,14 @@ namespace NST
 
                     THREE.Texture map = obj.Material.Map;
                     float alphaTest = obj.Material.AlphaTest;
+                    var color = obj.Material.Color ?? new THREE.Color(1, 1, 1);
 
                     var debugMat = (THREE.ShaderMaterial)_debugMaterial.Clone();
                     debugMat.Transparent = obj.Material.Transparent && _renderMode == 1;
                     (debugMat.Uniforms["uMap"] as THREE.GLUniform)!["value"] = map;
                     (debugMat.Uniforms["uAlphaTest"] as THREE.GLUniform)!["value"] = alphaTest;
                     (debugMat.Uniforms["uMode"] as THREE.GLUniform)!["value"] = _renderMode;
+                    (debugMat.Uniforms["uColor"] as THREE.GLUniform)!["value"] = color;
 
                     obj.Material = debugMat;
                 });

@@ -569,7 +569,7 @@ namespace NST
                 entity.Model = models[modelName];
             }
 
-            // (Step 7a) Remove debug meshes
+            // Step 7: Remove debug meshes
             foreach (NSTModel model in models.Values)
             {
                 bool isCloud = true;
@@ -589,31 +589,6 @@ namespace NST
                 if (isCloud && model.Meshes.Count > 1)
                 {
                     model.Meshes.RemoveRange(1, model.Meshes.Count - 1);
-                }
-            }
-
-            // (Step 7b) Fix missing crate colors
-            Dictionary<NamedReference, THREE.Vector4> _colorOverrides = new()
-            {
-                // NST
-                { new NamedReference("Crash_Crates_materials,TNTCrate,0000100", "GrayWood"), new THREE.Vector4(.8f, .2f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,BossRipperRoo_BigTNT,0004008", "newwood"), new THREE.Vector4(.8f, .2f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Crash_Crate_Nitro,0000210", "GrayWood01E"), new THREE.Vector4(.15f, .9f, .15f, 1) },
-                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerOne,00c0100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerTwo,0240100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Crash_Crate_TimerThree,0140100", "GrayWood"), new THREE.Vector4(.9f, .9f, .1f, 1) },
-                // CTR
-                { new NamedReference("Crash_Crates_materials,Octane_Skin_TimeCrate_01,00180000", "TimeCrate"), new THREE.Vector4(.78f, .72f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Octane_Skin_TimeCrate_02,00480000", "TimeCrate"), new THREE.Vector4(.78f, .72f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Octane_Skin_TimeCrate_03,00280000", "TimeCrate"), new THREE.Vector4(.78f, .72f, .1f, 1) },
-                { new NamedReference("Crash_Crates_materials,Octane_NitroCrate,00000210", "GrayWood01E"), new THREE.Vector4(.15f, .7f, .15f, 1) },
-            };
-
-            foreach ((NamedReference matRef, THREE.Vector4 colorOverride) in _colorOverrides)
-            {
-                if (materials.TryGetValue(matRef, out NSTMaterial? mat))
-                {
-                    mat.color = colorOverride;
                 }
             }
         }

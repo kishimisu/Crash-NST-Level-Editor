@@ -44,8 +44,12 @@ namespace NST
         public EIG_GFX_TEXTURE_FILTER magFilter = EIG_GFX_TEXTURE_FILTER.LINEAR;
 
         public bool editorOnly = false;
+        public bool anisotropic = false;
+        public bool vertexWibble = false;
 
         public THREE.Vector4 color = new THREE.Vector4(1, 1, 1, 1);
+
+        public bool UseVertexColors => !anisotropic && !vertexWibble && (type == typeof(CStandardMaterial) || type == typeof(CBlendedMaterial) || shaderName == "CStandardMaterial" || shaderName == "CBlendedMaterial");
 
         public static float DefaultShininess = 5.0f;
 
@@ -115,8 +119,7 @@ namespace NST
         /// </summary>
         private void SetupFromIgMaterial(igMaterial material)
         {
-            type       = material.GetType();
-            editorOnly = material is CUnlitMaterial unlit && unlit._onlyDrawInTools;
+            type = material.GetType();
 
             material.FindTextureReferences(textureReferences);
 
@@ -137,9 +140,16 @@ namespace NST
                 minFilter      = fx._customMaterialBitfield2._minificationFilter;
                 magFilter      = fx._customMaterialBitfield2._magnificationFilter;
                 drawType       = fx._graphicsMaterial?._materialBitField._drawType ?? EigDrawType.kDrawTypeOpaque;
+                editorOnly     = fx is CUnlitMaterial unlit && unlit._onlyDrawInTools;
                 effectHandle   = fx._effectHandle.Reference;
                 shaderName     = fx._fxFilename ?? "";
                 color          = fx.FindColor();
+
+                if (fx is CStandardMaterial standard)
+                {
+                    anisotropic = standard._anisotropicShading;
+                    vertexWibble = standard._vertexWibbleEnabled;
+                }
             }
             else if (material is igGraphicsMaterial gx)
             {
@@ -304,6 +314,10 @@ namespace NST
                 material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];
                 material.Map.MagFilter = _TEXTURE_FILTER_MAP[magFilter];
             }
+            else if (material.Color.Value.GetHex() == 0xffffff && type == typeof(CBlendedDecalMaterial)) // fix Blob in L126
+            {
+                material.Opacity = 0;
+            }
 
             if (editorOnly) material.Visible = false;
 
@@ -404,6 +418,12 @@ namespace NST
 
             if (editorOnly)
                 ImGui.BulletText($"Only draw in editor: {editorOnly}");
+
+            if (anisotropic)
+                ImGui.BulletText("Anisotropic shading");
+
+            if (vertexWibble)
+                ImGui.BulletText("Vertex wibble");
 
             if (color.X != 1 || color.Y != 1 || color.Z != 1 || color.W != 1)
             {
