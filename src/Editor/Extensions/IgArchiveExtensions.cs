@@ -520,7 +520,7 @@ namespace NST
                 {
                     if (archive.Path.EndsWith(".mini.pak"))
                     {
-                        ModalRenderer.ShowLoadingModal("Building level...");
+                        ModalRenderer.ShowLoadingModal("Importing assets...");
                         archive = ImportFromMinipak(archive, pkg);
                         ModalRenderer.CloseLoadingModal();
                     }
@@ -857,9 +857,14 @@ namespace NST
         {
             string? staticCollisionsPath = archive.FindCollisionFile(".hkx")?.Path;
 
+            bool hasCtrFiles = archive.Files.Any(f => f.Path.Contains("octane/", StringComparison.InvariantCultureIgnoreCase));
+
             foreach (var f in archive.Files.ToList())
             {
                 if (f.Path.StartsWith("maps/") || f.Path.StartsWith("packages/") || f.Path.StartsWith("update/") || f.Path == staticCollisionsPath)
+                    continue;
+
+                if (hasCtrFiles && (f.Path.StartsWith("models/") || f.Path.StartsWith("materialinstances/")))
                     continue;
 
                 if (NamespaceUtils.GetInfos(f.GetName(false))?.Archive == null)
@@ -910,7 +915,11 @@ namespace NST
                 names.Add(c._name.ToLowerInvariant());
             }
 
-            foreach ((var sourceArchiveName, var sourceFilePaths) in archives)
+            var sortedArchives = archives
+                .OrderBy(e => (char.ToUpperInvariant(e.Key[0]) - 'A' - ('M' - 'A') + 26) % 26)
+                .ThenBy(e => e.Key);
+
+            foreach ((var sourceArchiveName, var sourceFilePaths) in sortedArchives)
             {
                 string sourceArchivePath = Path.Combine(LocalStorage.ArchivePath, $"{sourceArchiveName}.pak");
                 var sourceArchive = IgArchive.Open(sourceArchivePath);
@@ -927,11 +936,13 @@ namespace NST
                     archive.AddFile(f);
 
                     float progress = (float)count / total;
-                    ModalRenderer.ShowLoadingModal($"Building level... ({MathF.Round(progress*100)}%)", progress);
+                    ModalRenderer.ShowLoadingModal($"Importing assets from {sourceArchiveName} ({MathF.Round(progress*100)}%)", progress);
                 }
             }
 
             string outputPath = archive.Path.Replace(".mini.pak", ".full.pak");
+
+            ModalRenderer.ShowLoadingModal($"Saving {NamespaceUtils.GetFileName(outputPath)}...");
 
             archive.SafeSave(outputPath);
 
