@@ -6,12 +6,21 @@ namespace Alchemy
     /// <summary>
     /// Link between a namespace and the archive that contains it
     /// </summary>
-    public class NamespaceInfos
+    public class NamespaceInfos(string name, string? archive = null)
     {
-        public string name { get; set; } // The name of the namespace
-        public string? pak { get; set; } // The name of the first archive that contains the namespace
+        public string Name { get; set; } = name; // The name of the namespace
+        public string? Archive { get; set; } = archive; // The name of the first archive that contains the namespace
+        public Dictionary<string, string> Paths { get; set; } = []; // The list of file paths and corresponding parent archive for this namespace
 
-        public NamespaceInfos(string name, string? pak = null) { this.name = name; this.pak = pak; }
+        public void AddPath(string ext, string archive)
+        {
+            if (Archive == null || ext == ".igz")
+            {
+                Archive = $"{archive}.pak";
+            }
+
+            Paths.Add(ext, archive);
+        }
     }
 
     /// <summary>
@@ -105,7 +114,7 @@ namespace Alchemy
         /// </summary>
         public static string FindNameForHash(uint hash)
         {
-            return GetInfos(hash)?.name ?? hash.ToString();
+            return GetInfos(hash)?.Name ?? hash.ToString();
         }
 
         /// <summary>
@@ -114,45 +123,41 @@ namespace Alchemy
         private static Dictionary<uint, NamespaceInfos> InitializeNamespaceInfos()
         {
             using Stream stream = Assembly.GetExecutingAssembly().GetManifestResourceStream("NST.assets.namespace_infos.metadata")!;
-            using BinaryReader reader = new BinaryReader(stream);
+            using MemoryStream input = DecompressNamespaceInfos(stream);
+            using BinaryReader reader = new BinaryReader(input, Encoding.UTF8);
 
-            byte[] data = reader.ReadBytes((int)stream.Length);
-
-            string content = Encoding.UTF8.GetString(DecompressNamespaceInfos(data));
+            int archiveCount = reader.ReadInt32();
+            int nameCount = reader.ReadInt32();
             
-            List<string> lines = content.Split('\n').ToList();
-            List<string> paks = [];
-            
-            Dictionary<uint, NamespaceInfos> namespaceInfos = [];
+            var namespaceInfos = new Dictionary<uint, NamespaceInfos>();
 
-            int i = 0;
-            for (; i < lines.Count; i++)
+            for (int i = 0; i < archiveCount; i++)
             {
-                string line = lines[i];
-                if (string.IsNullOrEmpty(line)) break;
-                paks.Add(line);
+                string archiveName = reader.ReadString();
+                int fileCount = reader.ReadInt32();
+
+                for (int j = 0; j < fileCount; j++)
+                {
+                    string filePath = reader.ReadString();
+
+                    string fileName = GetFileName(filePath, false); 
+                    uint hash = ComputeHash(fileName);
+
+                    if (!namespaceInfos.TryGetValue(hash, out var infos))
+                    {
+                        infos = new NamespaceInfos(fileName);
+                        namespaceInfos[hash] = infos;
+                    }
+
+                    infos.AddPath(filePath, archiveName);
+                }
             }
-            for (i++; i < lines.Count; i++)
+
+            for (int i = 0; i < nameCount; i++)
             {
-                string line = lines[i];
-                List<string> items = line.Split(' ').ToList();
-                
-                uint id = uint.Parse(items[0]);
-                string name = items[1];
-                int pakId = int.Parse(items[2]);
-                string? pak = pakId == 0 ? null : (paks[pakId - 1] + ".pak");
-
-                namespaceInfos.Add(id, new NamespaceInfos(name, pak));
+                string name = reader.ReadString();
+                namespaceInfos.Add(ComputeHash(name), new NamespaceInfos(name));
             }
-
-            namespaceInfos.Add(0x336636A3, new NamespaceInfos("i16_ps4"));
-            namespaceInfos.Add(0x77DE1F2D, new NamespaceInfos("i32_ps4"));
-            namespaceInfos.Add(0xF8313483, new NamespaceInfos("dxt1_tile_ps4"));
-            namespaceInfos.Add(0x00A15D65, new NamespaceInfos("dxt3_tile_ps4"));
-            namespaceInfos.Add(0x4EFC8CF7, new NamespaceInfos("dxt3_dx11"));
-            namespaceInfos.Add(0xF0B976CF, new NamespaceInfos("dxt5_tile_ps4"));
-            namespaceInfos.Add(0x7D081E6A, new NamespaceInfos("bc5_tile_ps4"));
-            namespaceInfos.Add(0x9B54FB48, new NamespaceInfos("b8g8r8a8_tile_ps4"));
 
             return namespaceInfos;
         }
@@ -160,25 +165,25 @@ namespace Alchemy
         /// <summary>
         /// Decompress the namespace infos data
         /// </summary>
-        private static byte[] DecompressNamespaceInfos(byte[] data)
+        private static MemoryStream DecompressNamespaceInfos(Stream input)
         {
-            using MemoryStream inputStream = new MemoryStream(data);
-            
             byte[] props = new byte[5];
-            inputStream.Read(props, 0, 5);
+            input.ReadExactly(props);
 
             byte[] lengthBytes = new byte[4];
-            inputStream.Read(lengthBytes, 0, 4);
+            input.ReadExactly(lengthBytes);
 
-            int uncompressedSize = BitConverter.ToInt32(lengthBytes, 0);
+            int uncompressedSize = BitConverter.ToInt32(lengthBytes);
 
-            using MemoryStream outputStream = new MemoryStream(uncompressedSize);
-           
+            var stream = new MemoryStream();
             var decoder = new SevenZip.Compression.LZMA.Decoder();
-            decoder.SetDecoderProperties(props);
-            decoder.Code(inputStream, outputStream, inputStream.Length - inputStream.Position, uncompressedSize, null);
 
-            return outputStream.ToArray();
+            decoder.SetDecoderProperties(props);
+            decoder.Code(input, stream, input.Length - input.Position, uncompressedSize, null);
+
+            stream.Position = 0;
+
+            return stream;
         }
     }
 }

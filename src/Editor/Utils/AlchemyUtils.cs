@@ -29,7 +29,7 @@ namespace NST
             }
 
             // Find the file in its original archive
-            string? archivePath = NamespaceUtils.GetInfos(NamespaceUtils.ComputeHash(fileName))?.pak;
+            string? archivePath = NamespaceUtils.GetInfos(NamespaceUtils.ComputeHash(fileName))?.Archive;
 
             if (archivePath == null)
             {
@@ -88,7 +88,7 @@ namespace NST
             if (obj != null || (archive != null && archive.GameVersion == GameVersion.CTR)) return obj;
 
             // Find the object in its original archive
-            string? archivePath = NamespaceUtils.GetInfos(reference)?.pak;
+            string? archivePath = NamespaceUtils.GetInfos(reference)?.Archive;
 
             if (archivePath == null)
             {

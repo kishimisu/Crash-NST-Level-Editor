@@ -335,7 +335,7 @@ namespace NST
             }
 
             try {
-                string pakPath = Path.Join(LocalStorage.GamePath, "archives", infos.pak);
+                string pakPath = Path.Join(LocalStorage.GamePath, "archives", infos.Archive);
 
                 IgArchiveRenderer archiveRenderer = OpenArchive(pakPath);
                 ImGui.SetWindowFocus(archiveRenderer.GetWindowName());
