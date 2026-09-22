@@ -196,8 +196,9 @@ namespace Alchemy
             source ??= this;
             clones ??= new Dictionary<igObject, igObject>();
             
-            // Clone child objects
             var props = new CloneProperties(source, this, mode, clones, forceClone, GameVersion);
+            
+            // Clone object recursively
             T clone = (T)obj.Clone(props);
 
             string srcNamespace = source.GetName(false).ToLowerInvariant();
@@ -348,77 +349,70 @@ namespace Alchemy
         /// Remove an object from the file and from all its parents.
         /// Recursively remove all of its children too and return all removed objects.
         /// </summary>
-        public HashSet<igObject> Remove(igObject toRemove, bool force = true, HashSet<igObject>? removed = null)
+        public HashSet<igObject> Remove(igObject toRemove) => Remove([toRemove]);
+        public HashSet<igObject> Remove(HashSet<igObject> toRemove)
         {
-            Dictionary<igObject, (List<igObject> parents, List<igObject> children)> references = [];
-            
-            igObject? objectList = Objects.Count > 0 ? (Objects[0] as igObjectList) : null;
-            var objects = objectList == null ? Objects : Objects.Skip(1);
+            var allObjects = Objects.FirstOrDefault() is igObjectList 
+                ? Objects.Skip(1).ToHashSet() 
+                : Objects.ToHashSet();
 
-            HashSet<igObject> allChildren = toRemove.GetChildrenRecursive(this, GameVersion, ChildrenSearchParams.IncludeHandles).ToHashSet();
-            
-            bool hasLoop = allChildren.Contains(toRemove);
-            
-            allChildren.Add(toRemove);
+            var parents = new Dictionary<igObject, HashSet<igObject>>(); // child -> parents
+            var childrens = new Dictionary<igObject, HashSet<igObject>>(); // parent -> children
 
-            foreach (igObject parent in objects)
+            // Build parent/children graph
+            foreach (var obj in allObjects)
             {
-                bool inHierarchy = allChildren.Contains(parent);
+                var children = obj.GetChildren(this, GameVersion, ChildrenSearchParams.IncludeHandles);
 
-                foreach (igObject child in parent.GetChildren(this, GameVersion, ChildrenSearchParams.IncludeHandles))
+                childrens[obj] = children;
+
+                foreach (var child in children)
                 {
-                    if (!references.ContainsKey(parent))
+                    if (!parents.TryGetValue(child, out var childParents))
                     {
-                        references[parent] = (new List<igObject>(), new List<igObject>());
-                    }
-                    references[parent].children.Add(child);
-
-                    if (!references.ContainsKey(child))
-                    {
-                        references[child] = (new List<igObject>(), new List<igObject>());
+                        childParents = [];
+                        parents[child] = childParents;
                     }
 
-                    if (inHierarchy && !hasLoop) continue;
-
-                    references[child].parents.Add(parent);
+                    childParents.Add(obj);
                 }
             }
 
-            removed ??= new HashSet<igObject>();
+            var removed = new HashSet<igObject>(toRemove);
+            var queue = new Queue<igObject>(toRemove);
 
-            return RemoveRecursive(toRemove, force, hasLoop, references, removed);
-        }
-
-        private HashSet<igObject> RemoveRecursive(igObject obj, bool force, bool hasLoop, Dictionary<igObject, (List<igObject> parents, List<igObject> children)> references, HashSet<igObject> removed)
-        {
-            (List<igObject>? parents, List<igObject>? children) = references.ContainsKey(obj) ? references[obj] : (null, null);
-
-            if (parents == null || parents.Count == 0 || force)
+            // Find objects to remove
+            while (queue.Count > 0)
             {
-                if (!force && hasLoop && obj is CEntity) return removed;
+                var current = queue.Dequeue();
 
-                removed.Add(obj);
+                removed.Add(current);
 
-                Objects.Remove(obj);
-
-                if (parents == null || children == null) return removed;
-
-                foreach (igObject parent in parents)
+                if (parents.TryGetValue(current, out var currentParents))
                 {
-                    parent.RemoveChild(obj);
-
-                    references[parent].children.Remove(obj);
+                    foreach (var parent in currentParents)
+                    {
+                        parent.RemoveChild(current);
+                    }
                 }
 
-                foreach (igObject child in children)
+                if (!childrens.TryGetValue(current, out var currentChildren))
+                    continue;
+
+                foreach (var child in currentChildren)
                 {
-                    if (removed.Contains(child)) continue;
+                    if (removed.Contains(child))
+                        continue;
 
-                    references[child].parents.Remove(obj);
-
-                    RemoveRecursive(child, false, hasLoop, references, removed);
+                    // Remove the child when all its parents have been removed
+                    if (parents.TryGetValue(child, out var childParents) && childParents.All(removed.Contains))
+                    {
+                        queue.Enqueue(child);
+                    }
                 }
             }
+            
+            Objects.RemoveAll(removed.Contains);
 
             return removed;
         }

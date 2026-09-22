@@ -350,7 +350,7 @@ namespace NST
                 return;
             }
 
-            List<igObject> children = newNode.Object.GetChildren(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles);
+            HashSet<igObject> children = newNode.Object.GetChildren(Renderer.Igz, Renderer.Igz.GameVersion, ChildrenSearchParams.IncludeHandles);
 
             // Update parents and children
             foreach (IgzTreeNode node in ObjectNodes)

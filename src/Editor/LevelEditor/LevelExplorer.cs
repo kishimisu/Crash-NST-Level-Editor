@@ -740,6 +740,9 @@ namespace NST
                 InstanceManager.ClearSelectedInstances();
             }
 
+            Dictionary<FileUpdateInfos, HashSet<igObject>> igObjectsToRemove = [];
+            
+            // Find objects to remove
             foreach (NSTObject selected in toRemove)
             {
                 // Special cases for spline children
@@ -777,11 +780,23 @@ namespace NST
 
                 FileUpdateInfos infos = FileManager.GetInfos(selected.ArchiveFile)!;
 
-                List<igObject> removed = infos.igz!.Remove(selected.GetObject()).ToList();
+                if (!igObjectsToRemove.TryGetValue(infos, out var objectsToRemove))
+                {
+                    objectsToRemove = [];
+                    igObjectsToRemove[infos] = objectsToRemove;
+                }
+
+                objectsToRemove.Add(selected.GetObject());
+            }
+
+            // Remove objects
+            foreach ((var infos, var objectsToRemove) in igObjectsToRemove)
+            {
+                List<igObject> removed = infos.igz!.Remove(objectsToRemove).ToList();
 
                 foreach (igObject obj in removed)
                 {
-                    ArchiveRenderer.SetObjectUpdated(selected.ArchiveFile, obj, true);
+                    ArchiveRenderer.SetObjectUpdated(infos.file, obj, true);
 
                     if (InstanceManager.AllReferences.TryGetValue(obj.ToNamedReference(infos.file.GetName(false)), out NSTObject? removedObject))
                     {
@@ -805,6 +820,7 @@ namespace NST
                                 {
                                     if (prefabChild.ParentPrefabInstance == removedEntity)
                                     {
+                                        InstanceManager.FakePrefabChilds.Remove(prefabChild);
                                         prefabChild.PrefabTemplate!.PrefabTemplateInstances.Remove(prefabChild);
                                         prefabChild.PrefabTemplate.PrefabTemplateInstances.ForEach(e => e.Parents.Remove(removedEntity));
                                         InstanceManager.Unregister(prefabChild);
@@ -818,6 +834,7 @@ namespace NST
                             }
                             else if (removedEntity.IsPrefabChild)
                             {
+                                InstanceManager.FakePrefabChilds.Remove(removedEntity);
                                 removedEntity.PrefabTemplate!.PrefabTemplateInstances.Remove(removedEntity);
                                 removedEntity.PrefabTemplate.PrefabTemplateInstances.ForEach(e => InstanceManager.Unregister(e));
                             }

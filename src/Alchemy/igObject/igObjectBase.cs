@@ -164,14 +164,13 @@ namespace Alchemy
         /// Can also include objects that are referenced through handles in the same IGZ file
         /// </summary>
         /// <param name="igz">The IGZ file containing this object</param>
-        public virtual List<igObject> GetChildren(IgzFile igz, GameVersion version, ChildrenSearchParams searchParams)
+        public virtual HashSet<igObject> GetChildren(IgzFile igz, GameVersion version, ChildrenSearchParams searchParams)
         {
-            List<igObject> handles = GetHandles(version)
-                .Select(handle => igz.FindObject(handle))
-                .OfType<igObject>()
-                .ToList();
+            var handles = GetHandles(version)
+                .Select(igz.FindObject)
+                .OfType<igObject>();
 
-            return GetChildren(version, searchParams).Concat(handles).ToList();
+            return GetChildren(version, searchParams).Concat(handles).ToHashSet();
         }
 
         /// <summary>
