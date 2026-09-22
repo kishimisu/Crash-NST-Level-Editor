@@ -209,7 +209,7 @@ namespace NST
             else if (!selected)
             {
                 if (Object is CDynamicClipEntity) layer = LevelExplorer.CameraLayer.ClipEntities;
-                else if (Model == null) layer = LevelExplorer.CameraLayer.AllEntities;
+                else if (Model == null) layer = LevelExplorer.CameraLayer.OtherEntities;
             }
             else if (IsPrefabChild && ParentPrefabInstance?.IsSelected == true && Model?.Name.Contains("cloud", StringComparison.InvariantCultureIgnoreCase) == true)
             {

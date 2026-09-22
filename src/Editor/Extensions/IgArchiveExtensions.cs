@@ -239,7 +239,7 @@ namespace NST
 
                 added.Add(current);
 
-                if (!current.IsIGZ()) continue;
+                if (current.Path.StartsWith("textures/") || !current.IsIGZ()) continue;
 
                 IgzFile igz = current.ToIgzFile();
 
@@ -522,7 +522,7 @@ namespace NST
                     if (archive.Path.EndsWith(".mini.pak"))
                     {
                         ModalRenderer.ShowLoadingModal("Importing assets...");
-                        archive = ImportFromMinipak(archive, pkg);
+                        ImportFromMinipak(archive, pkg);
                         ModalRenderer.CloseLoadingModal();
                     }
 
@@ -926,25 +926,28 @@ namespace NST
             archive.SafeSave(path, compress: true);
         }
 
-        private static IgArchive ImportFromMinipak(IgArchive archive, IgArchiveFile package)
+        private static void ImportFromMinipak(IgArchive archive, IgArchiveFile package)
         {
             var igz = package.ToIgzFile();
 
             var list = igz.FindObject<igStreamingChunkInfo>() 
                         ?? throw new Exception("Could not find igStreamingChunkInfo object");
 
-            Dictionary<string, HashSet<string>> archives = [];
+            var existing = archive.Files.Select(f => f.Path).ToHashSet(StringComparer.OrdinalIgnoreCase);
+            var missing = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+            var archives = new Dictionary<string, int>();
+            var paths = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+
             int total = 0;
             int count = 0;
-
-            var existing = archive.Files.Select(f => f.Path.ToLowerInvariant()).ToHashSet();
 
             foreach (var c in list._required._data)
             {
                 if (string.IsNullOrEmpty(c._name) || c._name.StartsWith("packages/")) 
                     continue;
 
-                if (!existing.Add(c._name.ToLowerInvariant())) 
+                if (!existing.Add(c._name)) 
                     continue;
 
                 string name = NamespaceUtils.GetFileName(c._name, false);
@@ -955,48 +958,54 @@ namespace NST
                     throw new Exception($"No archive found for {c._name}");
                 }
 
-                if (!archives.TryGetValue(archiveName, out var names))
+                if (!archives.TryGetValue(archiveName, out int fileCount))
                 {
-                    names = [];
-                    archives[archiveName] = names;
+                    fileCount = 0;
                 }
 
+                archives[archiveName] = fileCount + 1;
+                paths[c._name] = archiveName;
+
+                missing.Add(c._name);
+
                 total++;
-                names.Add(c._name.ToLowerInvariant());
             }
 
-            var sortedArchives = archives
-                .OrderBy(e => (char.ToUpperInvariant(e.Key[0]) - 'A' - ('M' - 'A') + 26) % 26)
-                .ThenBy(e => e.Key);
+            var sortedArchives = archives.Keys
+                .OrderBy(e => (char.ToUpperInvariant(e[0]) - 'A' - ('M' - 'A') + 26) % 26) // Levels in last
+                .ThenBy(e => e);
 
-            foreach ((var sourceArchiveName, var sourceFilePaths) in sortedArchives)
+            foreach (var sourceArchiveName in sortedArchives)
             {
+                if (archives[sourceArchiveName] <= 0)
+                    continue;
+
                 string sourceArchivePath = Path.Combine(LocalStorage.ArchivePath, $"{sourceArchiveName}.pak");
                 var sourceArchive = IgArchive.Open(sourceArchivePath);
 
-                foreach (var path in sourceFilePaths)
+                foreach (var sourceFile in sourceArchive.Files)
                 {
-                    var f = sourceArchive.FindFile(path, FileSearchType.Path);
-                    if (f == null)
+                    if (missing.Remove(sourceFile.Path))
                     {
-                        throw new Exception($"{sourceArchivePath}: File {path} not found");
+                        archive.AddFile(sourceFile);
+
+                        archives[paths[sourceFile.Path]]--;
+
+                        if (missing.Count == 0) break;
+
+                        float progress = (float)count++ / total;
+                        ModalRenderer.ShowLoadingModal($"Importing assets from {sourceArchiveName} ({MathF.Round(progress*100)}%)", progress);
                     }
-
-                    count++;
-                    archive.AddFile(f);
-
-                    float progress = (float)count / total;
-                    ModalRenderer.ShowLoadingModal($"Importing assets from {sourceArchiveName} ({MathF.Round(progress*100)}%)", progress);
                 }
+
+                if (missing.Count == 0) break;
             }
 
             string outputPath = archive.Path.Replace(".mini.pak", ".full.pak");
 
             ModalRenderer.ShowLoadingModal($"Saving {NamespaceUtils.GetFileName(outputPath)}...");
 
-            archive.SafeSave(outputPath);
-
-            return IgArchive.Open(outputPath); 
+            archive.SafeSave(outputPath, true);
         }
     }
 }

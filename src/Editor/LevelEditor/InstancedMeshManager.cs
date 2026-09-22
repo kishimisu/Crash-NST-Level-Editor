@@ -125,8 +125,8 @@ namespace NST
 
             if (modelName == null)
             {
-                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities);
-                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities));
+                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.OtherEntities);
+                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.OtherEntities));
             }
             else if (modelName.Contains("cloud"))
             {
@@ -137,6 +137,11 @@ namespace NST
             {
                 Object3D.Layers.Set((int)LevelExplorer.CameraLayer.Shadows);
                 Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.Shadows));
+            }
+            else
+            {
+                Object3D.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities);
+                Object3D.Traverse(o => o.Layers.Set((int)LevelExplorer.CameraLayer.AllEntities));
             }
         }
     }
@@ -427,7 +432,7 @@ namespace NST
                 {
                     bool triggerPassThrough = !selectionEmpty && selection.All(e => e.Object is CScriptTriggerEntity && e.IsPrefabChild);
 
-                    if (fromTree || (shiftPressed && selectionEmpty) || (!shiftPressed && (entity.ParentPrefabInstance.IsSelected || triggerPassThrough)))
+                    if (fromTree || (shiftPressed && selectionEmpty) || (!shiftPressed && ((!selectionEmpty && selection.All(e => e == entity.ParentPrefabInstance || e.ParentPrefabInstance == entity.ParentPrefabInstance)) || triggerPassThrough)))
                     {
                         Console.WriteLine("Select prefab child instances");
                         return SelectChildInstances(entity).Cast<NSTObject>().ToList();

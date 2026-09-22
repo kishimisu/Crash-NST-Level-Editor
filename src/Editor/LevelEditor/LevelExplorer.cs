@@ -53,32 +53,34 @@ namespace NST
         
         public enum CameraLayer 
         { 
-            Default = 0,
-            AllEntities = 1,
-            Splines = 2,
-            Camera = 3,
-            CameraBox = 4,
-            ClipEntities = 5,
-            ScriptTrigger = 6,
-            TriggerVolume = 7,
-            AudioBox = 8,
-            VisualBox = 9,
-            BoxLight = 10,
-            PointLight = 11,
-            TintSphere = 12,
-            Templates = 13,
-            Clouds = 14,
-            Shadows = 15,
-            Hidden = 16,
-            StaticCollision = 17,
-            BorderCollision = 18,
+            Default,
+            AllEntities,
+            OtherEntities,
+            Splines,
+            Camera,
+            CameraBox,
+            ClipEntities,
+            ScriptTrigger,
+            TriggerVolume,
+            AudioBox,
+            VisualBox,
+            BoxLight,
+            PointLight,
+            TintSphere,
+            Templates,
+            Clouds,
+            Shadows,
+            Hidden,
+            StaticCollision,
+            BorderCollision,
             HiddenTemplates = 29,
             TriggersOn = 30,
         };
 
         private readonly Dictionary<string, bool> _layers = new()
         {
-            { "All Entities", true },
+            { "3D Entities", true },
+            { "Other Entities", true },
             { "Splines", true },
             { "Cameras", true },
             { "Camera Boxes", false },
@@ -1267,6 +1269,17 @@ namespace NST
                 ImGuiUtils.Prefix("Hint:");
                 if (ImGui.InputText("##levelHint", ref _zoneInfo._hint, 256)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
 
+                ImGuiUtils.ColoredSeparator("Time trial", levelColor);
+                
+                ImGuiUtils.Prefix("Platinum time:", 110);
+                if (ImGui.InputFloat("##platinumTime", ref _zoneInfo._platinumTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+                
+                ImGuiUtils.Prefix("Gold time:", 110);
+                if (ImGui.InputFloat("##goldTime", ref _zoneInfo._goldTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+                
+                ImGuiUtils.Prefix("Sapphire time:", 110);
+                if (ImGui.InputFloat("##sapphireTime", ref _zoneInfo._sapphireTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
+
                 ImGuiUtils.ColoredSeparator("Level settings", levelColor);
                 ImGuiUtils.Prefix("Character: ");
                 if (ImGui.Combo("##defaultCharacter", ref _defaultCharacter, LevelBuilder.CrashCharacters, LevelBuilder.CrashCharacters.Length))
@@ -1308,17 +1321,6 @@ namespace NST
                         if (on && name == "jetpack") this.ChangeGameMode("Jetpack");
                     }
                 }
-
-                ImGuiUtils.ColoredSeparator("Time trial", levelColor);
-                
-                ImGuiUtils.Prefix("Platinum time:", 110);
-                if (ImGui.InputFloat("##platinumTime", ref _zoneInfo._platinumTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
-                
-                ImGuiUtils.Prefix("Gold time:", 110);
-                if (ImGui.InputFloat("##goldTime", ref _zoneInfo._goldTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
-                
-                ImGuiUtils.Prefix("Sapphire time:", 110);
-                if (ImGui.InputFloat("##sapphireTime", ref _zoneInfo._sapphireTime)) ArchiveRenderer.SetObjectUpdated(_zoneInfoFile, _zoneInfo);
 
                 ImGui.PopItemWidth();
                 ImGui.Spacing();

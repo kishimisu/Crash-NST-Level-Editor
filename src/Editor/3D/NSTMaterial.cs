@@ -46,10 +46,11 @@ namespace NST
         public bool editorOnly = false;
         public bool anisotropic = false;
         public bool vertexWibble = false;
+        public bool disableVertexColors = false;
 
         public THREE.Vector4 color = new THREE.Vector4(1, 1, 1, 1);
 
-        public bool UseVertexColors => !anisotropic && !vertexWibble && (type == typeof(CStandardMaterial) || type == typeof(CBlendedMaterial) || shaderName == "CStandardMaterial" || shaderName == "CBlendedMaterial");
+        public bool UseVertexColors => !anisotropic && !vertexWibble && !disableVertexColors && (type == typeof(CStandardMaterial) || type == typeof(CBlendedMaterial) || shaderName == "CStandardMaterial" || shaderName == "CBlendedMaterial");
 
         public static float DefaultShininess = 5.0f;
 
@@ -149,6 +150,10 @@ namespace NST
                 {
                     anisotropic = standard._anisotropicShading;
                     vertexWibble = standard._vertexWibbleEnabled;
+                }
+                else if (fx is CBlendedMaterial blended)
+                {
+                    disableVertexColors = !blended._useTopAlpha && !blended._invertTopAlpha && blended._parallaxMapping;
                 }
             }
             else if (material is igGraphicsMaterial gx)

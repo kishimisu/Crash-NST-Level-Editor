@@ -250,8 +250,8 @@ namespace NST
                 zoneInfo = chunkInfosIgz.FindObject<CZoneInfo>()!;
                 localizedInfo = chunkInfosIgz.FindObject<igLocalizedInfo>()!;
 
-                zoneInfo._displayName ??= "Custom Level";
-                zoneInfo._hint ??= "Hello, World!";
+                zoneInfo._displayName ??= GenerateRandomLevelName();
+                zoneInfo._hint ??= "Made in Crash NST Maker";
                 zoneInfo._name = levelIdentifier;
                 zoneInfo._year = year;
             }
@@ -646,6 +646,7 @@ namespace NST
                 igEntity largestBox = visualBoxes.Aggregate((a, b) => a.Value > b.Value ? a : b).Key;
                 largestBox.ObjectName = "MainLighting";
                 largestBox._parentSpacePosition = new igVec3fMetaField(0, 0, 0);
+                largestBox._bitfield._isArchetype = false;
                 archive.Clone(largestBox, sourceArchive, sourceLightingIgz, lightingIgz, clones);
             }
 
@@ -683,6 +684,26 @@ namespace NST
             progress.SetProgress("newlevel", 8/8f, $"Creating new level (8/8)...");
 
             return archive;
+        }
+
+        private static readonly string[] _levelAdjectives = [ 
+            "amazing", "awesome", "beautiful", "crazy", "unbelievable", "tricky", "kaizo", "impossible", "challenging", "random", 
+            "best", "biggest", "pretty", "cool", "fun", "hard", "easy", "simple", "short", "huge", "small", "epic", "great", "nice", 
+            "funny", "weird", "strange", "insane", "brutal", "extreme", "creative", "unique", "fresh", "new", "secret", "advanced", 
+            "ultimate", "hardcore", "legendary", "godly", "perfect", "flawless", "unfair", "deadly", "surprising", "cursed", "goofy", 
+            "silly", "bonkers", "broken", "questionable", "unhinged", "terrible", "experimental", "demo", "mysterious", "chaotic", 
+            "awkward", "glorious", "evil", "scary", "happy", "joyful", "friendly", "demonic", "retro", "magical", "eery", "pay-to-win"
+        ];
+
+        public static string GenerateRandomLevelName()
+        {
+            int idx = new Random().Next();
+
+            string adj = _levelAdjectives[idx % _levelAdjectives.Length];
+
+            adj = char.ToUpper(adj[0]) + adj.Substring(1);
+
+            return $"My {adj} Level";
         }
 
         /// <summary>

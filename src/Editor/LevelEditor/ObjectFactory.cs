@@ -1569,8 +1569,8 @@ namespace NST
                 _year = crashMode,
                 _overrideCharacter = "Crash",
 
-                _displayName = "Custom Level",
-                _hint = "Hello, World!",
+                _displayName = LevelBuilder.GenerateRandomLevelName(),
+                _hint = "Made in Crash NST Maker",
                 _platinumTime = 50,
                 _goldTime = 70,
                 _sapphireTime = 90,
