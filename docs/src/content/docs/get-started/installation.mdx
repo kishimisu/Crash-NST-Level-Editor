@@ -5,12 +5,12 @@ sidebar:
   order: 2
 ---
 
-import { Steps } from '@astrojs/starlight/components';
+import { CardGrid, LinkCard, Steps } from '@astrojs/starlight/components';
 
 ## Requirements
 
 - **Windows 64-bit** (or [Wine](https://www.winehq.org/) if you're using **Linux**).
-- **An original copy of Crash Bandicoot N. Sane Trilogy for PC**, installed through Steam or Xbox Game Pass.
+- **Crash Bandicoot N. Sane Trilogy (PC)**, installed through **Steam** or **Xbox Game Pass**.
 
 ## Download the prebuilt executable
 
@@ -21,7 +21,10 @@ import { Steps } from '@astrojs/starlight/components';
 2. Run it to open the [main menu](/get-started/first-launch/). The tool looks for your game installation; if it is not found, use the `File` menu to set the game path.
 
 3. You can now [Play a custom level](/get-started/quickstart-play-level/) or [Create your own level](/get-started/quickstart-first-level/)!
-
+   <CardGrid>
+      <LinkCard title="Play a custom level" description="Start playing custom levels in 3 steps" href="/get-started/quickstart-play-level/" />
+      <LinkCard title="Build your first level" description="A ten-minute walkthrough from an empty level to playing it in the game." href="/get-started/quickstart-first-level/" />
+   </CardGrid>
 </Steps>
 
 :::note[Antivirus false positives]
@@ -34,7 +37,7 @@ Check for new versions on the [Releases page](https://github.com/kishimisu/Crash
 
 ## Crash logs
 
-When the application hits an unhandled error it writes the details to a log file. Condiser attaching it when you ask for help on Discord or open a GitHub issue.
+When the application encounters an unhandled error it writes the details to a log file. Consider attaching it when you ask for help on Discord or open a GitHub issue.
 
 ## Uninstalling
 
