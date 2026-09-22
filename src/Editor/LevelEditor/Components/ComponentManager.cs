@@ -291,6 +291,12 @@ namespace NST
             Entity.Object._entityData._componentData._values[idx] = clone;
             Entity.Object._entityData._componentData.BuildDict();
 
+            if (!igz.Objects.Any(e => e != c.OriginalObject && e.GetChildren(igz, igz.GameVersion, ChildrenSearchParams.IncludeHandles).Contains(c.OriginalObject)))
+            {
+                // Console.WriteLine($"Remove unreferenced component ({c.OriginalObject})");
+                igz.Remove(c.OriginalObject);
+            }
+
             Explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, clone, true);
             Explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, Entity.Object, true);
             Explorer.ArchiveRenderer.SetObjectUpdated(Entity.ArchiveFile, Entity.Object._entityData._componentData, true);

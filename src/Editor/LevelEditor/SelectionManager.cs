@@ -1007,24 +1007,28 @@ namespace NST
                     }
                 }
 
+                // Register prefab children
                 foreach ((NSTEntity original, NSTEntity clone) in newEntities)
                 {
                     List<NSTEntity> prefabChildren = clone.InitPrefabChildren(_explorer.InstanceManager);
 
-                    if (prefabChildren.Count > 0)
+                    foreach (var child in prefabChildren)
                     {
-                        List<NSTEntity> originalPrefabChildren = original.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == original).ToList();
+                        newObjects.Add(child);
 
-                        for (int i = 0; i < Math.Min(originalPrefabChildren.Count, prefabChildren.Count); i++)
+                        var originalChild = (NSTEntity?)original.Children.FirstOrDefault(
+                            o => o is NSTEntity e && e.ParentPrefabInstance == original && e.Object.ObjectName == child.Object.ObjectName);
+
+                        if (originalChild == null)
                         {
-                            if (originalPrefabChildren[i].CollisionShapeIndex != -1)
-                            {
-                                // Console.WriteLine("Add prefab child collision: " + prefabChildren[i].Object.ObjectName + " (" + original.Object.ObjectName + "), template: " + prefabChildren[i].IsPrefabTemplate);
-                                newCollisionEntities.Add(originalPrefabChildren[i], prefabChildren[i]);
-                            }
-
-                            newObjects.Add(prefabChildren[i]);
+                            Console.WriteLine($"Warning: Could not find original child prefab for {child.Object}");
+                            continue;
                         }
+
+                        if (originalChild.CollisionShapeIndex == -1)
+                            continue;
+
+                        newCollisionEntities.Add(originalChild, child);
                     }
                 }
 
@@ -1169,6 +1173,12 @@ namespace NST
                         // Update new objects
                         newObjects.Remove(clone);
                         newObjects.Add(newPrefabChild);
+
+                        if (!igz.Objects.Any(e => e != clone.Object && e.GetChildren(igz, igz.GameVersion, ChildrenSearchParams.IncludeHandles).Contains(clone.Object)))
+                        {
+                            // Console.WriteLine($"Remove unreferenced entity ({clone.Object})");
+                            igz.Remove(clone.Object);
+                        }
 
                         if (copyToSameFile)
                         {
