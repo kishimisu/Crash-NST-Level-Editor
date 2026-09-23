@@ -1,6 +1,6 @@
 ---
 title: Troubleshooting
-description: Fixes for the most common problems with Crash NST Maker, from antivirus warnings and launch errors to missing objects, instant deaths and slow performance.
+description: Fixes for the most common problems with Crash NST Maker, from antivirus warnings and launch errors to missing objects, collision issues and slow performance.
 sidebar:
   order: 4
 ---
@@ -11,54 +11,79 @@ Most problems fall in one of the cases below. When in doubt, first update to the
 
 This is a known false positive. The tool works entirely offline and never accesses the network. Add an exception for the executable, or [build it from source](/get-started/installation/#build-from-source).
 
-## "The game is already running"
+## I can't set the game path
 
-The tool will not launch a level while the game is open. Close the game, then launch the level again.
+If you're encountering permission issues when trying to select the game's executable, switch from `Executable files (*.exe)` to `All files (*.*)` in the File Explorer and open any file next to the game's executable (create it if necessary). The tool only looks for the path to the parent folder.
 
-## Steam asks for confirmation every time I launch a level
+## "The game is already running" even though it isn't
 
-Enable `File → Skip Steam popup` in the main menu (v1.39 and later).
+If you've just closed the game, you need to wait a few seconds before you can launch it again. If the error persists, see "Nothing happens when I try to play a level" below.
+
+## Nothing happens when I try to play a level
+
+Sometimes, the game's executable is hanging even if you don't see its icon in your taskbar. When that happens, you can either open Steam and close the game, or use the Task Manager to kill the game's process.
 
 ## The application crashed
 
-When an unhandled error occurs, the tool writes a log file and shows a **Report issue** button. Share the log on the [Discord](https://discord.gg/vsnVrPvVjc) server or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues) along with what you were doing. The log includes the editor version.
+When a crash occurs, the tool writes the logs to `crash-log-latest.txt` and opens its parent folder. Share the log on [Discord](/get-started/community/#discord-communities) or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues) along with the maximum details about your actions before it crashed.
 
-## The interface is tiny or huge on a 2K, 4K or Retina screen
+## The game shows a black screen or is stuck on the loading screen
 
-Fixed in v1.41.9. Update the tool.
+This usually means that a required asset/dependency is missing from the archive. If it happened during basic level editing (copy/paste/delete/import) it's probably a bug, please share it.
+- Remove the last objects you added and test again to find the culprit.
 
-## The game shows a black screen or freezes when loading my level
+## The game crashes on load or freezes after some time
 
-- Update the tool: several causes of black screens after importing objects were fixed between v1.19 and v1.33, and a freeze in custom levels was fixed in v1.16.
+This is usually caused by a limitation of the game engine. It has been reported that freezes can start to appear if there are too many objects in a level, but the exact conditions are extremely inconsistent:
+- It seems to happen more frequently the less RAM you have
+- If you have been using the editor for a long time, try to close & reopen it to clear the memory usage (especially if you've opened many levels in the editor).
+- There's a concept of "object limit" in a level, but it's not a fixed number and can vary a lot depending on the object type:
+  - Crates, Enemies and [Spawners](/level-editor/special-objects/spawner-templates) in general count for the most in the object limit, because they have a lot of components
+  - [Static objects / Scenery](/level-editor/special-objects/static-models) count for almost nothing, there's still a limit but you can easily reach 5000+ static objects in a level without issue, whereas 300 crates would be pushing it. 
+- The freezes are more likely to happen if there are a lot of crates/enemies in a small area. Try spacing them more throughout the level
+
+If the error persists even after removing objects, it could also mean that a file in the archive is corrupted/invalid. If it happened during basic level editing (copy/paste/delete/import) it's probably a bug, please share it.
 - Remove the last objects you added and test again to find the culprit.
 
 ## Crash dies as soon as the level starts
 
-The death plane is probably above the ground. Select `Other → WorldInstance` in the object tree and lower the death plane height. This is common in levels imported from CTR:NF, whose scale is about 1.5 times larger than NST.
+The death plane is probably above the ground. Select `Other → WorldInstance` in the object tree and lower the death plane height.
 
 ## An object shows in the editor but not in the game
 
-Most game objects are spawned by a [script trigger](/level-editor/special-objects/script-triggers/) when the player enters its volume. If the trigger is missing or badly placed, the object never spawns. Show the triggers with `Visible Camera Layers → Script Triggers` and check that one covers the area where the player arrives. Also keep the tool updated: entities whose template lives in another file did not spawn before v1.25.
+- Most game objects are spawned by a [script trigger](/level-editor/special-objects/script-triggers/) when the player enters its volume. If the trigger is missing or badly placed, the object never spawns. Show the triggers with `Visible Camera Layers → Script Triggers` and check that one covers the area where the player arrives.
 
-## Objects lose their collisions
-
-Static collisions are rebuilt when you save. Prefabs losing their collisions after being moved or pasted was fixed in v1.19 and v1.41.8. If a static model has no collisions to begin with, its `CStaticCollisionComponent` is greyed out: see [Static models](/level-editor/special-objects/static-models/).
+- If you've imported the object using the Object Library, try to copy/paste the object by opening its original archive instead, as the copy/paste feature does more work under the hood and is more likely to import every dependency correctly.
 
 ## A special object does not work in my custom level
 
 Rides, jetpack, boulders and hubs need to be enabled per level in **Level settings**: `Enable Hog Ride`, `Enable Bear Ride`, `Enable Tiger Ride`, `Enable Jetpack`, `Enable Boulder` and `Enable Hub`. See [Level settings](/level-editor/level-settings/).
 
+## Objects lose their collisions
+
+Static collisions are rebuilt when you save. Prefabs losing their collisions after being moved, pasted or deleted was fixed in v1.44. If you're using the latest version, please share this bug.
+If a static model has no collisions to begin with, its `CStaticCollisionComponent` is greyed out: see [Static models](/level-editor/special-objects/static-models/).
+
 ## The hub says some levels are missing
 
 The level archives must be directly in the game's `archives/` folder, with the exact file names the hub expects. See [Play a custom level](/get-started/quickstart-play-level/). If you renamed a level archive, its creator must run `File → Archive → Update level name` on it again.
 
+## The interface is tiny or huge on a 2K, 4K or Retina screen
+
+Fixed in v1.41.9. Update the tool.
+
 ## The editor is slow
 
-- Lower `Editor settings → Max texture res.` (the default is 512) and restart the editor.
-- Lower `Editor settings → Render distance`.
-- Hide the camera layers you do not need, and press <kbd>Escape</kbd> to clear the selection, which greatly improves the frame rate.
+- Having an active selection can cut the frame rate in half. Press <kbd>Escape</kbd> to clear the selection when you don't use it. <kbd>Ctrl+Z</kbd> selects everything back.
+- Hide the camera layers that you don't actively need
 - Close the level editors you are not using.
-- Memory usage was cut by three to four times in v1.29, and again in v1.32 and v1.35. Update if you are on an older version.
+- Close Crash NST or other resource intensive apps
+
+## The editor takes a lot of RAM
+
+- Lower `Editor settings → Max texture res.` (the default is 512) and restart the editor.
+- Close and reopen the editor regularly after using it for a while, or if you've opened many levels.
+- Open the [Archive Editor](/archive-editor/archive-manager/) and right-click on files containing the most objects in the `maps/` folder to exclude them from the package file and prevent them from being loaded by the level editor. Remember to toggle "Include in package file" back afterwards!
 
 ## The Object Library takes forever to open
 
@@ -66,4 +91,4 @@ The first initialisation scans every archive of the game and takes 10 to 20 minu
 
 ## Still stuck?
 
-Ask on the [Discord](https://discord.gg/vsnVrPvVjc) server or open a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues). Include the editor version, the log file if there was a crash, and the steps to reproduce.
+Ask on [Discord](/get-started/community/#discord-communities) or open a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues). Include the editor version, the log file if there was a crash, and the steps to reproduce.
