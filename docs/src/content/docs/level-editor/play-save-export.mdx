@@ -1,0 +1,68 @@
+---
+title: Play, save and publish
+description: Save a level, launch it in the game, reduce its file size, and prepare it for sharing.
+---
+
+## Play and test your level
+
+Make sure the game is closed and click **Play current level** in the top-right corner of the level editor.
+
+![The Play current level button](../../../assets/screenshots/level_editor/play.jpg)
+
+It launches the game with the level **as last saved**: unsaved changes are not included. 
+
+To save and play in one go, use `File -> Save and run` or press <kbd>Ctrl</kbd>+<kbd>L</kbd>.
+
+## Save your level
+
+| Action | Shortcut |
+| --- | --- |
+| Save | <kbd>Ctrl</kbd>+<kbd>S</kbd> |
+| Backup, save and launch | <kbd>Ctrl</kbd>+<kbd>L</kbd> |
+| Save as... | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>S</kbd> |
+| Reload the current level | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>R</kbd> |
+| Open another level or archive | <kbd>Ctrl</kbd>+<kbd>O</kbd> |
+
+**Save as...** on an original game level turns it into a custom level saved elsewhere. Saving over an original game file always asks for confirmation.
+
+## Export your level
+
+The **Export** menu contains several options that can help reduce the size of your level archive.
+
+### Remove unused files
+
+**Remove unused files** scans the archive and removes files that are no longer referenced.
+
+Importing objects from another level can add many dependencies to your archive. Deleting those objects does not automatically remove their files, so running **Remove unused files** can help clean them up.
+
+### Compress and save
+
+Levels are saved uncompressed by default to make testing faster.
+
+Before sharing a level, use **Compress and save** after removing unused files. This creates a smaller `.pak` archive.
+
+:::tip
+**Compress and Save** asks where to save the compressed archive; Hold <kbd>Shift</kbd> while clicking it to overwrite the current archive instead. `.mini.pak` archives are always saved compressed.
+:::
+
+### Export to .mini.pak
+
+**Export to .mini.pak** creates a small version of a level archive, usually around 10 MB, containing only your custom changes and none of the original game assets.
+
+This can greatly reduce download times when sharing a level. 
+
+The trade-off is that the first time a player loads the `.mini.pak`, the editor needs to rebuild the full archive by fetching all missing assets from the original game files, which can take a few seconds to a few minutes depending on the level complexity.
+
+:::note[CTR Assets]
+Only assets from NST are excluded from .mini.pak archives because they are available in every original copy of the game.
+
+CTR assets are kept in the .mini.pak, so levels that use them will produce larger archives.
+:::
+
+#### Play a .mini.pak level
+
+You can play a `.mini.pak` level like any other using **Play Custom Level**.
+
+The editor automatically rebuilds the full archive and saves it as `<name>.full.pak`.
+
+You can delete the `.mini.pak` after the full archive has been created.

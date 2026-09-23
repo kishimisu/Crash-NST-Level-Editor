@@ -1,0 +1,56 @@
+---
+title: Undo and backups
+description: Undo and redo changes, create and restore backups, and protect your level from lost work.
+---
+
+## Undo and redo
+
+The undo/redo feature was added in v1.39. It lets you undo selection and transform changes made while editing a level.
+
+| Action | Control |
+| --- | --- |
+| Undo | <kbd>Ctrl</kbd>+<kbd>Z</kbd> |
+| Redo | <kbd>Ctrl</kbd>+<kbd>Shift</kbd>+<kbd>Z</kbd>|
+
+### Supported actions
+
+Undo only covers selection and transform changes. For changes that cannot be undone, rely on [backups](#backups)
+
+| Can be undone |  | Cannot be undone |  |
+| --- | --- | --- | --- |
+| Selecting objects | ✅ | Creating objects | ❌ |
+| Moving objects | ✅ | Deleting objects | ❌ |
+| Rotating objects | ✅ | Copy/pasting objects | ❌ |
+| Scaling objects | ✅ | Editing components | ❌ |
+
+## Backups
+
+:::caution
+Backups are useful when testing changes or recovering from problems such as a freeze or black screen.
+However, **don't rely on them as your only backup**. If you're working on an important level, regularly save copies of the level somewhere safe on your computer. Keeping multiple versions lets you recover older work if something goes wrong and a single backup isn't enough.
+:::
+
+The `Backup` menu lets you create and restore backups of the current archive.
+
+An archive can have up to two backups:
+
+- **Manual backup**, created and managed by you.
+- **Automatic backup**, created when you use `Save and run`
+
+### Manual backup
+
+Manual backups let you keep a copy of your level that you can restore later.
+
+- **Create backup** creates a backup next to the original file as `<level_name>.pak.backup`. Unsaved changes are not included.
+- **Restore** replaces the current level with the backup and reloads the level.
+- **Overwrite** creates a new backup and replaces the existing manual backup.
+- **Delete** removes the manual backup.
+
+### Automatic backup
+
+An automatic backup is created when you use `Save and run` or press <kbd>Ctrl</kbd>+<kbd>L</kbd>.
+
+- The backup is created **before** the level is saved and launched.
+- Each level can only have one automatic backup. Creating a new one replaces the previous automatic backup for that level.
+- Automatic backups do not affect your manual backup.
+- You can clear the automatic backup folder if it starts taking up too much space.
