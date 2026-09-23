@@ -23,9 +23,17 @@ If you've just closed the game, you need to wait a few seconds before you can la
 
 Sometimes, the game's executable is hanging even if you don't see its icon in your taskbar. When that happens, you can either open Steam and close the game, or use the Task Manager to kill the game's process.
 
-## The application crashed
+## Crash doesn't spawn
 
-When a crash occurs, the tool writes the logs to `crash-log-latest.txt` and opens its parent folder. Share the log on [Discord](/get-started/community/#discord-communities) or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues) along with the maximum details about your actions before it crashed.
+This is usually related to having a 100% save file in the auto-save slot. Put your save file in a different slot to fix this issue.
+
+## Crash dies as soon as the level starts
+
+The death plane is probably above the ground. Select `Other → WorldInstance` in the object tree and lower the death plane height.
+
+## Original levels don't work correctly after playing custom levels
+
+Delete the file `update.pak` located in the game's `archives/` folder and try again.
 
 ## The game shows a black screen or is stuck on the loading screen
 
@@ -45,9 +53,9 @@ This is usually caused by a limitation of the game engine. It has been reported 
 If the error persists even after removing objects, it could also mean that a file in the archive is corrupted/invalid. If it happened during basic level editing (copy/paste/delete/import) it's probably a bug, please share it.
 - Remove the last objects you added and test again to find the culprit.
 
-## Crash dies as soon as the level starts
+## The editor crashed
 
-The death plane is probably above the ground. Select `Other → WorldInstance` in the object tree and lower the death plane height.
+When a crash occurs, the tool writes the logs to `crash-log-latest.txt` and opens its parent folder. Share the log on [Discord](/get-started/community/#discord-communities) or in a [GitHub issue](https://github.com/kishimisu/Crash-NST-Level-Editor/issues) along with the maximum details about your actions before it crashed.
 
 ## An object shows in the editor but not in the game
 
