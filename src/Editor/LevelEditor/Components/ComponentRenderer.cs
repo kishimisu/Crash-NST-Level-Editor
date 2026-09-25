@@ -242,7 +242,7 @@ namespace NST
 
             for (int i = 0; i < component._prefabEntities._data.Count; i++)
             {
-                RenderObject($"{i}.", component._prefabEntities._data[i], manager.Entity.FileNamespace, typeof(igEntity), manager.Explorer, (value) => 
+                RenderObject($"{i+1}.", component._prefabEntities._data[i], manager.Entity.FileNamespace, typeof(igEntity), manager.Explorer, (value) => 
                 {
                     if (value == null) component._prefabEntities._data.RemoveAt(i);
                     else component._prefabEntities._data[i] = (igEntity)value;
@@ -1639,9 +1639,11 @@ namespace NST
                 }
                 else
                 {
-                    NSTObject? entity = explorer.FindObject(value);
-                    if (entity != null) callback(entity.GetObject());
-                    else Console.WriteLine($"Warning: Could not find object reference {value}");
+                    if (explorer.InstanceManager.AllReferences.TryGetValue(value, out NSTObject? entity)) 
+                    {
+                        callback(entity.GetObject());
+                    }
+                    else ModalRenderer.Show("Warning", $"Could not find object:\n{value}");
                 }
             },
             // todo: allow to select objects from other files
@@ -1707,11 +1709,9 @@ namespace NST
 
                 return null;
             }
-                        
-            // Find object in explorer
-            NSTObject? obj = explorer.FindObject(reference);
 
-            if (obj == null)
+            // Find object in explorer
+            if (!explorer.InstanceManager.AllReferences.TryGetValue(reference, out NSTObject? obj))
             {
                 if (skipIfNotFound) return null;
 

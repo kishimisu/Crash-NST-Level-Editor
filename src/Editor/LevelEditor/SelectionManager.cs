@@ -397,7 +397,11 @@ namespace NST
                     }
                     else
                     {
-                        keyframe.Object._value = new igVec3fMetaField(worldEulerDegrees.X, worldEulerDegrees.Y, worldEulerDegrees.Z);
+                        var parentRotation = new THREE.Quaternion();
+                        keyframe.Parent.ObjectToWorld().Decompose(new(), parentRotation, new());
+                        var localRotation = parentRotation.Invert() * worldQuaternion;
+                        var localEuler = new THREE.Euler().SetFromQuaternion(localRotation, THREE.RotationOrder.ZYX);
+                        keyframe.Object._value = localEuler.ToVector3().MultiplyScalar(THREE.MathUtils.RAD2DEG).ToVec3MetaField();
                     }
                     _explorer.ArchiveRenderer.SetObjectUpdated(keyframe.ArchiveFile, keyframe.Object);
                     continue;

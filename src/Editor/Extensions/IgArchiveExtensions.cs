@@ -697,10 +697,12 @@ namespace NST
                     update = IgArchive.Open(LocalStorage.UpdateFilePath);
                 }
             }
-            finally
+            catch (Exception e)
             {
-                update ??= new IgArchive(LocalStorage.UpdateFilePath, GameVersion.NST);
+                Console.WriteLine($"Could not load update.pak: {e.Message}\n{e.StackTrace}");
             }
+            
+            update ??= new IgArchive(LocalStorage.UpdateFilePath, GameVersion.NST);
 
             foreach (IgArchiveFile file in update.Files.ToList())
             {

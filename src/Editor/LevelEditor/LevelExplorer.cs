@@ -1733,11 +1733,6 @@ namespace NST
             }
         }
 
-        public NSTObject? FindObject(NamedReference reference)
-        {
-            return InstanceManager.AllObjects.Find(e => e.FileNamespace == reference.namespaceName && e.GetObject().ObjectName == reference.objectName);
-        }
-
         private List<THREE.Intersection> Raycast(THREE.Vector2 mouseClipSpace, float distance, bool excludeTransparent = false)
         {
             if (mouseClipSpace.X < -1 || mouseClipSpace.X > 1 || mouseClipSpace.Y < -1 || mouseClipSpace.Y > 1) return [];

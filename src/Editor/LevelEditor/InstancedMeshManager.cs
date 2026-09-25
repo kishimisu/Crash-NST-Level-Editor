@@ -428,7 +428,7 @@ namespace NST
                     return [];
                 }
 
-                if (entity.IsPrefabChild && entity.ParentPrefabInstance?.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) < 45)
+                if (entity.IsPrefabChild && entity.ParentPrefabInstance?.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) <= 50)
                 {
                     bool triggerPassThrough = !selectionEmpty && selection.All(e => e.Object is CScriptTriggerEntity && e.IsPrefabChild);
 

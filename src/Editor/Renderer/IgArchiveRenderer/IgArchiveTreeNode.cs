@@ -165,6 +165,17 @@ namespace NST
 
         private void RenderContextMenu(IgArchiveTreeView tree)
         {
+            if (ImGui.Selectable("Import files..."))
+            {
+                var paths = FileExplorer.OpenFiles(FileExplorer.EXT_ALL, true);
+                foreach (var path in paths)
+                {
+                    string name = NamespaceUtils.GetFileName(path);
+                    var file = new IgArchiveFile(NodePath + name, tree.Renderer.Archive.GameVersion);
+                    file.SetData(System.IO.File.ReadAllBytes(path));
+                    tree.Renderer.AddFile(file);
+                }
+            }
             if (ImGui.Selectable("New file..."))
             {
                 tree.Renderer.CreateFile("New_File.igz", NodePath);

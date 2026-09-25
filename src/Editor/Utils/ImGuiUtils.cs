@@ -106,16 +106,25 @@ namespace NST
         /// </summary>
         public static string TruncateTextToFit(string text, float maxWidth)
         {
-            float textWidth = ImGui.CalcTextSize(text).X;
-            
-            if (textWidth <= maxWidth)
+            const string ellipsis = "...";
+            float charWidth = ImGui.CalcTextSize("a").X;
+            float ellipsisWidth = charWidth * 3;
+
+            if (text.Length * charWidth <= maxWidth)
                 return text;
 
-            while (text.Length > 0 && ImGui.CalcTextSize(text + "...").X > maxWidth)
-            {
-                text = text.Substring(0, text.Length - 1);
-            }
-            return text + "...";
+            if (ellipsisWidth > maxWidth)
+                return string.Empty;
+
+            int maxChars = (int)((maxWidth - ellipsisWidth) / charWidth);
+
+            if (maxChars <= 0)
+                return ellipsis;
+
+            if (maxChars >= text.Length)
+                return text;
+
+            return text.Substring(0, maxChars) + ellipsis;
         }
 
         /// <summary>
