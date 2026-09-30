@@ -1024,23 +1024,24 @@ namespace NST
             explorer.Clone([trigger], sourceArchive, sourceIgz, hazardFile, hazardIgz, 800, initializeObjects: true);
         }
 
-        private static void AddCDynamicClipEntity(LevelExplorer explorer)
+        public static void AddCDynamicClipEntity(LevelExplorer explorer, string objectName = "DynamicClip_001", THREE.Vector3? position = null, THREE.Vector3? rotation = null, THREE.Box3? bounds = null)
         {
             IgArchive sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "L301_ToadVillage.pak"));
             IgzFile sourceIgz = sourceArchive.FindFile("L301_ToadVillage_Crates.igz")!.ToIgzFile();
 
             CDynamicClipEntity clip = sourceIgz.FindObject<CDynamicClipEntity>()!;
-            clip.ObjectName = "DynamicClip_001";
-            clip._min = new igVec3fMetaField(-800, -15, 0);
-            clip._max = new igVec3fMetaField(800, 15, 300);
-            clip._transform!._parentSpaceRotation = new igVec3fMetaField(0, 0, 0);
+            clip.ObjectName = objectName;
+            clip._min = bounds?.Min.ToVec3MetaField() ?? new igVec3fMetaField(-800, -15, 0);
+            clip._max = bounds?.Max.ToVec3MetaField() ?? new igVec3fMetaField(800, 15, 300);
+            clip._parentSpacePosition = position?.ToVec3MetaField() ?? new igVec3fMetaField(0, 0, 0);
+            clip._transform!._parentSpaceRotation = rotation?.ToVec3MetaField() ?? new igVec3fMetaField(0, 0, 0);
             clip._clipTypeStorage._clipPlayers = true;
             clip._clipTypeStorage._clipTeamHero = true;
             clip._clipTypeStorage._clipNPCEnemies = true;
 
             explorer.GetOrCreateIgzFile("Clips", out IgArchiveFile clipFile, out IgzFile clipIgz);
 
-            explorer.Clone([clip], sourceArchive, sourceIgz, clipFile, clipIgz);
+            explorer.Clone([clip], sourceArchive, sourceIgz, clipFile, clipIgz, moveToCamera: position == null);
         }
 
         private static void AddDeathTrigger(LevelExplorer explorer, string type, string vfx)
@@ -1330,7 +1331,7 @@ namespace NST
 
                     // Console.WriteLine($"Add collision for {src} => {dst.ObjectName} ({collisionId})");
 
-                    var shape = compoundShape._elements.GetElements()[collisionId];
+                    var shape = compoundShape._elements[collisionId];
 
                     explorer.ArchiveRenderer.SetEntityUpdated(nstEntity, shape);
                 }

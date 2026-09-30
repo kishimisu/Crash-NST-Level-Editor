@@ -9,6 +9,23 @@ namespace Havok
         public IReadOnlyList<CachedFieldAttr> GetFields(GameVersion version) => AttributeUtils.GetAttributes(GetType()).GetFields(version);
 
         public hkObject Clone() => (hkObject)MemberwiseClone();
+
+        public virtual hkObject Clone(GameVersion version)
+        {
+            hkObject clone = (hkObject)MemberwiseClone();
+
+            foreach (CachedFieldAttr field in GetFields(version))
+            {
+                object? value = field.GetValue(this);
+
+                if (value == null) continue;
+                if (value is hkObject obj) value = obj.Clone(version);
+
+                field.SetValue(clone, value);
+            }
+
+            return clone;
+        }
         
         public virtual void Parse(HavokFile hkx, BinaryReader reader)
         {

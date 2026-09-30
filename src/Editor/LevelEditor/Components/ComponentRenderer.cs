@@ -200,6 +200,19 @@ namespace NST
 
             if (!hasCollision) ImGui.EndDisabled();
             if (!hasCollision) ImGui.SetItemTooltip("This object has no collision data");
+
+            if (!enabled && manager.Entity.Model != null && ImGui.SmallButton("Create box collision"))
+            {
+                manager.Entity.ObjectToWorld().Decompose(out THREE.Vector3 position, out THREE.Euler rotation, out THREE.Vector3 scale);
+
+                var model = manager.Entity.Model.CreateObject();
+                model.Scale.Copy(scale);
+
+                var bounds = new THREE.Box3().ExpandByObject(model);
+                var name = $"FakeCollision_{manager.Entity.Object.ObjectName}";
+
+                ObjectFactory.AddCDynamicClipEntity(manager.Explorer, name, position, rotation.ToVector3(), bounds);
+            }
         }
 
         private static void RenderComponent(CStaticComponentData component, NSTComponent manager)

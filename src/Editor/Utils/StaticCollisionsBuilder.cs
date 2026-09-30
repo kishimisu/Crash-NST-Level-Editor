@@ -57,7 +57,7 @@ namespace NST
             var position = new THREE.Vector3();
             transform.Decompose(position, new(), new());
 
-            foreach (var shape in compoundShape._elements.GetElements())
+            foreach (var shape in compoundShape._elements)
             {
                 var havokPosition = new THREE.Vector3(shape._transform.M41, shape._transform.M42, shape._transform.M43);
 
@@ -115,7 +115,33 @@ namespace NST
             {
                 HashedReference reference = updateInfos.GetReference();
 
-                if (updateInfos.removed)
+                if (updateInfos.entity.Object.TryGetComponent(out CLevelBorderComponentData? levelBorder) && !string.IsNullOrEmpty(levelBorder._borderPath))
+                {
+                    // Update border collision
+
+                    var file = archive.FindFile(NamespaceUtils.GetFileName(levelBorder._borderPath));
+
+                    Console.WriteLine("Updating border collision for " + updateInfos.entity.Object.ObjectName);
+
+                    if (file == null)
+                    {
+                        Console.WriteLine($"Warning: File not found ({levelBorder._borderPath})");
+                        continue;
+                    }
+
+                    var hkx = file.ToHavokFile();
+
+                    if (hkx.GetAllObjects().Find(e => e is hknpCompressedMeshShape) is not hknpCompressedMeshShape shape)
+                    {
+                        Console.WriteLine($"Warning: No hknpCompressedMeshShape found ({levelBorder._borderPath})");
+                        continue;
+                    }
+
+                    EditCollisionFaces(shape, updateInfos.removedFaces);
+
+                    file.SetData(hkx.Save());
+                }
+                else if (updateInfos.removed)
                 {
                     if (updateInfos.entity.CollisionShapeIndex == -1 || !existing.Contains(reference))
                     {
@@ -140,11 +166,9 @@ namespace NST
 
                     hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, updateInfos.shapeInstance);
 
-                    u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
-
                     if (shape._shape is hknpCompressedMeshShape meshShape && meshShape._data?._meshTree != null)
                     {
-                        foreach (var dataRun in meshShape._data._meshTree._primitiveDataRuns.GetElements())
+                        foreach (var dataRun in meshShape._data._meshTree._primitiveDataRuns)
                         {
                             if (dataRun?._value?._data > 32) // Remove missing CollisionMaterial IDs when importing from CTR
                             {
@@ -152,6 +176,10 @@ namespace NST
                             }
                         }
                     }
+
+                    EditCollisionFaces(shape, updateInfos.removedFaces);
+
+                    u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
                     shapes.Add(shape, key);
                     rebuildHashMap = true;
@@ -164,6 +192,8 @@ namespace NST
 
                     hknpShapeInstance original = shapesById[updateInfos.entity.CollisionShapeIndex];
                     hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, original);
+
+                    EditCollisionFaces(shape, updateInfos.removedFaces);
 
                     u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
@@ -180,6 +210,8 @@ namespace NST
                     
                     UpdateHavokShape(updateInfos.entity, toUpdate);
 
+                    EditCollisionFaces(toUpdate, updateInfos.removedFaces);
+
                     Console.WriteLine("Updated collision for " + updateInfos.entity.Object.ObjectName);
                 }
             }
@@ -191,8 +223,8 @@ namespace NST
                 if (compoundShape._elements.Count > 0)
                 {
                     // Rebuild BVH tree
-                    BVHNode root = BVHBuilder.Build(compoundShape._elements.GetElements());
-                    List<hkcdStaticTreeCodec3Axis6> axis6Tree = root.BuildAxis6Tree(compoundShape._elements.GetElements());
+                    BVHNode root = BVHBuilder.Build(compoundShape._elements);
+                    List<hkcdStaticTreeCodec3Axis6> axis6Tree = root.BuildAxis6Tree(compoundShape._elements);
 
                     compoundShape._boundingVolumeData._nodes.Clear();
                     compoundShape._boundingVolumeData._nodes.AddRange(axis6Tree);
@@ -227,7 +259,7 @@ namespace NST
         /// <summary>
         /// Add a clone of a hknpShapeInstance to a static compound shape
         /// </summary>
-        static hknpShapeInstance AddHavokShape(CollisionUpdateInfos infos, hknpStaticCompoundShape compoundShape, hknpShapeInstance shapeInstance)
+        private static hknpShapeInstance AddHavokShape(CollisionUpdateInfos infos, hknpStaticCompoundShape compoundShape, hknpShapeInstance shapeInstance)
         {
             hknpShapeInstance cloneInstance = (hknpShapeInstance)shapeInstance.Clone();
             
@@ -241,7 +273,7 @@ namespace NST
         /// <summary>
         /// Update a hknpShapeInstance's transform
         /// </summary>
-        static void UpdateHavokShape(NSTEntity entity, hknpShapeInstance shapeInstance)
+        private static void UpdateHavokShape(NSTEntity entity, hknpShapeInstance shapeInstance)
         {
             THREE.Matrix4 transform = entity.ObjectToWorld();
 
@@ -262,6 +294,59 @@ namespace NST
             shapeInstance._transform.M24 = originalTransform.M24;
             shapeInstance._transform.M34 = originalTransform.M34;
             shapeInstance._transform.M44 = originalTransform.M44;
+        }
+
+        private static void EditCollisionFaces(hknpShapeInstance shapeInstance, HashSet<int> removedFaceIndices)
+        {
+            if (removedFaceIndices.Count == 0 || shapeInstance._shape is not hknpCompressedMeshShape)
+                return;
+
+            var shape = (hknpCompressedMeshShape)shapeInstance._shape.Clone(GameVersion.NST);
+
+            shapeInstance._shape = shape;
+
+            EditCollisionFaces(shape, removedFaceIndices);
+        }
+
+        private static void EditCollisionFaces(hknpCompressedMeshShape shape, HashSet<int> removedFaceIndices)
+        {
+            if (removedFaceIndices.Count == 0 || shape._data?._meshTree == null)
+                return;
+
+            foreach (int id in removedFaceIndices)
+            {
+                int primitiveId = id / 2;
+                int primitiveStart = 0;
+                bool found = false;
+
+                foreach (var section in shape._data._meshTree._sections)
+                {
+                    int primitiveCount = (int)(section._primitives & 0xFF);
+
+                    if (primitiveStart + primitiveCount > primitiveId)
+                    {
+                        foreach (var n in section._nodes)
+                        {
+                            if (n._data == 0 || n._data%2 == 1) continue;
+                            if (n._data/2 + primitiveStart != primitiveId) continue;
+
+                            n._data = 0;
+
+                            found = true;
+                            break;
+                        }
+
+                        break;
+                    }
+
+                    primitiveStart += primitiveCount;
+                }
+                
+                if (!found)
+                {
+                    Console.WriteLine($"Warning: No match found in section for face {id} (primitive: {primitiveId})");
+                }
+            }
         }
     }
 }

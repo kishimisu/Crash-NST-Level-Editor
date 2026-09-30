@@ -772,6 +772,8 @@ namespace NST
                     }
                 }
             }
+
+            _explorer.RenderNextFrame = true;
         }
 
         /// <summary>
@@ -811,6 +813,8 @@ namespace NST
                     }
                 }
             }
+
+            _explorer.RenderNextFrame = true;
         }
 
         /// <summary>
@@ -821,11 +825,20 @@ namespace NST
         /// <param name="applyTransform">Whether to transform the resulting shape to world space using the entity's transform</param>
         private void CreateCollisionShape(NSTEntity entity, hknpShape? shape, bool applyTransform = true)
         {
+            entity.CollisionObject?.Parent.Remove(entity.CollisionObject);
+            entity.CollisionObject = null;
+
             if (shape == null) return;
+
+            CollisionUpdateInfos? infos = null;
+            _explorer.FileManager.GetInfos(entity.ArchiveFile)?.updatedCollisions.TryGetValue(entity, out infos);
+
+            bool editMode = _explorer.SelectionBox.CollisionMode;
 
             THREE.Material mat = new THREE.MeshBasicMaterial() 
             {
-                Color = new THREE.Color(1, 0, 0),
+                VertexColors = editMode,
+                Color = editMode ? null : new THREE.Color(1, 0, 0),
                 Side = THREE.Constants.DoubleSide,
                 PolygonOffset = true,
                 PolygonOffsetFactor = -10,
@@ -854,11 +867,14 @@ namespace NST
             }
             else if (shape is hknpConvexPolytopeShape polytopeShape)
             {
-                foreach (var vertex in polytopeShape._vertices.GetElements())
+                if (editMode) return;
+
+                foreach (var vertex in polytopeShape._vertices)
                 {
                     positions.Add(new THREE.Vector3(vertex.X, vertex.Y, vertex.Z) * havokScale);
                 }
-                foreach (var face in polytopeShape._faces.GetElements())
+
+                foreach (var face in polytopeShape._faces)
                 {
                     for (int i = 0; i < face._numIndices - 2; i++)
                     {
@@ -876,11 +892,11 @@ namespace NST
                 List<(uint, uint, uint)> vertices = [];
                 List<THREE.Vector3> sharedVertices = [];
 
-                foreach (var v in tree._packedVertices.GetElements())
+                foreach (var v in tree._packedVertices)
                 {
                     vertices.Add(UnpackXYZ(v, 11, 11, 10));
                 }
-                foreach (var v in tree._sharedVertices.GetElements())
+                foreach (var v in tree._sharedVertices)
                 {
                     var (x, y, z) = UnpackXYZ(v, 21, 21, 22);
                     sharedVertices.Add(new THREE.Vector3(x / 2097151f, y / 2097151f, z / 4194303f));
@@ -889,7 +905,7 @@ namespace NST
                 int primitiveStart = 0;
                 int sharedIndexStart = 0;
 
-                foreach (var section in tree._sections.GetElements())
+                foreach (var section in tree._sections)
                 {
                     int firstVertex = (int)section._firstPackedVertex;
                     int primitiveCount = (int)(section._primitives & 0xFF);
@@ -934,6 +950,17 @@ namespace NST
                             var c = GetVertex(primitive._indices_2);
                             var d = GetVertex(primitive._indices_3);
 
+                            bool deleted = !section._nodes.Any(n => n._data%2 == 0 && n._data/2 == i); // saved deletion
+
+                            if (infos != null) // pending deletion
+                            {
+                                int faceIndex = primitiveStart + i;
+                                deleted |= infos.removedFaces.Contains(faceIndex*2) || infos.removedFaces.Contains(faceIndex*2+1);
+                            }
+
+                            if (deleted && i > 0) 
+                                b = c = d = a;
+
                             positions.AddRange([
                                 a, b, c, d 
                             ]);
@@ -958,6 +985,20 @@ namespace NST
                 return;
             }
             
+            if (editMode)
+            {
+                float[] colorBuffer = new float[positions.Count*3];
+
+                for (int i = 0; i < positions.Count; i++)
+                {
+                    colorBuffer[i*3]   = 1;
+                    colorBuffer[i*3+1] = 0;
+                    colorBuffer[i*3+2] = 0;
+                }
+
+                geometry.SetAttribute("color", new THREE.BufferAttribute<float>(colorBuffer, 3));
+            }
+
             float[] posBuffer = positions.SelectMany(e => new float[] { e.X, e.Y, e.Z }).ToArray();
             geometry.SetAttribute("position", new THREE.BufferAttribute<float>(posBuffer, 3));
             geometry.SetIndex(indices);
@@ -966,19 +1007,28 @@ namespace NST
             THREE.Mesh meshWire = new THREE.Mesh(geometry, matWire);
             THREE.Group group = new THREE.Group() { mesh, meshWire };
 
-            entity.CollisionObject?.Parent.Remove(entity.CollisionObject);
             entity.CollisionObject = group;
 
             if (applyTransform)
             {
                 group.ApplyMatrix4(entity.ObjectToWorld());
             }
-            else
-            {
-                group.UserData["BorderCollision"] = true;
-            }
 
-            group.Traverse(e => e.UserData["entity"] = entity);
+            group.Traverse(e =>
+            {
+                e.UserData["entity"] = entity;
+                e.UserData["collision"] = true;
+
+                if (applyTransform)
+                {
+                    e.Layers.Set((int)LevelExplorer.CameraLayer.StaticCollision);
+                }
+                else
+                {
+                    group.UserData["BorderCollision"] = true;
+                    e.Layers.Set((int)LevelExplorer.CameraLayer.BorderCollision);
+                }
+            });
 
             RootObject.Add(group);
         }

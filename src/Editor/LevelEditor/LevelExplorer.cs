@@ -117,6 +117,7 @@ namespace NST
         public bool CanUseBoxSelection => !_gizmos.dragging && _clickedInsideScene && IsWindowFocused;
 
         public EntityTreeView TreeView => _treeView;
+        public SelectionBox SelectionBox => _selectionBox;
         public IgArchiveFile? ZoneInfoFile => _zoneInfoFile;
         public CZoneInfo? ZoneInfo => _zoneInfo;
         public int CrashMode => _crashMode;
@@ -531,6 +532,8 @@ namespace NST
 
             for (int i = 0; i < _textureToMaterials.Count; i++)
             {
+                if (_maxTextureSize <= 8) break;
+
                 NamedReference textureRef = _textureToMaterials.Keys.ElementAt(i);
                 if (progressBar) _progressManager.SetProgress("textures", (float)(i+1) / _textureToMaterials.Count, $"Loading textures {i + 1}/{_textureToMaterials.Count}...");
 
@@ -1252,10 +1255,19 @@ namespace NST
             else if (ImGui.GetIO().WantCaptureKeyboard) return;
             else if (ImGui.IsKeyPressed(ImGuiKey.Backspace) || ImGui.IsKeyPressed(ImGuiKey.Delete))
             {
-                RemoveObjects(SelectionManager.Selection, true, true);
+                if (_selectionBox.CollisionMode)
+                {
+                    _selectionBox.RemoveCollisions(this);
+                }
+                else
+                {
+                    RemoveObjects(SelectionManager.Selection, true, true);
+                }
             }
             else if (ImGui.IsKeyPressed(ImGuiKey.Escape))
             {
+                _selectionBox.ClearCollisions();
+
                 if (SelectionManager.Selection.Count > 0)
                 {
                     SelectionManager.ClearSelection(true);
@@ -1358,7 +1370,7 @@ namespace NST
                 ImGui.TextDisabled("(?)");
                 ImGui.SameLine();
                 ImGui.SetItemTooltip("Lower values decrease memory usage.\nRestart the editor for the change to take effect.");
-                if (ImGui.SliderInt("##maxTexSize", ref logMaxTexSize, 0, 7, logMaxTexSize <= 0 ? "potato" : _maxTextureSize.ToString()))
+                if (ImGui.SliderInt("##maxTexSize", ref logMaxTexSize, 0, 7, logMaxTexSize <= 0 ? "no textures" : _maxTextureSize.ToString()))
                 {
                     _maxTextureSize = logMaxTexSize <= 0 ? 8 : (int)Math.Pow(2, logMaxTexSize + 4);
                     LocalStorage.Set("max_texture_size", _maxTextureSize);
@@ -1511,6 +1523,10 @@ namespace NST
             var flags = ImGuiChildFlags.AutoResizeX | ImGuiChildFlags.AutoResizeY;
             if (_cameraLayersOpen) flags |= ImGuiChildFlags.AlwaysUseWindowPadding;
 
+            bool staticCollision = _layers["Static Collisions"];
+            bool borderCollision = _layers["Border Collisions"];
+            bool collisionEnabled = staticCollision | borderCollision;
+
             if (ImGui.BeginChild("CameraLayers" + GetHashCode(), new System.Numerics.Vector2(0, 0), flags))
             {
                 _cameraLayersOpen = ImGui.CollapsingHeader("Camera layers  ");
@@ -1541,12 +1557,45 @@ namespace NST
                             }
                             else if (layer.Key == "Static Collisions")
                             {
+                                if (!enabled && !borderCollision) _selectionBox.CollisionMode = false;
                                 InstanceManager.ShowCollisions(enabled, true, false);
                             }
                             else if (layer.Key == "Border Collisions")
                             {
+                                if (!enabled && !staticCollision) _selectionBox.CollisionMode = false;
                                 InstanceManager.ShowCollisions(enabled, false, true);
                             }
+                        }
+
+                        if (collisionEnabled && layer.Key == "Border Collisions")
+                        {
+                            bool editing = _selectionBox.CollisionMode;
+                            
+                            if (editing)
+                            {
+                                ImGui.PushStyleColor(ImGuiCol.Button,        new System.Numerics.Vector4(0.75f, 0.25f, 0.15f, 1.0f));
+                                ImGui.PushStyleColor(ImGuiCol.ButtonHovered, new System.Numerics.Vector4(0.85f, 0.35f, 0.20f, 1.0f));
+                                ImGui.PushStyleColor(ImGuiCol.ButtonActive,  new System.Numerics.Vector4(0.65f, 0.15f, 0.10f, 1.0f));
+                            }
+                            
+                            if (ImGui.Button(_selectionBox.CollisionMode ? "Stop editing" : "Edit collisions", new System.Numerics.Vector2(ImGui.GetContentRegionAvail().X, 0)))
+                            {
+                                _selectionBox.CollisionMode = !_selectionBox.CollisionMode;
+
+                                if (!_selectionBox.CollisionMode)
+                                {
+                                    _selectionBox.ClearCollisions();
+                                }
+                                else
+                                {
+                                    SelectionManager.ClearSelection(true);
+                                    _gizmos.Visible = false;
+                                }
+
+                                InstanceManager.ShowCollisions(true, staticCollision, borderCollision);
+                            }
+
+                            if (editing) ImGui.PopStyleColor(3);
                         }
                     }
                 }
@@ -1746,7 +1795,13 @@ namespace NST
 
             UpdateActiveLayers(raycaster.layers);
 
-            if (excludeTransparent)
+            if (_selectionBox.CollisionMode)
+            {
+                raycaster.layers.DisableAll();
+                raycaster.layers.Enable((int)CameraLayer.StaticCollision);
+                raycaster.layers.Enable((int)CameraLayer.BorderCollision);
+            }
+            else if (excludeTransparent)
             {
                 raycaster.layers.Disable((int)CameraLayer.Splines);
                 raycaster.layers.Disable((int)CameraLayer.CameraBox);
@@ -1768,6 +1823,19 @@ namespace NST
             List<NSTObject> hitEntities = [];
 
             intersects.Sort((x, y) => y.object3D.UserData.ContainsKey("spline").CompareTo(x.object3D.UserData.ContainsKey("spline")));
+
+            if (_selectionBox.CollisionMode)
+            {
+                if (intersects.Count > 0 && intersects[0].object3D.UserData.ContainsKey("collision"))
+                {
+                    _selectionBox.SelectCollisionFace(intersects[0].object3D, intersects[0].faceIndex);
+                }
+                else
+                {
+                    _selectionBox.ClearCollisions();
+                }
+                return;
+            }
 
             for (int i = 0; i < intersects.Count; i++)
             {
@@ -1899,6 +1967,7 @@ namespace NST
             bool? addToSelection = false, 
             bool initializeObjects = false, 
             float? offsetZ = null,
+            bool moveToCamera = true,
             Dictionary<igObject, igObject>? clones = null)
         {
             Dictionary<NSTEntity, string?> newEntities = [];
@@ -1986,8 +2055,12 @@ namespace NST
                 SelectionManager.UpdateSelection(newEntities.Keys.Where(e => e != selected && e.IsSpawned && !e.IsPrefabInstance && !e.IsPrefabChild).Cast<NSTObject>().ToList(), false);
             }
 
-            SelectionManager.SelectionContainer.Position = GetIntersectionPoint(camDistance * 2);
-            if (offsetZ != null) SelectionManager.SelectionContainer.Position.Z += offsetZ.Value;
+            if (moveToCamera)
+            {
+                SelectionManager.SelectionContainer.Position = GetIntersectionPoint(camDistance * 2);
+                if (offsetZ != null) SelectionManager.SelectionContainer.Position.Z += offsetZ.Value;
+            }
+
             SelectionManager.ApplyChanges();
 
             return allObjects;

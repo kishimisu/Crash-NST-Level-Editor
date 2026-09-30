@@ -1,21 +1,34 @@
 using Alchemy;
+using System.Collections;
 
 namespace Havok
 {
     public abstract class hkMemoryBase : hkObject { }
     
-    public abstract class hkMemoryBase<T> : hkMemoryBase
+    public abstract class hkMemoryBase<T> : hkMemoryBase, IList<T>
     {
+        // Content
         protected List<T> _elements = [];
 
-        public T this[int index] => _elements[index];
+        // List<T> interface
+        public T this[int index]
+        {
+            get => _elements[index];
+            set => _elements[index] = value;
+        }
         public int Count => _elements.Count;
-        public List<T> GetElements() => _elements;
+        public bool IsReadOnly => false;
         public void Add(T element) => _elements.Add(element);
         public void AddRange(List<T> elements) => _elements.AddRange(elements);
         public void Clear() => _elements.Clear();
+        public bool Contains(T element) => _elements.Contains(element);
+        public void CopyTo(T[] array, int arrayIndex) => _elements.CopyTo(array, arrayIndex);
+        public IEnumerator<T> GetEnumerator() => _elements.GetEnumerator();
+        IEnumerator IEnumerable.GetEnumerator() => GetEnumerator();
         public int IndexOf(T element) => _elements.IndexOf(element);
-        public void Remove(T element) => _elements.Remove(element);
+        public void Insert(int index, T element) => _elements.Insert(index, element);
+        public bool Remove(T element) => _elements.Remove(element);
+        public void RemoveAt(int index) => _elements.RemoveAt(index);
 
         protected void ParseElements(HavokFile hkx, BinaryReader reader, int offset, int count)
         {
@@ -65,6 +78,28 @@ namespace Havok
             if (!typeof(T).IsAssignableTo(typeof(hkObject))) return [];
 
             return _elements.Where(x => x != null).Cast<hkObject>().ToList();
+        }
+
+        public override hkObject Clone(GameVersion version)
+        {
+            var clone = (hkMemoryBase<T>)MemberwiseClone();
+
+            if (!typeof(T).IsSubclassOf(typeof(hkObject)))
+            {
+                clone._elements = new List<T>(_elements);
+                return clone;
+            }
+
+            clone._elements = new List<T>(_elements.Count);
+
+            for (int i = 0; i < _elements.Count; i++)
+            {
+                hkObject? element = _elements[i] as hkObject;
+                object cloneElement = element?.Clone(version)!;
+                clone._elements.Add((T)cloneElement);
+            }
+            
+            return clone;
         }
     }
 

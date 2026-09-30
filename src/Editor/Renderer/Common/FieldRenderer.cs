@@ -550,7 +550,7 @@ namespace NST
 
         private static void RenderHkMemory<T>(hkMemoryBase<T?> memory, FileRenderer renderer, string name)
         {
-            RenderMemory(memory.GetElements(), renderer, memory.GetType(), name);
+            RenderMemory(memory, renderer, memory.GetType(), name);
         }
 
         /// <summary>

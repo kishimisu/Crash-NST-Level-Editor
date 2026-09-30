@@ -41,7 +41,7 @@ namespace Havok
             return new Vector3(x, y, z);
         }
 
-        public List<hkcdStaticTreeCodec3Axis6> BuildAxis6Tree(List<hknpShapeInstance> shapes)
+        public List<hkcdStaticTreeCodec3Axis6> BuildAxis6Tree(IList<hknpShapeInstance> shapes)
         {
             var tree = new List<hkcdStaticTreeCodec3Axis6>();
             var ids = new Dictionary<BVHNode, int>();
@@ -135,7 +135,7 @@ namespace Havok
     /// </summary>
     public static class BVHBuilder
     {
-        public static BVHNode Build(List<hknpShapeInstance> shapes)
+        public static BVHNode Build(IList<hknpShapeInstance> shapes)
         {
             Vector3 min = new Vector3(float.MaxValue, float.MaxValue, float.MaxValue);
             Vector3 max = new Vector3(float.MinValue, float.MinValue, float.MinValue);

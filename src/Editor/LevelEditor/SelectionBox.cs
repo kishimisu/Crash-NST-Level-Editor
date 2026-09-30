@@ -39,6 +39,10 @@ public class SelectionBox
 	private bool isDragging = false;
     private Vector2 _startPoint = new Vector2();
 
+	// Collisions
+	public bool CollisionMode { get; set; } = false;
+	public Dictionary<Object3D, HashSet<int>> RemovedCollisionFaces { get; } = [];
+
 	public SelectionBox( LevelExplorer explorer, Camera camera, Object3D root, float deep = float.MaxValue ) 
 	{
 		this.camera = camera;
@@ -107,6 +111,11 @@ public class SelectionBox
 		this.startPoint = startPoint ?? this.startPoint;
 		this.endPoint = endPoint ?? this.endPoint;
         this.selection = [];
+
+		if (!ImGui.IsKeyDown(ImGuiKey.LeftShift))
+		{
+			ClearCollisions();
+		}
 
 		UpdateFrustum( this.startPoint, this.endPoint );
 		SearchChildInFrustum( _frustum, this.root );
@@ -184,7 +193,15 @@ public class SelectionBox
 		{
 			if (!obj.Layers.Test(camera.Layers)) return;
 
-			if ( obj is InstancedMesh instanced && instanced.UserData.TryGetValue("instance", out object? value)) 
+			if (CollisionMode)
+			{
+				if (obj.Geometry != null) 
+					IntersectCollision(frustum, obj);
+				
+				return;
+			}
+
+			if (obj is InstancedMesh instanced && instanced.UserData.TryGetValue("instance", out object? value)) 
 			{
                 InstanceManager instanceManager = (InstanceManager)value;
 
@@ -235,5 +252,128 @@ public class SelectionBox
 				this.SearchChildInFrustum( frustum, obj.Children[ x ] );
 			}
 		}
+	}
+
+	private bool IntersectCollision(Frustum frustum, Object3D obj)
+	{
+		if (obj.Geometry is not BufferGeometry bufferGeo) return false;
+		if (!obj.UserData.ContainsKey("collision")) return false;
+		if (!obj.UserData.TryGetValue("entity", out var e) || e is not NSTEntity entity) return false;
+		
+		var positions = (BufferAttribute<float>)bufferGeo.Attributes["position"];
+		var colors = (BufferAttribute<float>)bufferGeo.Attributes["color"];
+		var transform = entity.ObjectToWorld();
+		var col = new THREE.Color(0, 1, 0);
+
+		HashSet<int>? removedFaces = null;
+
+		for (int i = 0; i < positions.Array.Length - 12; i += 12)
+		{
+			if (FrustumContains(frustum, transform, positions.Array, i, 4))
+			{
+				if (removedFaces == null && !RemovedCollisionFaces.TryGetValue(obj, out removedFaces))
+				{
+					removedFaces = [];
+					RemovedCollisionFaces[obj] = removedFaces;
+				}
+
+				if (removedFaces.Add(i/12 * 2))
+				{
+					UpdateFaceColor(colors, i/12, col, 4);
+				}
+			}
+		}
+		
+		return true;
+	}
+
+	public void SelectCollisionFace(Object3D obj, int faceIndex)
+	{
+		if (obj.Geometry is not BufferGeometry bufferGeo) return;
+		if (!obj.UserData.ContainsKey("collision")) return;
+		
+		var colors = (BufferAttribute<float>)bufferGeo.Attributes["color"];
+		var col = new THREE.Color(1, 0, 0);
+
+		if (!ImGui.IsKeyDown(ImGuiKey.LeftShift)) ClearCollisions();
+
+		if (!RemovedCollisionFaces.TryGetValue(obj, out var removedFaces))
+		{
+			removedFaces = [];
+			RemovedCollisionFaces[obj] = removedFaces;
+		}
+
+		bool removed = removedFaces.Add(faceIndex);
+
+		if (removed)
+		{
+			col = new THREE.Color(0, 1, 0);
+		}
+		else
+		{
+			removedFaces.Remove(faceIndex);
+		}
+
+		UpdateFaceColor(colors, faceIndex/2, col, 4);
+	}
+
+	// Clear the current selection
+	public void ClearCollisions()
+	{
+		foreach ((var obj, var faces) in RemovedCollisionFaces)
+		{
+			if (obj.Geometry is not BufferGeometry geo) continue;
+
+			var colors = (BufferAttribute<float>)geo.Attributes["color"];
+
+			foreach (int id in faces)
+			{
+				UpdateFaceColor(colors, id/2, new THREE.Color(1, 0, 0), 4);
+			}
+		}
+
+		RemovedCollisionFaces.Clear();
+	}
+
+	// Delete selected collision faces
+	public void RemoveCollisions(LevelExplorer explorer)
+	{
+		List<NSTEntity> updated = [];
+
+		foreach ((var obj, var removedFaces) in RemovedCollisionFaces)
+		{
+			if (!obj.UserData.TryGetValue("entity", out var e) || e is not NSTEntity entity) continue;
+
+			updated.Add(entity);
+
+			explorer.ArchiveRenderer.SetEntityUpdated(entity, removeCollisionFaces: removedFaces);
+		}
+
+		ClearCollisions();
+		explorer.InstanceManager.RefreshCollisionShapes(updated);
+	}
+
+	private static void UpdateFaceColor(BufferAttribute<float> colors, int faceId, THREE.Color color, int elmPerFace)
+	{
+		for (int i = 0; i < elmPerFace; i++)
+		{
+			int idx = (faceId * elmPerFace + i) * 3;
+			colors.Array[idx + 0]  = color.R;
+			colors.Array[idx + 1]  = color.G;
+			colors.Array[idx + 2]  = color.B;
+		}
+		colors.NeedsUpdate = true;
+	}
+
+	private static bool FrustumContains(Frustum frustum, Matrix4 transform, float[] positions, int start, int count)
+	{
+		for (int i = 0; i < count; i++)
+		{
+			var v = new Vector3(positions[start + i*3 + 0], positions[start + i*3 + 1], positions[start + i*3 + 2]);
+
+			if (frustum.ContainsPoint(v.ApplyMatrix4(transform)))
+				return true;
+		}
+		return false;
 	}
 }

@@ -555,11 +555,11 @@ namespace NST
         /// </summary>
         /// <param name="entity">The entity that has been updated</param>
         /// <param name="shapeInstance">The corresponding shape instance if not in the same archive</param>
-        public void SetEntityUpdated(NSTEntity entity, hknpShapeInstance? shapeInstance = null, bool removed = false)
+        public void SetEntityUpdated(NSTEntity entity, hknpShapeInstance? shapeInstance = null, bool removed = false, HashSet<int>? removeCollisionFaces = null)
         {
             FileUpdateInfos infos = SetObjectUpdated(entity.ArchiveFile, entity.Object);
 
-            if (entity.CollisionShapeIndex == -1 && shapeInstance == null) return;
+            if (entity.CollisionShapeIndex == -1 && shapeInstance == null && removeCollisionFaces == null) return;
 
             if (shapeInstance != null)
             {
@@ -572,12 +572,20 @@ namespace NST
             }
             else
             {
-                infos.updatedCollisions[entity] = new CollisionUpdateInfos()
+                collisionInfos = new CollisionUpdateInfos()
                 {
                     entity = entity,
                     removed = removed,
                     shapeInstance = shapeInstance,
                 };
+
+                infos.updatedCollisions[entity] = collisionInfos;
+            }
+
+            if (removeCollisionFaces != null)
+            {
+                foreach (int f in removeCollisionFaces)
+                    collisionInfos.removedFaces.Add(f);
             }
         }
 

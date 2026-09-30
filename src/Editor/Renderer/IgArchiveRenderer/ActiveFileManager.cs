@@ -11,6 +11,7 @@ namespace NST
         public NSTEntity entity; // Updated entity
         public hknpShapeInstance? shapeInstance = null; // Full shape instance if not in the same archive
         public bool removed = false; // Whether the entity has been removed
+        public HashSet<int> removedFaces = []; // Faces that were removed from the collision mesh
 
         /// <summary>
         /// Get the hashed reference corresponding to the entity
@@ -148,22 +149,22 @@ namespace NST
         /// <summary>
         /// List of active and/or updated files
         /// </summary>
-        private Dictionary<IgArchiveFile, FileUpdateInfos> _files = [];
+        private readonly Dictionary<IgArchiveFile, FileUpdateInfos> _files = [];
 
         /// <summary>
         /// Check if a file has been updated
         /// </summary>
-        public bool IsFileUpdated(IgArchiveFile file) => _files.ContainsKey(file) && _files[file].updated;
+        public bool IsFileUpdated(IgArchiveFile file) => _files.TryGetValue(file, out var infos) && infos.updated;
 
         /// <summary>
         /// Check if a file is a new file
         /// </summary>
-        public bool IsNewFile(IgArchiveFile file) => _files.ContainsKey(file) && _files[file].removeOnDiscard;
+        public bool IsNewFile(IgArchiveFile file) => _files.TryGetValue(file, out var infos) && infos.removeOnDiscard;
 
         /// <summary>
         /// Get the original path of a file (if it has been renamed)
         /// </summary>
-        public string? GetOriginalPath(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file].originalPath : null;
+        public string? GetOriginalPath(IgArchiveFile file) => _files.TryGetValue(file, out FileUpdateInfos? value) ? value.originalPath : null;
 
         /// <summary>
         /// Get the IGZ instance associated to a file, if it exists
@@ -202,7 +203,7 @@ namespace NST
         /// <summary>
         /// Get the update infos corresponding to a file if it exists
         /// </summary>
-        public FileUpdateInfos? GetInfos(IgArchiveFile file) => _files.ContainsKey(file) ? _files[file] : null;
+        public FileUpdateInfos? GetInfos(IgArchiveFile file) => _files.TryGetValue(file, out FileUpdateInfos? value) ? value : null;
 
         /// <summary>
         /// Find an object corresponding to a reference in the currently open files
