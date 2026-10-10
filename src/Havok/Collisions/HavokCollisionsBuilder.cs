@@ -154,9 +154,12 @@ namespace Havok
 
                     if (removedPrimitives.Contains(primitiveStart + i))
                         continue;
-                    
+
                     var primitive = tree._primitives[primitiveStart + i];
 
+                    if (GetUniqueIndexCount(primitive) < 3)
+                        continue;
+                    
                     var a = GetVertex(primitive._indices_0);
                     var b = GetVertex(primitive._indices_1);
                     var c = GetVertex(primitive._indices_2);
@@ -542,6 +545,17 @@ namespace Havok
                 .ToList();
 
             return vertices;
+        }
+
+        public static int GetUniqueIndexCount(hkcdStaticMeshTreeBasePrimitive p)
+        {
+            int uniqueCount = 1;
+
+            if (p._indices_1 != p._indices_0) uniqueCount++;
+            if (p._indices_2 != p._indices_0 && p._indices_2 != p._indices_1) uniqueCount++;
+            if (p._indices_3 != p._indices_0 && p._indices_3 != p._indices_1 && p._indices_3 != p._indices_2) uniqueCount++;
+
+            return uniqueCount;
         }
 
         public static (uint x, uint y, uint z) UnpackXYZ(ulong packed, int xBits, int yBits, int zBits)

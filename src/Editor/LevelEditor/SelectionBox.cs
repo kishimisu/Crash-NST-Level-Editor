@@ -262,7 +262,7 @@ public class SelectionBox
 		
 		var positions = (BufferAttribute<float>)bufferGeo.Attributes["position"];
 		var colors = (BufferAttribute<float>)bufferGeo.Attributes["color"];
-		var transform = entity.ObjectToWorld();
+		var transform = obj.UserData.ContainsKey("BorderCollision") ? Matrix4.Identity() : entity.ObjectToWorld();
 		var col = new THREE.Color(0, 1, 0);
 
 		HashSet<int>? removedFaces = null;
