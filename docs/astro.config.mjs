@@ -121,9 +121,10 @@ export default defineConfig({
 						'level-editor/object-properties',
 						'level-editor/undo-and-backups',
 						'level-editor/play-save-export',
-						'level-editor/custom-hubs-and-modpacks',
 						'level-editor/ctr-nf-support',
 						'level-editor/export-to-gltf',
+						'level-editor/custom-hubs-and-modpacks',
+						'level-editor/collision-editing',
 						'level-editor/troubleshooting',
 						{
 							label: 'Special Objects',

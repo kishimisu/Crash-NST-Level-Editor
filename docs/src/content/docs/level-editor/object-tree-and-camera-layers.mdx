@@ -52,6 +52,8 @@ Click an entry to open its properties, double-click to focus the camera on it, h
 
 The **Camera layers** header at the top of the scene view chooses which categories of objects are drawn. Hiding layers cleans up the view and improves performance. Most hidden layers still show the objects that are part of the current selection. Your choice of layers is saved when you close the editor.
 
+![The Camera layers panel](../../../assets/screenshots/level_editor/camera_layers.png)
+
 | Layer | Shows | Useful when |
 | --- | --- | --- |
 | **Camera Boxes** | Transition zones between two cameras | Adjusting camera transitions |
@@ -73,6 +75,8 @@ Templates located at (0,0,0) are hidden even when the Templates layer is on, to 
 
 | Mode | Highlights |
 | --- | --- |
-| **Static Collisions** | Objects that have collisions |
-| **Prefabs** | Prefab instances and the entities that belong to a prefab |
+| **Prefabs** | Prefab instances and entities that belong to a prefab |
 | **Game Objects** | Every game object: enemies, hazards, platforms... |
+| **Havok Objects** | Highlight objects that have static collision data. |
+| **Havok Sections** | Colors static collision triangles according to their BVH section index. |
+| **Havok Materials** | Colors static collision triangles according to their material index (dirt, ice...) |
