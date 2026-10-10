@@ -691,7 +691,7 @@ namespace NST
             "best", "biggest", "pretty", "cool", "fun", "hard", "easy", "simple", "short", "huge", "small", "epic", "great", "nice", 
             "funny", "weird", "strange", "insane", "brutal", "extreme", "creative", "unique", "fresh", "new", "secret", "advanced", 
             "ultimate", "hardcore", "legendary", "godly", "perfect", "flawless", "unfair", "deadly", "surprising", "cursed", "goofy", 
-            "silly", "bonkers", "broken", "questionable", "unhinged", "terrible", "experimental", "demo", "mysterious", "chaotic", 
+            "silly", "bonkers", "broken", "questionable", "unhinged", "terrible", "experimental", "cute", "mysterious", "chaotic", 
             "awkward", "glorious", "evil", "scary", "happy", "joyful", "friendly", "demonic", "retro", "magical", "eery", "pay-to-win"
         ];
 

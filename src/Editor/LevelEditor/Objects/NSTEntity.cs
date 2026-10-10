@@ -346,7 +346,7 @@ namespace NST
             var geo = new THREE.SphereGeometry(1, 16, 16);
             var geoWire = new THREE.SphereGeometry(1, 8, 8);
             var mat = new THREE.MeshBasicMaterial() { Transparent = true, Opacity = 0.35f, Color = color };
-            var matWire = new THREE.MeshBasicMaterial() { Wireframe = true, Color = color };
+            var matWire = new THREE.MeshBasicMaterial() { Wireframe = true, Color = color, WireframeLineWidth = LevelExplorer.WireframeLineWidth };
 
             var mesh = new THREE.Mesh(geo, mat)
             {

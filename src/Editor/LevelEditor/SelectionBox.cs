@@ -267,7 +267,7 @@ public class SelectionBox
 
 		HashSet<int>? removedFaces = null;
 
-		for (int i = 0; i < positions.Array.Length - 12; i += 12)
+		for (int i = 0; i <= positions.Array.Length - 12; i += 12)
 		{
 			if (FrustumContains(frustum, transform, positions.Array, i, 4))
 			{

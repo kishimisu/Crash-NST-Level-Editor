@@ -52,7 +52,8 @@ namespace NST
 
             THREE.Mesh mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial() {
                 Color = color,
-                Wireframe = true
+                Wireframe = true,
+                WireframeLineWidth = LevelExplorer.WireframeLineWidth,
             });
             
             if (focused)

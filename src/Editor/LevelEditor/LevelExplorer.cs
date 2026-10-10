@@ -48,8 +48,8 @@ namespace NST
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
 
-        public enum DebugMode { None = 0, Collisions = 1, Prefabs = 2, GameObjects = 3, Instanced = 4, Selection = 5 };
-        private readonly string[] _debugModes = ["None", "Static Collisions", "Prefabs", "Game Objects", /*"Instanced", "Selection"*/];
+        public enum DebugMode { None = 0, Prefabs = 1, GameObjects = 2, Collisions = 3, HavokSections = 4, HavokMaterials = 5, Instanced = 6, Selection = 7 };
+        private readonly string[] _debugModes = ["None", "Prefabs", "Game Objects", "Havok Objects", "Havok Sections", "Havok Materials", /*"Instanced", "Selection"*/];
         
         public enum CameraLayer 
         { 
@@ -122,6 +122,9 @@ namespace NST
         public CZoneInfo? ZoneInfo => _zoneInfo;
         public int CrashMode => _crashMode;
         public int DefaultCharacter { set => _defaultCharacter = value; }
+
+        public static int LineWidth = 2;
+        public static int WireframeLineWidth = 1;
 
         private static readonly Dictionary<string, string> _zoneInfoOptions = new()
         {
@@ -265,6 +268,9 @@ namespace NST
 
             _gizmoTranslationSnap = LocalStorage.Get("translation_snap", 80.0f);
             _gizmoRotationSnap = LocalStorage.Get("rotation_snap", 45.0f);
+
+            LineWidth = LocalStorage.Get("line_width", 2);
+            WireframeLineWidth = LocalStorage.Get("wireframe_width", 1);
 
             foreach ((string layerName, bool active) in _layers)
             {
@@ -957,6 +963,12 @@ namespace NST
                 
                 LoadCollisions(InstanceManager.AllEntities);
 
+                if (_selectionBox.CollisionMode)
+                {
+                    _selectionBox.ClearCollisions();
+                    InstanceManager.RefreshCollisionShapes(InstanceManager.AllEntities);
+                }
+
                 foreach (Action callback in postSaveCallbacks)
                 {
                     callback.Invoke();
@@ -1331,6 +1343,8 @@ namespace NST
                     this.ChangeGameMode(GameplayModeManager.GameplayModes[_gameplayMode]);
                 }
 
+                ImGuiUtils.ColoredSeparator("Special options", levelColor);
+
                 List<string> enabledOptions = GameplayModeManager.GetSpecialZoneInfoOptions(_zoneInfo._build);
 
                 foreach ((string displayName, string name) in _zoneInfoOptions)
@@ -1385,10 +1399,31 @@ namespace NST
                     RenderNextFrame = true;
                 }
                 ImGuiUtils.Prefix("Camera FOV");
-                if (ImGui.SliderFloat("FOV", ref _camera.Fov, 30, 120))
+                if (ImGui.SliderFloat("##fov", ref _camera.Fov, 30, 120))
                 {
                     LocalStorage.Set("camera_fov", _camera.Fov);
                     _camera.UpdateProjectionMatrix();
+                    RenderNextFrame = true;
+                }
+
+                ImGuiUtils.Prefix("Spline Thickness");
+                bool updateLineWidth = ImGui.SliderInt("##splineThickness", ref LineWidth, 1, 8);
+
+                ImGuiUtils.Prefix("Box Thickness");
+                updateLineWidth |= ImGui.SliderInt("##boxThickness", ref WireframeLineWidth, 1, 8);
+
+                if (updateLineWidth)
+                {
+                    LocalStorage.Set("line_width", LineWidth);
+                    LocalStorage.Set("wireframe_width", WireframeLineWidth);
+                    _scene.Traverse(e =>
+                    {
+                        if (e.Material != null)
+                        {
+                            e.Material.LineWidth = LineWidth;
+                            e.Material.WireframeLineWidth = WireframeLineWidth;
+                        }
+                    });
                     RenderNextFrame = true;
                 }
 
@@ -1396,9 +1431,34 @@ namespace NST
                 if (ImGui.Combo("##debugMode", ref _debugMode, _debugModes, _debugModes.Length))
                 {
                     _debugMode = _debugMode % _debugModes.Length;
+
                     _gizmos.Visible = false;
                     SelectionManager.ClearSelection();
                     InstanceManager.RefreshInstances(InstanceManager.AllEntities.Cast<NSTObject>().ToList());
+
+                    bool staticCol = _layers["Static Collisions"];
+                    bool borderCol = _layers["Border Collisions"];
+
+                    if (_debugMode == (int)DebugMode.HavokSections || _debugMode == (int)DebugMode.HavokMaterials)
+                    {
+                        if (staticCol || borderCol)
+                        {
+                            InstanceManager.RefreshCollisionShapes(InstanceManager.AllEntities);
+                        }
+                        else
+                        {
+                            _layers["Static Collisions"] = true;
+                            InstanceManager.ShowCollisions(true, true, false);
+                            UpdateActiveLayers(_camera.Layers);
+                        }
+                    }
+                    else if (staticCol && !borderCol)
+                    {
+                        _layers["Static Collisions"] = false;
+                        InstanceManager.ShowCollisions(false, false, false);
+                        UpdateActiveLayers(_camera.Layers);
+                    }
+
                     RenderNextFrame = true;
                 }
                 
@@ -1419,7 +1479,7 @@ namespace NST
                 {
                     LocalStorage.Set("increase_speed", _fpsControls.SpeedIncrease);
                 }
-                ImGuiUtils.Prefix("Show diamond gizmo:");
+                ImGuiUtils.Prefix("Show central gizmo:");
                 if (ImGui.Checkbox("##diamondGizmo", ref _gizmos.EnableTranslateXYZ))
                 {
                     LocalStorage.Set("enable_translate_xyz", _gizmos.EnableTranslateXYZ);
@@ -1456,6 +1516,9 @@ namespace NST
                     _gizmoTranslationSnap = 80;
                     _gizmoRotationSnap = 45;
 
+                    LineWidth = 2;
+                    WireframeLineWidth = 1;
+
                     LocalStorage.Set("max_texture_size", _maxTextureSize);
                     LocalStorage.Set("camera_far", _camera.Far);
                     LocalStorage.Set("camera_fov", _camera.Fov);
@@ -1465,9 +1528,19 @@ namespace NST
                     LocalStorage.Set("enable_translate_xyz", _gizmos.EnableTranslateXYZ);
                     LocalStorage.Set("translation_snap", _gizmoTranslationSnap);
                     LocalStorage.Set("rotation_snap", _gizmoRotationSnap);
+                    LocalStorage.Set("line_width", LineWidth);
+                    LocalStorage.Set("wireframe_width", WireframeLineWidth);
 
                     _camera.UpdateProjectionMatrix();
                     _gizmos._gizmo.UpdateVisibility("XYZ", _gizmos.EnableTranslateXYZ);
+                    _scene.Traverse(e =>
+                    {
+                        if (e.Material != null)
+                        {
+                            e.Material.LineWidth = LineWidth;
+                            e.Material.WireframeLineWidth = WireframeLineWidth;
+                        }
+                    });
                     RenderNextFrame = true;
                 }
                 ImGui.Spacing();

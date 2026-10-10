@@ -180,7 +180,7 @@ namespace NST
         private THREE.Object3D CreateLineMesh(List<THREE.Vector3> points)
         {
             var lineGeometry = new THREE.BufferGeometry();
-            var lineMaterial = new THREE.LineBasicMaterial() { Color = Color, LineWidth = 2 };
+            var lineMaterial = new THREE.LineBasicMaterial() { Color = Color, LineWidth = LevelExplorer.LineWidth };
 
             float[] positions = points.SelectMany(p => new float[] { p.X, p.Y, p.Z }).ToArray();
 
