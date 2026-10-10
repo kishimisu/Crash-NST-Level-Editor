@@ -250,6 +250,21 @@ namespace NST
                 ? new THREE.MeshBasicMaterial()
                 : new THREE.MeshPhongMaterial();
 
+            material.Shininess = DefaultShininess;
+            material.Roughness = 0;
+            material.Metalness = 0;
+
+            material.Color = new THREE.Color(color.X, color.Y, color.Z);
+
+            if (texture != null)
+            {
+                material.Map = cloneTexture ? (THREE.Texture)texture.Clone() : texture;
+                material.Map.WrapS = _TEXTURE_WRAP_MAP[wrapS];
+                material.Map.WrapT = _TEXTURE_WRAP_MAP[wrapT];
+                material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];
+                material.Map.MagFilter = _TEXTURE_FILTER_MAP[magFilter];
+            }
+
             if (blending)
             {
                 material.Transparent = true;
@@ -280,26 +295,24 @@ namespace NST
                 material.AlphaTest = alphaRef;
             }
 
-            material.Metalness = 0;
-            material.Roughness = 0;
-            material.Shininess = DefaultShininess;
-            material.Color = new THREE.Color(color.X, color.Y, color.Z);
+            // Tweak decal material to look good with the default shader
 
-            if (type.IsAssignableTo(typeof(CBlendedDecalMaterial)) || effectHandle?.namespaceName == "GBufferDecal") 
+            bool isBlendedDecal = type == typeof(CBlendedDecalMaterial);
+            bool isWaterDecal = materialHandle?.objectName == "waterDecal" || effectHandle?.namespaceName.Contains("Water") == true;
+
+            if (isBlendedDecal || effectHandle?.namespaceName == "GBufferDecal") 
             {
                 material.PolygonOffset = true;
                 material.PolygonOffsetFactor = -1.0f * (drawCallIndex+1);
                 material.PolygonOffsetUnits = 0.1f;
             }
 
-            bool waterDecal = materialHandle?.objectName == "waterDecal" || effectHandle?.namespaceName.Contains("Water") == true;
-
-            if (waterDecal)
+            if (isWaterDecal)
             {
                 material.Color = new THREE.Color(0.3f, 0.8f, 1.0f);
             }
 
-            if (waterDecal || type == typeof(CFlowWaterMaterial) || type == typeof(CWaterMaterial))
+            if (isWaterDecal || type == typeof(CFlowWaterMaterial) || type == typeof(CWaterMaterial))
             {
                 material.Opacity = 0.5f;
                 material.Transparent = true;
@@ -311,17 +324,25 @@ namespace NST
                 material.Opacity = 0.5f;
             }
 
-            if (texture != null)
+            if (isBlendedDecal)
             {
-                material.Map = cloneTexture ? (THREE.Texture)texture.Clone() : texture;
-                material.Map.WrapS = _TEXTURE_WRAP_MAP[wrapS];
-                material.Map.WrapT = _TEXTURE_WRAP_MAP[wrapT];
-                material.Map.MinFilter = _TEXTURE_FILTER_MAP[minFilter];
-                material.Map.MagFilter = _TEXTURE_FILTER_MAP[magFilter];
-            }
-            else if (material.Color.Value.GetHex() == 0xffffff && type == typeof(CBlendedDecalMaterial)) // fix Blob in L126
-            {
-                material.Opacity = 0;
+                if (texture == null && material.Color.Value.GetHex() == 0xffffff) // fix Blob in L126
+                {
+                    material.Opacity = 0;
+                }
+                else if (materialHandle?.objectName == "C2_Pine_Snow01") // fix Pine Trees in L202
+                {
+                    material.OnBeforeCompile += (shader, _) =>
+                    {
+                        if (shader["fragmentShader"] is string fragmentShader)
+                        {
+                            shader["fragmentShader"] = fragmentShader.Replace(
+                                "#include <alphatest_fragment>",
+                                "if (diffuseColor.r < ALPHATEST) discard;"
+                            );
+                        }
+                    };
+                }
             }
 
             if (editorOnly) material.Visible = false;

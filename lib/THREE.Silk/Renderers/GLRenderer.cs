@@ -1086,7 +1086,7 @@ namespace THREE
 
             var parameters = programCache.GetParameters(material, lights, shadowsArray, scene, object3D);
 
-            var programCacheKey = programCache.getProgramCacheKey(parameters).Replace("False", "false").Replace("True", "true");
+            var programCacheKey = programCache.getProgramCacheKey(material, parameters).Replace("False", "false").Replace("True", "true");
 
             Hashtable programs = (Hashtable)materialProperties["programs"];
             materialProperties["environment"] = material is MeshStandardMaterial ? (scene is Scene ? (scene as Scene).Environment : null) : null;

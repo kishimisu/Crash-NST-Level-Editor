@@ -252,7 +252,7 @@ namespace THREE
         public Box3 ExpandByScalar(float scalar)
         {
             this.Min = this.Min.AddScalar(-scalar);
-            this.Max = this.Min.AddScalar(scalar);
+            this.Max = this.Max.AddScalar(scalar);
 
             return this;
         }

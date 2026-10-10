@@ -367,7 +367,7 @@ namespace THREE
 
             return parameters;
         }
-        public string getProgramCacheKey(Hashtable parameters)
+        public string getProgramCacheKey(Material material, Hashtable parameters)
         {
             var array = new List<string>();
 
@@ -404,7 +404,10 @@ namespace THREE
                 }
             }
 
-            //array.Add(material.OnBeforeCompile.ToString());
+            if (material.OnBeforeCompile?.ToString() is string onBeforeCompile && !string.IsNullOrEmpty(onBeforeCompile))
+            {
+                array.Add(onBeforeCompile);
+            }
             array.Add(renderer.outputEncoding.ToString());
             array.Add(renderer.GammaFactor.ToString());
 
