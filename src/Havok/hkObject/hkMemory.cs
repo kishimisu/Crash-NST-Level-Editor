@@ -29,6 +29,7 @@ namespace Havok
         public void Insert(int index, T element) => _elements.Insert(index, element);
         public bool Remove(T element) => _elements.Remove(element);
         public void RemoveAt(int index) => _elements.RemoveAt(index);
+        public void Set(List<T> elements) => _elements = elements;
 
         protected void ParseElements(HavokFile hkx, BinaryReader reader, int offset, int count)
         {

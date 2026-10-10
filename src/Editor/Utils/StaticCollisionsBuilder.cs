@@ -9,6 +9,7 @@ namespace NST
     public static class StaticCollisionsUtils
     {
         public const float HAVOK_SCALE = 0.0254f;
+        public const float HAVOK_SCALE_INV = 39.37f;
 
         /// <summary>
         /// Get static collision data from an IgArchive
@@ -137,7 +138,7 @@ namespace NST
                         continue;
                     }
 
-                    EditCollisionFaces(shape, updateInfos.removedFaces);
+                    UpdateCollisions(shape, updateInfos.removedFaces);
 
                     file.SetData(hkx.Save());
                 }
@@ -177,7 +178,7 @@ namespace NST
                         }
                     }
 
-                    EditCollisionFaces(shape, updateInfos.removedFaces);
+                    UpdateCollisions(shape, updateInfos.removedFaces);
 
                     u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
@@ -193,7 +194,7 @@ namespace NST
                     hknpShapeInstance original = shapesById[updateInfos.entity.CollisionShapeIndex];
                     hknpShapeInstance shape = AddHavokShape(updateInfos, compoundShape, original);
 
-                    EditCollisionFaces(shape, updateInfos.removedFaces);
+                    UpdateCollisions(shape, updateInfos.removedFaces);
 
                     u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
@@ -210,33 +211,14 @@ namespace NST
                     
                     UpdateHavokShape(updateInfos.entity, toUpdate);
 
-                    EditCollisionFaces(toUpdate, updateInfos.removedFaces);
+                    UpdateCollisions(toUpdate, updateInfos.removedFaces);
 
                     Console.WriteLine("Updated collision for " + updateInfos.entity.Object.ObjectName);
                 }
             }
 
-            if (compoundShape._boundingVolumeData != null)
-            {
-                compoundShape._boundingVolumeData._nodes.Clear();
-
-                if (compoundShape._elements.Count > 0)
-                {
-                    // Rebuild BVH tree
-                    BVHNode root = BVHBuilder.Build(compoundShape._elements);
-                    List<hkcdStaticTreeCodec3Axis6> axis6Tree = root.BuildAxis6Tree(compoundShape._elements);
-
-                    compoundShape._boundingVolumeData._nodes.Clear();
-                    compoundShape._boundingVolumeData._nodes.AddRange(axis6Tree);
-                    compoundShape._boundingVolumeData._min = new System.Numerics.Vector4(root.boundsMin.X, root.boundsMin.Y, root.boundsMin.Z, compoundShape._boundingVolumeData._min.W);
-                    compoundShape._boundingVolumeData._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._boundingVolumeData._max.W);
-                
-                    // Update bounds
-                    compoundShape._min = new System.Numerics.Vector4(root.boundsMin.X, root.boundsMin.Y, root.boundsMin.Z, compoundShape._min.W);
-                    compoundShape._max = new System.Numerics.Vector4(root.boundsMax.X, root.boundsMax.Y, root.boundsMax.Z, compoundShape._max.W);
-                    compoundShape._numShapeKeyBits = (byte)Math.Max(1, 32 - System.Numerics.BitOperations.LeadingZeroCount((uint)compoundShape._elements.Count-1));
-                }
-            }
+            // Rebuild BVH
+            compoundShape = HavokCollisionsBuilder.RebuildStaticCompoundShape(compoundShape);
 
             collisionHkxFile.SetData(collisionHkx.Save());
 
@@ -296,7 +278,7 @@ namespace NST
             shapeInstance._transform.M44 = originalTransform.M44;
         }
 
-        private static void EditCollisionFaces(hknpShapeInstance shapeInstance, HashSet<int> removedFaceIndices)
+        private static void UpdateCollisions(hknpShapeInstance shapeInstance, HashSet<int> removedFaceIndices)
         {
             if (removedFaceIndices.Count == 0 || shapeInstance._shape is not hknpCompressedMeshShape)
                 return;
@@ -305,48 +287,21 @@ namespace NST
 
             shapeInstance._shape = shape;
 
-            EditCollisionFaces(shape, removedFaceIndices);
+            UpdateCollisions(shape, removedFaceIndices);
         }
 
-        private static void EditCollisionFaces(hknpCompressedMeshShape shape, HashSet<int> removedFaceIndices)
+        private static void UpdateCollisions(hknpCompressedMeshShape shape, HashSet<int> removedFaceIndices)
         {
             if (removedFaceIndices.Count == 0 || shape._data?._meshTree == null)
                 return;
 
-            foreach (int id in removedFaceIndices)
-            {
-                int primitiveId = id / 2;
-                int primitiveStart = 0;
-                bool found = false;
+            var newShape = HavokCollisionsBuilder.RebuildCompressedMeshShape(shape._data._meshTree, removedFaceIndices.Select(id => id/2).ToHashSet());
 
-                foreach (var section in shape._data._meshTree._sections)
-                {
-                    int primitiveCount = (int)(section._primitives & 0xFF);
+            if (newShape._data?._meshTree == null)
+                return;
 
-                    if (primitiveStart + primitiveCount > primitiveId)
-                    {
-                        foreach (var n in section._nodes)
-                        {
-                            if (n._data == 0 || n._data%2 == 1) continue;
-                            if (n._data/2 + primitiveStart != primitiveId) continue;
-
-                            n._data = 0;
-
-                            found = true;
-                            break;
-                        }
-
-                        break;
-                    }
-
-                    primitiveStart += primitiveCount;
-                }
-                
-                if (!found)
-                {
-                    Console.WriteLine($"Warning: No match found in section for face {id} (primitive: {primitiveId})");
-                }
-            }
+            shape._data._meshTree = newShape._data._meshTree;
+            shape._numShapeKeyBits = (byte)newShape._data._meshTree._bitsPerKey;
         }
     }
 }
