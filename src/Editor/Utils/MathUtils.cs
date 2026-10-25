@@ -58,6 +58,14 @@ namespace NST
             return matrix.Compose(pos, rot, THREE.Vector3.One());
         }
 
+        public static float SanitizeEulerAngle(float angle)
+        {
+            if (angle > 180f) angle -= 360f;
+            if (angle < -180f) angle += 360f;
+            if (MathF.Abs(angle) < 0.001f) angle = 0f;
+            return angle;
+        }
+
         /// <summary>
         /// Get the next power of two greater or equal than n
         /// </summary>

@@ -47,6 +47,7 @@ namespace NST
 
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
+        private HashSet<IgArchiveFile> _corruptedFiles = [];
 
         public enum DebugMode { None = 0, Prefabs = 1, GameObjects = 2, Collisions = 3, HavokMaterials = 4, HavokSections = 5, HavokPrimitives = 6, Instanced = 7, Selection = 8 };
         private readonly string[] _debugModes = ["None", "Prefabs", "Game Objects", "Havok Objects", "Havok Materials", "Havok Sections", "Havok Primitives", /*"Instanced", "Selection"*/];
@@ -369,7 +370,18 @@ namespace NST
             for (int i = 0; i < mapFiles.Count; i++)
             {
                 IgArchiveFile mapFile = mapFiles[i];
-                IgzFile igz = FileManager.GetIgz(mapFile) ?? mapFile.ToIgzFile();
+                IgzFile? igz = FileManager.GetIgz(mapFile);
+
+                try
+                {
+                    igz ??= mapFile.ToIgzFile();
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"Couldn't open {mapFile.Path}: {e}");
+                    _corruptedFiles.Add(mapFile);
+                    continue;
+                }
 
                 _progressManager.SetProgress("entities", (float)(i+1) / mapFiles.Count, $"Loading entity files {i + 1}/{mapFiles.Count}...");
 
@@ -1026,6 +1038,26 @@ namespace NST
                     CachedModelNames = _cachedModels.Values.Select(e => e.Name).ToList();
                     CachedModelNames.Sort();
                     _updateCachedModels = false;
+
+                    if (_corruptedFiles.Count > 0)
+                    {
+                        string paths = string.Join("\n", _corruptedFiles.Select(e => $"- {e.Path}"));
+                        bool single = _corruptedFiles.Count == 1;
+
+                        ModalRenderer.ShowModal2(
+                            "Warning",
+                            $"The following file{(single ? " is" : "s are")} corrupted. Do you want to delete {(single ? "it" : "them")}?\n\n{paths}\n",
+                            () => _corruptedFiles.Clear(),
+                            () =>
+                            {
+                                foreach (var f in _corruptedFiles)
+                                {
+                                    ArchiveRenderer?.RemoveFile(f);
+                                }
+                                _corruptedFiles.Clear();
+                            }
+                        );
+                    }
                 }
 
                 var close = ArchiveRenderer?.RenderMenuBar(SaveArchive);

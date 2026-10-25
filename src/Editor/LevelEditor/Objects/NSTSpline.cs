@@ -10,6 +10,7 @@ namespace NST
 
         public THREE.Object3D? Rotations3D;
         public THREE.Object3D? Markers3D;
+        public THREE.Object3D? Velocity3D;
 
         public List<NSTSplineControlPoint> _controlPoints = [];
         public List<NSTSplineRotationKeyFrame> _rotationKeyFrames = [];
@@ -144,6 +145,7 @@ namespace NST
 
             Rotations3D = CreateRotationKeyFramesMesh();
             Markers3D = CreateMarkersMesh();
+            Velocity3D = CreateVelocityMesh();
 
             lineMesh.Add(pointMesh);
 
@@ -156,6 +158,10 @@ namespace NST
                 if (Markers3D != null && _isMarkerListOpen)
                 {
                     lineMesh.Add(Markers3D);
+                }
+                if (Velocity3D != null && _isVelocityListOpen)
+                {
+                    lineMesh.Add(Velocity3D);
                 }
             }
 
@@ -232,6 +238,21 @@ namespace NST
             {
                 if (marker.IsSelected) continue;
                 group.Add(marker.CreateObject3D());
+            }
+
+            return group;
+        }
+
+        private THREE.Group? CreateVelocityMesh()
+        {
+            if (_velocityKeyFrames.Count == 0) return null;
+
+            THREE.Group group = new THREE.Group();
+
+            foreach (NSTSplineVelocityKeyFrame vel in _velocityKeyFrames)
+            {
+                if (vel.IsSelected) continue;
+                group.Add(vel.CreateObject3D());
             }
 
             return group;
@@ -939,7 +960,15 @@ namespace NST
                 OpenVelocityList = false;
             }
 
+            prevOpen = _isVelocityListOpen;
             _isVelocityListOpen = _velocityKeyFrames.Count > 0 && ImGui.TreeNodeEx($"Velocity ({_velocityKeyFrames.Count})", ImGuiTreeNodeFlags.NoTreePushOnOpen);
+
+            if (prevOpen != _isVelocityListOpen && Object3D != null && Velocity3D != null)
+            {
+                if (_isVelocityListOpen) Object3D.Add(Velocity3D);
+                else Object3D.Remove(Velocity3D);
+                explorer.RenderNextFrame = true;
+            }
 
             if (_isVelocityListOpen && ImGui.BeginTable("VelocityTable", 4, tableFlags))
             {
@@ -1103,8 +1132,7 @@ namespace NST
             var sphereMat = new THREE.MeshBasicMaterial() { Color = Parent.Color };
             var sphereMesh = new THREE.Mesh(sphereGeo, sphereMat);
 
-            sphereMesh.Position.Set(Object._position._x, Object._position._y, Object._position._z);
-            sphereMesh.ApplyMatrix4(Parent.Parent.ObjectToWorld());
+            sphereMesh.ApplyMatrix4(ObjectToWorld());
 
             Object3D = sphereMesh;
 
@@ -1142,11 +1170,7 @@ namespace NST
             mesh.RotateZ((float)Math.PI / 2);
             mesh.Scale.X *= 1.6f;
 
-            THREE.Vector3 rotation = Object._value.ToVector3() * THREE.MathUtils.DEG2RAD;
-            group.Rotation.SetFromVector3(rotation, THREE.RotationOrder.ZYX);
-            group.Position.Copy(Position);
-
-            if (selected) group.ApplyMatrix4(Parent.Parent.ObjectToWorld());
+            group.ApplyMatrix4(selected ? ObjectToWorld() : ObjectToWorld(Position, Rotation));
 
             group.Add(mesh);
 
@@ -1278,9 +1302,8 @@ namespace NST
             var mat = new THREE.MeshBasicMaterial() { Color = new THREE.Color(.1f,1,.2f) };
             var mesh = new THREE.Mesh(geo, mat);
 
-            mesh.Position.Copy(Position);
             mesh.RotateX((float)Math.PI / 2);
-            if (selected) mesh.ApplyMatrix4(Parent.Parent.ObjectToWorld());
+            mesh.ApplyMatrix4(selected ? ObjectToWorld() : new THREE.Matrix4().SetPosition(Position));
 
             mesh.UserData["splineVelocity"] = this;
 
@@ -1316,10 +1339,8 @@ namespace NST
             var mat = new THREE.MeshBasicMaterial() { Color = new THREE.Color(1,0,0) };
             var mesh = new THREE.Mesh(geo, mat);
 
-            mesh.Position.Copy(Position);
             mesh.RotateX((float)Math.PI / 2);
-            mesh.TranslateY(-height / 2);
-            if (selected) mesh.ApplyMatrix4(Parent.Parent.ObjectToWorld());
+            mesh.ApplyMatrix4(selected ? ObjectToWorld() : new THREE.Matrix4().SetPosition(Position));
 
             mesh.UserData["splineMarker"] = this;
 
@@ -1355,7 +1376,7 @@ namespace NST
 
             if (!selected)
             {
-                sphereMesh.ApplyMatrix4(Parent.ObjectToWorld().Inverted());
+                sphereMesh.ApplyMatrix4(Parent.ObjectToWorld(true).Inverted());
             }
 
             sphereMesh.UserData["waypoint"] = this;

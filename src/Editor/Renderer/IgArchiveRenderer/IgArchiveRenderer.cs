@@ -277,28 +277,30 @@ namespace NST
 
                 if (ImGui.BeginMenu("Export"))
                 {
-                    if (IsLevelArchive && ImGui.MenuItem("Remove unused files")) this.RemoveUnusedFiles();
-                    
-                    if (ImGui.MenuItem("Compress and save")) TrySaveArchive(compress: true);
-
-                    if (IsLevelArchive && ImGui.MenuItem("Export to .mini.pak"))
+                    if (IsLevelArchive && ImGui.MenuItem("Remove unused files"))
                     {
-                        string? path = FileExplorer.SaveFile(FileExplorer.EXT_ARCHIVES, Archive.GetName().Replace(".pak", ".mini.pak"));
-                        if (!string.IsNullOrEmpty(path))
+                        if (IsUpdated)
                         {
-                            if (!path.EndsWith(".mini.pak"))
-                            {
-                                ModalRenderer.Show("Couldn't create mini-pak", "The archive name must ends with .mini.pak");
-                            }
-                            else
-                            {
-                                CrashHandler.TryRunTask("exporting .mini.pak", () =>
-                                {
-                                    ModalRenderer.ShowLoadingModal($"Saving {NamespaceUtils.GetFileName(path)}...");
-                                    Archive.ExportToMinipak(path);
-                                    ModalRenderer.CloseLoadingModal();
-                                });
-                            }
+                            ModalRenderer.Show("Warning", "You need to save the level first");
+                        }
+                        else
+                        {
+                            this.RemoveUnusedFiles();
+                        }
+                    }
+                    
+                    if (ImGui.MenuItem("Compress and save"))
+                    {
+                        TrySaveArchive(compress: true);
+                    }
+
+                    if (IsLevelArchive)
+                    {
+                        if (ImGui.BeginMenu("Export to .mini.pak"))
+                        {
+                            if (ImGui.MenuItem("Default")) ExportToMinipak();
+                            if (ImGui.MenuItem("Custom (can take some time)")) ExportToMinipak(true);
+                            ImGui.EndMenu();
                         }
                     }
 
@@ -450,6 +452,33 @@ namespace NST
             {
                 explorer.IsOpen = false;
                 explorer.ReOpen = fromLevelEditor;
+            }
+        }
+
+        private void ExportToMinipak(bool checkAll = false)
+        {
+            if (IsUpdated)
+            {
+                ModalRenderer.Show("Warning", "You need to save the level first");
+                return;
+            }
+
+            string? path = FileExplorer.SaveFile(FileExplorer.EXT_ARCHIVES, Archive.GetName().Replace(".pak", ".mini.pak"));
+            if (!string.IsNullOrEmpty(path))
+            {
+                if (!path.EndsWith(".mini.pak"))
+                {
+                    ModalRenderer.Show("Couldn't create mini-pak", "The archive name must ends with .mini.pak");
+                }
+                else
+                {
+                    CrashHandler.TryRunTask("exporting .mini.pak", () =>
+                    {
+                        ModalRenderer.ShowLoadingModal($"Saving {NamespaceUtils.GetFileName(path)}...");
+                        Archive.ExportToMinipak(path, checkAll);
+                        ModalRenderer.CloseLoadingModal();
+                    });
+                }
             }
         }
 

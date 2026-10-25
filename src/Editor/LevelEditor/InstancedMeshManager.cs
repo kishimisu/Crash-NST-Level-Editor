@@ -378,6 +378,10 @@ namespace NST
             {
                 return Select((NSTSplineMarker)splineMarkerObj);
             }
+            else if (hit.object3D.UserData.TryGetValue("splineVelocity", out object? splineVelocityObj))
+            {
+                return Select((NSTSplineVelocityKeyFrame)splineVelocityObj);
+            }
             else if (hit.object3D.UserData.TryGetValue("waypoint", out object? waypointObj))
             {
                 return Select((NSTWaypoint)waypointObj);
@@ -431,11 +435,14 @@ namespace NST
                     return [];
                 }
 
-                if (entity.IsPrefabChild && entity.ParentPrefabInstance?.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) <= 50)
+                if (entity.IsPrefabChild && entity.ParentPrefabInstance != null)
                 {
                     bool triggerPassThrough = !selectionEmpty && selection.All(e => e.Object is CScriptTriggerEntity && e.IsPrefabChild);
+                    bool fullySelected = !selectionEmpty && selection.All(e => e == entity.ParentPrefabInstance || e.ParentPrefabInstance == entity.ParentPrefabInstance);
+                    bool tooManyChildren = entity.ParentPrefabInstance.Children.Count(e => e is NSTEntity entity && entity.IsPrefabChild) > 50;
+                    bool isUnique = entity.PrefabTemplate?.PrefabTemplateInstances.Count <= 1;
 
-                    if (fromTree || (shiftPressed && selectionEmpty) || (!shiftPressed && ((!selectionEmpty && selection.All(e => e == entity.ParentPrefabInstance || e.ParentPrefabInstance == entity.ParentPrefabInstance)) || triggerPassThrough)))
+                    if (fromTree || (isUnique && tooManyChildren) || (shiftPressed && selectionEmpty) || (!shiftPressed && (fullySelected || triggerPassThrough)))
                     {
                         Console.WriteLine("Select prefab child instances");
                         return SelectChildInstances(entity).Cast<NSTObject>().ToList();

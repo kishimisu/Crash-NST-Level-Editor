@@ -727,7 +727,7 @@ namespace NST
 
             if (onRelease)
             {
-                explorer.SelectionManager.ApplyChanges("translate");
+                explorer.SelectionManager.ApplyChanges("translate", fromGui: true);
             }
 
             // Render rotation input
@@ -735,9 +735,9 @@ namespace NST
             igVec3fMetaField rotationDegrees = transform._parentSpaceRotation.Mul(THREE.MathUtils.RAD2DEG);
             if (RenderVector3("Rotation", ref rotationDegrees, out onRelease, 0.1f))
             {
-                rotationDegrees._x = (float)(Math.Truncate((decimal)rotationDegrees._x * 10) / 10) % 360f;
-                rotationDegrees._y = (float)(Math.Truncate((decimal)rotationDegrees._y * 10) / 10) % 360f;
-                rotationDegrees._z = (float)(Math.Truncate((decimal)rotationDegrees._z * 10) / 10) % 360f;
+                rotationDegrees._x = MathUtils.SanitizeEulerAngle(rotationDegrees._x);
+                rotationDegrees._y = MathUtils.SanitizeEulerAngle(rotationDegrees._y);
+                rotationDegrees._z = MathUtils.SanitizeEulerAngle(rotationDegrees._z);
 
                 if (Object._transform == null)
                 {
@@ -753,7 +753,7 @@ namespace NST
 
             if (onRelease)
             {
-                explorer.SelectionManager.ApplyChanges("rotate");
+                explorer.SelectionManager.ApplyChanges("rotate", fromGui: true);
             }
 
             // Render scale input
@@ -789,7 +789,7 @@ namespace NST
                     THREE.Vector3 currentScale = childTemplate.Object._transform._nonUniformPersistentParentSpaceScale.ToVector3();
                     THREE.Vector3 newScale = MathUtils.SafeDivide(currentScale, explorer.SelectionManager.SelectionContainer.Scale);
                     childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = newScale.ToVec3MetaField();
-                    explorer.SelectionManager.ApplyChanges("scale");
+                    explorer.SelectionManager.ApplyChanges("scale", fromGui: true);
                 }
             }
             else
@@ -815,10 +815,10 @@ namespace NST
 
                 if (onRelease)
                 {
-                    THREE.Vector3 currentScale = transform._nonUniformPersistentParentSpaceScale.ToVector3();
-                    THREE.Vector3 newScale = MathUtils.SafeDivide(currentScale, explorer.SelectionManager.SelectionContainer.Scale);
-                    transform._nonUniformPersistentParentSpaceScale = newScale.ToVec3MetaField();
-                    explorer.SelectionManager.ApplyChanges("scale");
+                    // THREE.Vector3 currentScale = transform._nonUniformPersistentParentSpaceScale.ToVector3();
+                    // THREE.Vector3 newScale = MathUtils.SafeDivide(currentScale, explorer.SelectionManager.SelectionContainer.Scale);
+                    // transform._nonUniformPersistentParentSpaceScale = newScale.ToVec3MetaField();
+                    explorer.SelectionManager.ApplyChanges("scale", fromGui: true);
                 }
             }
 

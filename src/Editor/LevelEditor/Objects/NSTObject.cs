@@ -177,14 +177,18 @@ namespace NST
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
                 explorer.SelectionManager.TranslateSelectionFromGUI(previousPosition, position.ToVector3());
             }
-            if (onRelease) explorer.SelectionManager.ApplyChanges("translate");
+            if (onRelease) explorer.SelectionManager.ApplyChanges("translate", fromGui: true);
 
             if (RenderVector3("Rotation", ref rotation, out onRelease))
             {
+                rotation._x = MathUtils.SanitizeEulerAngle(rotation._x);
+                rotation._y = MathUtils.SanitizeEulerAngle(rotation._y);
+                rotation._z = MathUtils.SanitizeEulerAngle(rotation._z);
+
                 explorer.ArchiveRenderer.SetObjectUpdated(ArchiveFile, GetObject());
                 explorer.SelectionManager.RotateSelectionFromGUI(previousRotation, rotation.ToEuler(true));
             }
-            if (onRelease) explorer.SelectionManager.ApplyChanges("rotate");
+            if (onRelease) explorer.SelectionManager.ApplyChanges("rotate", fromGui: true);
         }
 
         public void RenderBounds(ref igVec3fMetaField min, ref igVec3fMetaField max, LevelExplorer explorer)

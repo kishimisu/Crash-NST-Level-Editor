@@ -330,7 +330,7 @@ namespace NST
         //     }
         // }
 
-        public void ApplyChanges(string mode = "translate", bool updateHistory = true, THREE.Vector3? scaleOverride = null)
+        public void ApplyChanges(string mode = "translate", bool updateHistory = true, THREE.Vector3? scaleOverride = null, bool fromGui = false)
         {
             HashSet<NSTSpline> refreshSplines = [];
             HashSet<NSTObject> refreshTemplates = [];
@@ -341,6 +341,8 @@ namespace NST
 
             foreach (NSTObject obj in _selection)
             {
+                bool skipTransformUpdate = fromGui && obj == _selection[0];
+
                 // Get world transform
                 THREE.Vector3 worldPos = new THREE.Vector3();
                 THREE.Quaternion worldQuaternion = new THREE.Quaternion();
@@ -382,7 +384,7 @@ namespace NST
 
                 if (obj is NSTSplineControlPoint controlPoint)
                 {
-                    THREE.Vector3 localPos = worldPos.ApplyMatrix4(controlPoint.Parent.Parent.ObjectToWorld().Inverted());
+                    THREE.Vector3 localPos = worldPos.ApplyMatrix4(controlPoint.Parent.ObjectToWorld().Inverted());
                     controlPoint.Object._position = new igVec3fMetaField(localPos.X, localPos.Y, localPos.Z);
                     _explorer.ArchiveRenderer.SetObjectUpdated(controlPoint.ArchiveFile, controlPoint.Object);
                     refreshSplines.Add(controlPoint.Parent);
@@ -408,18 +410,24 @@ namespace NST
                 }
                 if (obj is NSTCameraBox cameraBox)
                 {
-                    cameraBox.Object._position = worldPos.ToVec3MetaField();
-                    cameraBox.Object._rotation = worldEulerDegrees.ToVec3MetaField();
-                    cameraBox.Object._min = cameraBox.Object._min.ToVector3().Multiply(worldScale).ToVec3MetaField();
-                    cameraBox.Object._max = cameraBox.Object._max.ToVector3().Multiply(worldScale).ToVec3MetaField();
-                    _explorer.ArchiveRenderer.SetObjectUpdated(cameraBox.ArchiveFile, cameraBox.Object);
+                    if (!skipTransformUpdate)
+                    {
+                        cameraBox.Object._position = worldPos.ToVec3MetaField();
+                        cameraBox.Object._rotation = worldEulerDegrees.ToVec3MetaField();
+                        cameraBox.Object._min = cameraBox.Object._min.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                        cameraBox.Object._max = cameraBox.Object._max.ToVector3().Multiply(worldScale).ToVec3MetaField();
+                        _explorer.ArchiveRenderer.SetObjectUpdated(cameraBox.ArchiveFile, cameraBox.Object);
+                    }
                     continue;
                 }
                 if (obj is NSTCamera camera)
                 {
-                    camera.Object._position = worldPos.ToVec3MetaField();
-                    camera.Object._rotation = worldEulerDegrees.ToVec3MetaField();
-                    _explorer.ArchiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
+                    if (!skipTransformUpdate)
+                    {
+                        camera.Object._position = worldPos.ToVec3MetaField();
+                        camera.Object._rotation = worldEulerDegrees.ToVec3MetaField();
+                        _explorer.ArchiveRenderer.SetObjectUpdated(camera.ArchiveFile, camera.Object);
+                    }
                     continue;
                 }
                 if (obj is NSTWaypoint waypoint)
@@ -467,7 +475,6 @@ namespace NST
                 //     worldScale.Set(1, 1, 1);
                 // }
 
-
                 // If prefab child, the transform needs to be converted to local space
                 if (entity3D.IsPrefabChild && entity3D.ParentPrefabInstance != null)
                 {
@@ -504,6 +511,23 @@ namespace NST
                         childTemplate.Object._transform._nonUniformPersistentParentSpaceScale = worldScale.ToVec3MetaField();
                     }
                 }
+                    
+                _explorer.ArchiveRenderer.SetEntityUpdated(entity3D);
+
+                if (entity3D.IsPrefabInstance)
+                {
+                    var prefabChildren = entity3D.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == entity3D);
+
+                    foreach (NSTEntity child in prefabChildren)
+                    {
+                        if (child.CollisionShapeIndex != -1)
+                        {
+                            _explorer.ArchiveRenderer.SetEntityUpdated(child);
+                        }
+                    }
+                }
+
+                if (skipTransformUpdate) continue;
 
                 bool updateScale = childTemplate == null && entity is not CDynamicClipEntity && entity is not CScriptTriggerEntity;
 
@@ -522,7 +546,7 @@ namespace NST
                 if (entity._transform != null)
                 {   
                     // Update rotation
-                    entity._transform._parentSpaceRotation = worldEuler.ToVec3MetaField();
+                    entity._transform._parentSpaceRotation = ConstrainEuler(entity._transform._parentSpaceRotation.ToVector3(), worldEuler.ToVector3()).ToVec3MetaField();
 
                     if (updateScale)
                     {
@@ -531,32 +555,20 @@ namespace NST
                     }
                 }
 
-                _explorer.ArchiveRenderer.SetEntityUpdated(entity3D);
-
-                if (entity3D.IsPrefabInstance)
-                {
-                    var prefabChildren = entity3D.Children.OfType<NSTEntity>().Where(e => e.ParentPrefabInstance == entity3D);
-
-                    foreach (NSTEntity child in prefabChildren)
-                    {
-                        if (child.CollisionShapeIndex != -1)
-                        {
-                            _explorer.ArchiveRenderer.SetEntityUpdated(child);
-                        }
-                    }
-                }
-
                 THREE.Matrix4 deltaMatrix = new THREE.Matrix4().Copy(entity3D.ObjectToWorld()).Multiply(previousMatrix.Inverted());
 
                 // Update child templates position
-                foreach (var child in entity3D.GetUniqueChildTemplates())
+                if (mode == "translate")
                 {
-                    if (!refreshTemplates.Add(child)) continue;
-                    
-                    THREE.Matrix4 newChildMatrix = deltaMatrix * child.ObjectToWorld();
-                    THREE.Vector3 p = new THREE.Vector3();
-                    newChildMatrix.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
-                    child.Object._parentSpacePosition = p.ToVec3MetaField();
+                    foreach (var child in entity3D.GetUniqueChildTemplates())
+                    {
+                        if (!refreshTemplates.Add(child)) continue;
+                        
+                        THREE.Matrix4 newChildMatrix = deltaMatrix * child.ObjectToWorld();
+                        THREE.Vector3 p = new THREE.Vector3();
+                        newChildMatrix.Decompose(p, new THREE.Quaternion(), new THREE.Vector3());
+                        child.Object._parentSpacePosition = p.ToVec3MetaField();
+                    }
                 }
                 foreach (var parent in entity3D.GetParentSpawners())
                 {
@@ -1322,6 +1334,44 @@ namespace NST
                 return b + new THREE.Vector3(0f, MathF.Sign(delta.Y) * size, 0f);
             else
                 return b + new THREE.Vector3(0f, 0f, MathF.Sign(delta.Z) * size);
+        }
+
+        private static THREE.Vector3 ConstrainEuler(THREE.Vector3 a, THREE.Vector3 b)
+        {
+            // wrap into [-pi, pi] and pick the closest angle
+            static float Wrap(double angle, double reference)
+            {
+                const double TWO_PI = 2.0 * Math.PI;
+                double w = angle - TWO_PI * Math.Floor((angle + Math.PI) / TWO_PI);
+
+                if (Math.Abs(w + Math.PI) < 1e-5)
+                {
+                    w = Math.Abs(reference - Math.PI) < Math.Abs(reference + Math.PI) ? Math.PI : -Math.PI;
+                }
+
+                return (float)w;
+            }
+
+            // snap to the nearest degree and prevent -0.0
+            static float Snap(float angle)
+            {
+                const float step = MathF.PI / 180f;
+
+                float nearest = MathF.Round(angle / step) * step;
+                
+                angle = MathF.Abs(angle - nearest) < 0.001f ? nearest : angle;
+
+                if (MathF.Abs(angle) < 0.001f) angle = 0.0f;
+
+                return angle;
+            }
+
+            var c1 = new THREE.Vector3(Wrap(b.X, a.X), Wrap(b.Y, a.Y), Wrap(b.Z, a.Z));
+            var c2 = new THREE.Vector3(Wrap(b.X + Math.PI, a.X), Wrap(Math.PI - b.Y, a.Y), Wrap(b.Z + Math.PI, a.Z));
+
+            var closest = a.DistanceToSquared(c1) <= a.DistanceToSquared(c2) ? c1 : c2;
+
+            return new THREE.Vector3(Snap(closest.X), Snap(closest.Y), Snap(closest.Z));
         }
     }
 }

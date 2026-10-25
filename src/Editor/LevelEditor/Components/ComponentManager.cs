@@ -327,7 +327,7 @@ namespace NST
 
         private void PasteComponents(LevelExplorer explorer)
         {
-            if (explorer != _copyEntityExplorer || _copyEntity == null) return;
+            if (_copyEntity == null) return;
 
             Entity.MakeUnique(explorer);
 
@@ -349,20 +349,20 @@ namespace NST
                 }
 
                 // External archive
-                // if (_copyExplorer != explorer)
-                // {
-                //     IgArchive source = _copyExplorer.Archive;
-                //     IgzFile sourceIgz = _copyExplorer.FileManager.GetIgz(_copyEntity.ArchiveFile)!;
-                //     IgzFile destIgz = explorer.FileManager.GetIgz(Entity.ArchiveFile)!;
+                if (_copyEntityExplorer != null && _copyEntityExplorer != explorer)
+                {
+                    IgzFile sourceIgz = _copyEntityExplorer.FileManager.GetIgz(_copyEntity.ArchiveFile)!;
+                    IgzFile destIgz = explorer.FileManager.GetIgz(Entity.ArchiveFile)!;
 
-                //     igComponentData clone = explorer.ArchiveRenderer.Clone(c.component, source, sourceIgz, destIgz, clones);
-                //     Component newComponent = new Component(key, clone, explorer);
+                    // Add clone
+                    igComponentData clone = explorer.ArchiveRenderer.Clone(c.OriginalObject, _copyEntityExplorer.Archive, sourceIgz, destIgz, clones);
+                    Entity.Object._entityData?._componentData?.Add(key, clone);
 
-                //     CachedComponents[clone] = newComponent;
-                //     _components.Add(newComponent);
-                //     Entity.Object._entityData?._componentData?.Add(key, clone);
-                // }
-                // else
+                    // Update cache
+                    _components.Add(new NSTComponent(key, clone, this, true));
+                    explorer.CachedComponents[clone] = [ Entity ];
+                }
+                else
                 {
                     IgzFile sourceIgz = explorer.FileManager.GetIgz(_copyEntity.ArchiveFile)!;
                     IgzFile destIgz = explorer.FileManager.GetIgz(Entity.ArchiveFile)!;
@@ -446,12 +446,12 @@ namespace NST
             }
 
             // Paste components
-            if (Entity.Object._entityData?._componentData != null && _copyComponents.Count > 0 && explorer == _copyEntityExplorer)
+            if (Entity.Object._entityData?._componentData != null && _copyComponents.Count > 0)
             {
                 if (useSelection)
                 {
                     ImGui.Separator();
-                    if (ImGui.Selectable($"Paste {_copyComponents.Count} component{(_copyComponents.Count == 1 ? "" : "s")}"))
+                    if (ImGui.Selectable($"Paste {_copyComponents.Count} component{(_copyComponents.Count == 1 ? "" : "s")}{(explorer == _copyEntityExplorer ? "" : " [external]")}"))
                     {
                         PasteComponents(explorer);
                     }
@@ -460,7 +460,7 @@ namespace NST
                 if (_copyComponents[0].Object.GetType() == components[0].Object.GetType())
                 {
                     ImGui.Separator();
-                    if (ImGui.Selectable($"Paste component values"))
+                    if (_copyEntityExplorer != null && ImGui.Selectable($"Paste component values"))
                     {
                         IgzFile sourceIgz = _copyEntityExplorer.FileManager.GetIgz(_copyComponents[0].Entity.ArchiveFile)!;
                         IgzFile destinationIgz = explorer.FileManager.GetIgz(components[0].Entity.ArchiveFile)!;

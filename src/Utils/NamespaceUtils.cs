@@ -10,7 +10,7 @@ namespace Alchemy
     {
         public string Name { get; set; } = name; // The name of the namespace
         public string? Archive { get; set; } = archive; // The name of the first archive that contains the namespace
-        public Dictionary<string, string> Paths { get; set; } = []; // The list of file paths and corresponding parent archive for this namespace
+        public Dictionary<string, string> Paths { get; set; } = new(StringComparer.OrdinalIgnoreCase); // The list of file paths and corresponding parent archive for this namespace
 
         public void AddPath(string ext, string archive)
         {

@@ -259,7 +259,7 @@ namespace NST
 
         public static void RemoveUnusedFiles(this IgArchiveRenderer renderer)
         {
-            Task.Run(() =>
+            CrashHandler.TryRunTask("removing unused files", () =>
             {
                 HashSet<IgArchiveFile> visited = [];
 
@@ -856,15 +856,16 @@ namespace NST
             ModManager.LaunchLevel(levelIdentifier);
         }
 
-        public static void ExportToMinipak(this IgArchive archive, string path)
+        public static void ExportToMinipak(this IgArchive archive, string path, bool checkAll = false)
         {
             string? staticCollisionsPath = archive.FindCollisionFile(".hkx")?.Path;
 
             bool hasCtrFiles = archive.Files.Any(f => f.Path.Contains("octane/", StringComparison.InvariantCultureIgnoreCase));
 
-            Dictionary<string, IgArchive> openArchives = [];
+            var openArchives = new Dictionary<string, IgArchive>();
+            var minipakFiles = new List<IgArchiveFile>(archive.Files);
 
-            foreach (var f in archive.Files.ToList())
+            foreach (var f in archive.Files)
             {
                 if (f.Path.StartsWith("maps/") || f.Path.StartsWith("packages/") || f.Path.StartsWith("update/") || f.Path == staticCollisionsPath)
                     continue;
@@ -874,15 +875,15 @@ namespace NST
 
                 var infos = NamespaceUtils.GetInfos(f.GetName(false));
 
-                if (infos?.Archive == null)
+                if (infos == null || !infos.Paths.TryGetValue(f.Path, out var sourceArchiveName))
                     continue;
 
-                if (f.Path.StartsWith("sound"))
+                if (checkAll || f.Path.StartsWith("sound"))
                 {
-                    if (!openArchives.TryGetValue(infos.Archive, out var sourceArchive))
+                    if (!openArchives.TryGetValue(sourceArchiveName, out var sourceArchive))
                     {
-                        sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, infos.Archive));
-                        openArchives[infos.Archive] = sourceArchive;
+                        sourceArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, $"{sourceArchiveName}.pak"));
+                        openArchives[sourceArchiveName] = sourceArchive;
                     }
 
                     var sourceFile = sourceArchive.FindFile(f.Path, FileSearchType.Path);
@@ -890,19 +891,8 @@ namespace NST
                     if (sourceFile == null)
                         continue;
 
-                    byte[] bytes;
-                    byte[] source;
-
-                    if (f.IsCompressed() == sourceFile.IsCompressed())
-                    {
-                        bytes = f.GetData();
-                        source = sourceFile.GetData();
-                    }
-                    else
-                    {
-                        bytes = f.Uncompress();
-                        source = sourceFile.Uncompress();
-                    }
+                    byte[] bytes = f.Uncompress();
+                    byte[] source = sourceFile.Uncompress();
 
                     if (bytes.Length != source.Length)
                         continue;
@@ -922,10 +912,12 @@ namespace NST
                         continue;
                 }
 
-                archive.RemoveFile(f);
+                minipakFiles.Remove(f);
             }
 
-            archive.SafeSave(path, compress: true);
+            var minipak = new IgArchive(path, archive.GameVersion, minipakFiles);
+
+            minipak.SafeSave(path, compress: true);
         }
 
         private static void ImportFromMinipak(IgArchive archive, IgArchiveFile package)
