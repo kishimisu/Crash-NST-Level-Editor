@@ -3,7 +3,7 @@ title: Collision editing
 description: Learn how to view, create, edit, and debug collision meshes in the level editor.
 sidebar:
   badge:
-    text: v1.45
+    text: v1.46
     variant: success
 ---
 
@@ -34,18 +34,32 @@ This can be useful to see where the actual collisions in a level are, as:
 
 ## Creating collisions
 
-![Create collisions](../../../assets/screenshots/level_editor/create_clip.jpg)
+If a [static model](/level-editor/special-objects/static-models) has no collision data, you can create a collisions using either of the following methods, depending on whether you need a simple box or an exact collision mesh.
 
-If a [static model](/level-editor/special-objects/static-models) has no collision data, you can create a simple collision shape directly from the model.
+### Create box collision
 
+![Box collision](../../../assets/screenshots/level_editor/box_collision.jpg)
+
+Creates a simple box collision based on the selected static model's position, size, and rotation.
 1. Select the static model in the scene.
-2. Choose **Create box collision**.
-3. The editor creates a new [dynamic clip](/level-editor/special-objects/dynamic-clips) with the same position, size, and rotation as the selected shape.
+2. Choose Create box collision.
+3. The editor creates a new [dynamic clip](/level-editor/special-objects/dynamic-clips) matching the model's position, size, and rotation.
+Use this method when a simple box collision is sufficient.
 
-This can be useful if you just want to add a simple box collision to a shape.
+### Create exact collision
 
-:::note
-Proper collision rebuilding (creating a collision mesh with the exact shape of the object) is still a work in progress. Stay tuned for future updates!
+![Exact collision](../../../assets/screenshots/level_editor/exact_collision.jpg)
+
+Creates a collision mesh that matches the exact shape of the selected static model.
+1. Select the static model in the scene.
+2. Choose Create exact collision.
+3. The editor generates a collision mesh using the triangles from the original model.
+
+:::caution
+Exact collision generation is **not optimized yet**. The editor currently uses every triangle from the original model to build the collision mesh, rather than simplifying it into a lower-detail shape. 
+
+This can result in unnecessarily complex collision meshes that may affect performance, especially for large models.
+An optimization algorithm is planned, but until then, use this feature with caution on models with many triangles.
 :::
 
 ## Editing collisions
@@ -83,5 +97,6 @@ The collision debug views lets you inspect how static collision geometry is orga
 Open **Editor Settings → Debug Mode** and enable one of the following options:
 
 - **Havok Objects**: Highlight objects that have static collision data.
-- **Havok Sections:** Colors static collision triangles according to their BVH section index.
 - **Havok Materials:** Colors static collision triangles according to their material index (dirt, ice...)
+- **Havok Sections:** Colors static collision triangles according to their BVH section index.
+- **Havok Primitives:** Colors static collision triangles according to their BVH primitive index.

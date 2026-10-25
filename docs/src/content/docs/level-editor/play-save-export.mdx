@@ -47,14 +47,19 @@ Before sharing a level, use **Compress and save** after removing unused files. T
 
 ### Export to .mini.pak
 
-**Export to .mini.pak** creates a small version of a level archive, usually around 10 MB, containing only your custom changes and none of the original game assets.
+**Export to .mini.pak (Default)** creates a small version of a level archive, usually around 10 MB, containing only your custom changes and none of the original game assets.
 
 This can greatly reduce download times when sharing a level. 
 
 The trade-off is that the first time a player loads the `.mini.pak`, the editor needs to rebuild the full archive by fetching all missing assets from the original game files, which can take a few seconds to a few minutes depending on the level complexity.
 
+:::tip[Custom Assets]
+By default, only map files and custom audio files are included in the .mini.pak.
+If you've changed other assets (models, textures, animations...), use the option `Export to .mini.pak (Custom)` to include them too.
+:::
+
 :::note[CTR Assets]
-Only assets from NST are excluded from .mini.pak archives because they are available in every original copy of the game.
+Only assets from NST are removed from .mini.pak archives because they are available in every original copy of the game.
 
 CTR assets are kept in the .mini.pak, so levels that use them will produce larger archives.
 :::
