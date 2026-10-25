@@ -172,13 +172,23 @@ namespace Havok
                 sharedIndexStart += numSharedIndices;
             }
 
-            return RebuildCompressedMeshShape(primitives);
+            return BuildCompressedMeshShape(primitives);
+        }
+
+        /// <summary>
+        /// Build an hknpCompressedMeshShape given a list of vertices and indices
+        /// </summary>
+        public static hknpCompressedMeshShape BuildCompressedMeshShape(List<Vector3> vertices, List<int> indices)
+        {
+            List<HkxPrimitive> primitives = HavokPrimitiveBuilder.Build(vertices, indices);
+            
+            return BuildCompressedMeshShape(primitives);
         }
 
         /// <summary>
         /// Build an hknpCompressedMeshShape given a list of quad primitives
         /// </summary>
-        private static hknpCompressedMeshShape RebuildCompressedMeshShape(List<HkxPrimitive> primitives)
+        private static hknpCompressedMeshShape BuildCompressedMeshShape(List<HkxPrimitive> primitives)
         {
             hknpCompressedMeshShape outShape = CreateEmptyCompressedMeshShape();
             hknpCompressedMeshShapeTree tree = outShape._data!._meshTree!;

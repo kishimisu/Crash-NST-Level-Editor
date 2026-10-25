@@ -1,4 +1,5 @@
 using Alchemy;
+using Havok;
 using ImGuiNET;
 using System.Reflection;
 using System.Linq.Expressions;
@@ -201,7 +202,14 @@ namespace NST
             if (!hasCollision) ImGui.EndDisabled();
             if (!hasCollision) ImGui.SetItemTooltip("This object has no collision data");
 
-            if (!enabled && manager.Entity.Model != null && ImGui.SmallButton("Create box collision"))
+            if (enabled || manager.Entity.Model == null)
+            {
+                return;
+            }
+
+            ImGui.Spacing();
+
+            if (ImGui.Button("Create box collision"))
             {
                 manager.Entity.ObjectToWorld().Decompose(out THREE.Vector3 position, out THREE.Euler rotation, out THREE.Vector3 scale);
 
@@ -213,6 +221,54 @@ namespace NST
 
                 ObjectFactory.AddCDynamicClipEntity(manager.Explorer, name, position, rotation.ToVector3(), bounds);
             }
+
+            if (ImGui.Button("Create exact collision"))
+            {
+                ModalRenderer.ShowLoadingModal("Building collision mesh...");
+
+                CrashHandler.TryRunTask("building collision mesh", () =>
+                {
+                    List<System.Numerics.Vector3> vertices = [];
+                    List<int> indices = [];
+
+                    foreach (var mesh in manager.Entity.Model.Meshes)
+                    {
+                        int indexStart = vertices.Count;
+
+                        vertices.AddRange(mesh.positions.Select(p => p * StaticCollisionsUtils.HAVOK_SCALE));
+
+                        foreach (uint index in mesh.indices)
+                        {
+                            indices.Add(indexStart + (int)index);
+                        }
+                    }
+
+                    var instance = new hknpShapeInstance()
+                    {
+                        _shape = HavokCollisionsBuilder.BuildCompressedMeshShape(vertices, indices)
+                    };
+
+                    component._flagsBitfield._disableCollision = false;
+
+                    manager.Explorer.ArchiveRenderer.SetEntityUpdated(manager.Entity, instance);
+
+                    manager.Explorer.InstanceManager.RefreshCollisionShapes([manager.Entity]);
+
+                    ModalRenderer.CloseLoadingModal();
+                });
+            }
+
+            int triangleCount = manager.Entity.Model.TriangleCount;
+
+            var color = triangleCount switch
+            {
+                < 1_000 =>  new System.Numerics.Vector4(0.64f, 0.66f, 0.70f, 1.0f),
+                < 20_000 => new System.Numerics.Vector4(1.00f, 0.58f, 0.20f, 1.0f),
+                _        => new System.Numerics.Vector4(0.95f, 0.25f, 0.25f, 1.0f)
+            };
+
+            ImGui.SameLine();
+            ImGui.TextColored(color, $"{triangleCount.ToString("N0", System.Globalization.CultureInfo.GetCultureInfo("en-US"))} triangles");
         }
 
         private static void RenderComponent(CStaticComponentData component, NSTComponent manager)

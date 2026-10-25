@@ -569,6 +569,11 @@ namespace NST
             if (infos.updatedCollisions.TryGetValue(entity, out CollisionUpdateInfos? collisionInfos))
             {
                 collisionInfos.removed |= removed;
+
+                if (shapeInstance != null)
+                {
+                    collisionInfos.shapeInstance = shapeInstance;
+                }
             }
             else
             {

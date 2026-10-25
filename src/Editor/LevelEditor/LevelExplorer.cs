@@ -48,8 +48,8 @@ namespace NST
         private Task _initializationTask;
         private ProgressManager _progressManager = new ProgressManager();
 
-        public enum DebugMode { None = 0, Prefabs = 1, GameObjects = 2, Collisions = 3, HavokSections = 4, HavokMaterials = 5, Instanced = 6, Selection = 7 };
-        private readonly string[] _debugModes = ["None", "Prefabs", "Game Objects", "Havok Objects", "Havok Sections", "Havok Materials", /*"Instanced", "Selection"*/];
+        public enum DebugMode { None = 0, Prefabs = 1, GameObjects = 2, Collisions = 3, HavokMaterials = 4, HavokSections = 5, HavokPrimitives = 6, Instanced = 7, Selection = 8 };
+        private readonly string[] _debugModes = ["None", "Prefabs", "Game Objects", "Havok Objects", "Havok Materials", "Havok Sections", "Havok Primitives", /*"Instanced", "Selection"*/];
         
         public enum CameraLayer 
         { 
@@ -1439,7 +1439,7 @@ namespace NST
                     bool staticCol = _layers["Static Collisions"];
                     bool borderCol = _layers["Border Collisions"];
 
-                    if (_debugMode == (int)DebugMode.HavokSections || _debugMode == (int)DebugMode.HavokMaterials)
+                    if (_debugMode == (int)DebugMode.HavokSections || _debugMode == (int)DebugMode.HavokMaterials || _debugMode == (int)DebugMode.HavokPrimitives)
                     {
                         if (staticCol || borderCol)
                         {

@@ -182,6 +182,16 @@ namespace NST
 
                     u64 key = ((u64)reference.fileHash << 32) | reference.objectHash;
 
+                    if (existing.Remove(reference))
+                    {
+                        var original = shapes.FirstOrDefault(s => s.Value == key);
+                        if (original.Key != null)
+                        {
+                            shapes.Remove(original.Key);
+                            Console.WriteLine("Removed previous collision for " + updateInfos.entity.Object);
+                        }
+                    }
+
                     shapes.Add(shape, key);
                     rebuildHashMap = true;
 

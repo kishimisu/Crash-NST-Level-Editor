@@ -11,11 +11,17 @@ namespace NST
         public string FilePath { get;  set; } // Model file path in archive
         public string OriginalPath { get; set; } // Value as found in the igz file
         public List<NSTMesh> Meshes { get; } = []; // List of meshes
+        public int TriangleCount { get; } = 0; // Total number of triangles
 
         public NSTModel(List<NSTMesh> meshes, string name = "")
         {
             Name = name;
             Meshes = meshes;
+
+            foreach (var mesh in meshes)
+            {
+                TriangleCount += mesh.indices.Count / 3;
+            }
         }
 
         /// <summary>
