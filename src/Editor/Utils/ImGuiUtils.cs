@@ -255,5 +255,45 @@ namespace NST
                 ImGui.EndCombo();
             }
         }
+
+        public static void RenderGradient(List<(float Time, Vector3 Color)> steps, float height = 16.0f)
+        {
+            var drawList = ImGui.GetWindowDrawList();
+            var pos = ImGui.GetCursorScreenPos();
+
+            float width = ImGui.GetContentRegionAvail().X;
+            var size = new Vector2(width, height);
+
+            if (ImGui.IsRectVisible(size))
+            {
+                if (steps.Count == 1)
+                {
+                    uint color = ImGui.ColorConvertFloat4ToU32(new Vector4(steps[0].Color, 1f));
+                    drawList.AddRectFilled(pos, pos + size, color);
+                    drawList.AddRect(pos, pos + size, ImGui.GetColorU32(ImGuiCol.Border));
+                }
+                else if (steps.Count >= 2)
+                {
+                    uint prev = ImGui.ColorConvertFloat4ToU32(new Vector4(steps[0].Color, 1f));
+
+                    for (int i = 1; i < steps.Count; i++)
+                    {
+                        uint next = ImGui.ColorConvertFloat4ToU32(new Vector4(steps[i].Color, 1f));
+
+                        drawList.AddRectFilledMultiColor(
+                            new Vector2(pos.X + width * steps[i - 1].Time, pos.Y),
+                            new Vector2(pos.X + width * steps[i].Time, pos.Y + height),
+                            prev, next, next, prev
+                        );
+
+                        prev = next;
+                    }
+
+                    drawList.AddRect(pos, pos + size, ImGui.GetColorU32(ImGuiCol.Border));
+                }
+
+                ImGui.Dummy(size);
+            }
+        }
     }
 }

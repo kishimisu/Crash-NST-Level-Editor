@@ -194,6 +194,24 @@ namespace NST
 
                 ImGui.PopItemWidth();
                 ImGui.EndTable();
+
+                if (obj is igVfxOperator)
+                {
+                    foreach (var f in fields)
+                    {
+                        if (f.GetFieldType() == typeof(igVfxRgbCurveMetaField) && f.GetValue(obj) is igVfxRgbCurveMetaField rgbCurve)
+                        {
+                            ImGui.Spacing();
+                            ImGui.Separator();
+                            ImGui.Spacing();
+
+                            if (igVfxRgbCurveRenderer.Render(rgbCurve, f.GetName()))
+                            {
+                                SetUpdated(obj);
+                            }
+                        }
+                    }
+                }
             }
         }
 
