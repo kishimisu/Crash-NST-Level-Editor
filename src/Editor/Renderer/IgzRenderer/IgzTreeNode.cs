@@ -24,6 +24,12 @@ namespace NST
         public CSubSoundPreview? SubSoundPreview { get; set; } = null;
         private bool _audioPreview = false;
 
+        // Command stream preview
+        private static readonly Dictionary<NamedReference, List<string?>> MaterialEffectNames = [];
+        private bool _graphicsMaterialInitialized = false;
+        private string? _techniqueName = null;
+        private igGraphicsObjectSet? _objectSet = null;
+
         /// <summary>
         /// Object node constructor
         /// </summary>
@@ -297,6 +303,12 @@ namespace NST
                 ImGui.Text(objectName);
                 if (IsUpdated) ImGui.PopStyleColor();
             }
+
+            if (!string.IsNullOrEmpty(_techniqueName))
+            {
+                ImGui.SameLine();
+                ImGui.TextDisabled($"({_techniqueName})");
+            }
         }
 
         /// <summary>
@@ -382,6 +394,95 @@ namespace NST
                 ImGui.Spacing();
                 ImGui.SetNextItemWidth(-1);
                 renderer.ArchiveRenderer.RenderOpenModel(modelComponent._fileName, renderer);
+                ImGui.Spacing();
+            }
+            else if (Object is igGraphicsMaterial graphicsMaterial)
+            {
+                if (!_graphicsMaterialInitialized)
+                {
+                    _graphicsMaterialInitialized = true;
+
+                    var reference = graphicsMaterial._effectHandle.Reference;
+                    var effectNames = new List<string?>();
+
+                    if (reference != null && !MaterialEffectNames.TryGetValue(reference, out effectNames))
+                    {
+                        var obj = AlchemyUtils.FindObjectInArchives(reference, null);
+
+                        if (obj is igGraphicsEffect graphicsEffect && graphicsEffect._techniqueNames != null)
+                        {
+                            effectNames = graphicsEffect._techniqueNames._data.ToList();
+                        }
+                        else if (obj is igEffect effect && effect?._techniqueList != null)
+                        {
+                            effectNames = effect._techniqueList._data.Select(e => e._name).ToList();
+                        }
+                        else
+                        {
+                            effectNames = [];
+                        }
+
+                        MaterialEffectNames[reference] = effectNames;
+                    }
+
+                    var commonState = graphicsMaterial._commonState;
+                    if (commonState != null)
+                    {
+                        var node = renderer.FindNode(commonState);
+                        if (node != null)
+                        {
+                            node._techniqueName = "Common State";
+                            node._objectSet = graphicsMaterial._graphicsObjects;
+                        }
+                    }
+
+                    for (int i = 0; i < graphicsMaterial._techniques.Count; i++)
+                    {
+                        var technique = graphicsMaterial._techniques[i];
+                        if (technique == null) continue;
+
+                        var node = renderer.FindNode(technique);
+                        if (node == null) continue;
+
+                        if (i < effectNames.Count)
+                            node._techniqueName = effectNames[i];
+
+                        node._objectSet = graphicsMaterial._graphicsObjects;
+                    }
+                }
+            }
+            else if (Object is igGraphicsEffect graphicsEffect && graphicsEffect._commandStreams != null)
+            {
+                if (!_graphicsMaterialInitialized)
+                {
+                    _graphicsMaterialInitialized = true;
+
+                    for (int i = 0; i < graphicsEffect._commandStreams._data.Count; i++)
+                    {
+                        var commandStream = graphicsEffect._commandStreams._data[i];
+                        if (commandStream == null) continue;
+
+                        var node = renderer.FindNode(commandStream);
+                        if (node == null) continue;
+
+                        if (i < graphicsEffect._techniqueNames?._data.Count)
+                            node._techniqueName = graphicsEffect._techniqueNames._data[i];
+                        
+                        node._objectSet = graphicsEffect._graphicsObjects;
+                    }
+                }
+            }
+            else if (Object is igMemoryCommandStream commandStream && _objectSet != null)
+            {
+                if (ImGui.TreeNodeEx("Command list", ImGuiTreeNodeFlags.NoTreePushOnOpen | ImGuiTreeNodeFlags.DefaultOpen))
+                {
+                    if (igCommandStreamRenderer.Render(renderer, commandStream, _objectSet, GetDisplayName()))
+                    {
+                        renderer.SetUpdated(Object);
+                    }
+                }
+                ImGui.Spacing();
+                ImGui.Separator();
                 ImGui.Spacing();
             }
         }
