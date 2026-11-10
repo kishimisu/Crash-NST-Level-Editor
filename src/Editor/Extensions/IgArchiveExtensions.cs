@@ -712,25 +712,7 @@ namespace NST
                 }
             }
 
-            IgArchiveFile? zoneInfoFile = archive.FindCustomZoneInfoFile();
-            IgzFile? zoneInfoIgz = zoneInfoFile?.ToIgzFile();
-            CZoneInfo? zoneInfo = zoneInfoIgz?.FindObject<CZoneInfo>();
-
-            if (zoneInfoFile == null || zoneInfoIgz == null || zoneInfo == null)
-            {
-                Console.WriteLine("No zone info found, creating new one...");
-                
-                string crashMode = levelIdentifier.Substring(0, levelIdentifier.IndexOf('/'));
-                EGameYear year = LevelBuilder.GetGameYear(crashMode);
-                
-                (CZoneInfo newZoneInfo, igLocalizedInfo newLocalizedInfo) = ObjectFactory.CreateZoneInfo(levelIdentifier, year);
-
-                zoneInfo = newZoneInfo;
-                zoneInfoIgz = new IgzFile(zoneInfoPath, [ newZoneInfo, newLocalizedInfo ]);
-                zoneInfoFile = new IgArchiveFile(zoneInfoPath, archive.GameVersion);
-                update.AddFile(zoneInfoFile);
-            }
-
+            // Remove previous files
             IgArchiveFile? previousCharacterFileCrash = update.FindFile($"Crash_CharacterData.igz");
             IgArchiveFile? previousCharacterFileCoco = update.FindFile($"Coco_CharacterData.igz");
             IgArchiveFile? previousCrashSystemData = update.FindFile($"CrashBandicootSystemData.igz");
@@ -741,74 +723,127 @@ namespace NST
             if (previousCrashSystemData != null) update.RemoveFile(previousCrashSystemData);
             if (previousZoneInfoSystemData != null) update.RemoveFile(previousZoneInfoSystemData);
 
-            string zoneInfoIdentifier = zoneInfoFile.GetName(false);
-            List<string> options = GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build);
+            Dictionary<string, (IgArchiveFile file, IgzFile igz)> characterDataFiles = [];
 
-            if (options.Count > 0)
+            /** Register a level archive **/
+            void AddZoneInfo(IgArchive archive)
             {
-                try
+                IgArchiveFile? zoneInfoFile = archive.FindCustomZoneInfoFile();
+                IgzFile? zoneInfoIgz = zoneInfoFile?.ToIgzFile();
+                CZoneInfo? zoneInfo = zoneInfoIgz?.FindObject<CZoneInfo>();
+
+                // Create zone info if missing (should not happen)
+                if (zoneInfoFile == null || zoneInfoIgz == null || zoneInfo == null)
                 {
-                    IgArchiveFile characterData = GameplayModeManager.CreateCharacterData(options, zoneInfo._year, zoneInfoIdentifier, zoneInfo._overrideCharacter);
-                    update.AddFile(characterData);
+                    Console.WriteLine("No zone info found, creating new one...");
+
+                    IgArchiveFile? pkg = archive.FindPackageFile();
+                    if (pkg == null) return;
+
+                    int index = pkg.Path.IndexOf("maps/");
+                    if (index == -1) return;
+
+                    string levelIdentifier = pkg.Path.Substring(index + 5).Replace("_pkg.igz", "");
+                    string newZoneInfoPath = $"maps/{levelIdentifier}_zoneinfo.igz";
+                    
+                    string crashMode = levelIdentifier.Substring(0, levelIdentifier.IndexOf('/'));
+                    EGameYear year = LevelBuilder.GetGameYear(crashMode);
+                    
+                    (CZoneInfo newZoneInfo, igLocalizedInfo newLocalizedInfo) = ObjectFactory.CreateZoneInfo(levelIdentifier, year);
+
+                    zoneInfo = newZoneInfo;
+                    zoneInfoIgz = new IgzFile(newZoneInfoPath, [ newZoneInfo, newLocalizedInfo ]);
+                    zoneInfoFile = new IgArchiveFile(newZoneInfoPath, archive.GameVersion);
+                    zoneInfoFile.SetData(zoneInfoIgz.Save());
+                    update.AddFile(zoneInfoFile);
                 }
-                catch (Exception e)
+
+                // Register special options
+                string zoneInfoIdentifier = zoneInfoFile.GetName(false);
+                List<string> options = GameplayModeManager.GetSpecialZoneInfoOptions(zoneInfo._build);
+
+                if (options.Count > 0)
                 {
-                    Console.WriteLine($"Could not create character data for {zoneInfo._overrideCharacter}: {e.Message}");
+                    try
+                    {
+                        string characterName = string.IsNullOrEmpty(zoneInfo._overrideCharacter) ? "Crash" : zoneInfo._overrideCharacter;
+
+                        if (!characterDataFiles.TryGetValue(characterName, out var characterData))
+                        {
+                            IgArchive crashArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, $"{characterName}.pak"))!;
+                            IgArchiveFile file = crashArchive.FindFile($"{characterName}_CharacterData.igz")!;
+                            IgzFile igz = file.ToIgzFile();
+                            characterData = (file, igz);
+                            characterDataFiles[characterName] = characterData;
+                        }
+
+                        GameplayModeManager.UpdateCharacterData(characterData.igz, options, zoneInfoIdentifier);
+                    }
+                    catch (Exception e)
+                    {
+                        Console.WriteLine($"Could not create character data for {zoneInfo._overrideCharacter}: {e.Message}");
+                    }
                 }
+
+                zoneInfo._zoneVehicle = null;
+
+                if (options.Contains("jetski")) zoneInfo._zoneVehicle = "CocoJetski";
+                else if (options.Contains("plane")) zoneInfo._zoneVehicle = "CrashCocoPlane";
+                
+                if (options.Contains("hub"))
+                {
+                    IgArchive permanentArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "permanent.pak"));
+                    IgArchiveFile crashSystemDataFile = permanentArchive.FindFile("CrashBandicootSystemData.igz")!;
+                    IgzFile crashSystemDataIgz = crashSystemDataFile.ToIgzFile();
+
+                    var systemData = crashSystemDataIgz.FindObject<CCrashBandicootSystemData>()!;
+                    systemData._crash1Hub.Reference!.namespaceName = zoneInfoIdentifier;
+                    systemData._crash2Hub.Reference!.namespaceName = zoneInfoIdentifier;
+                    systemData._crash3Hub.Reference!.namespaceName = zoneInfoIdentifier;
+
+                    crashSystemDataFile.SetData(crashSystemDataIgz.Save());
+                    update.AddFile(crashSystemDataFile);
+
+                    IgArchiveFile zoneInfoSystemDataFile = permanentArchive.FindFile("zoneInfoSystemData.igz")!;
+                    IgzFile zoneInfoSystemDataIgz = zoneInfoSystemDataFile.ToIgzFile();
+
+                    for (int i = 1; i <= 3; i++)
+                    {
+                        var zoneInfoList = zoneInfoSystemDataIgz.FindObject<CZoneInfoHandleList>($"c{i}StoryModeZoneInfos")!;
+                        zoneInfoList._data[0].Reference!.namespaceName = zoneInfoIdentifier;
+                    }
+
+                    zoneInfoSystemDataFile.SetData(zoneInfoSystemDataIgz.Save());
+                    update.AddFile(zoneInfoSystemDataFile);
+
+                    int crashMode = LevelBuilder.GetGameYearInt(zoneInfo._year) + 1;
+                    zoneInfo._juiceDomain.Reference ??= new NamedReference("JuiceDomain_Story", "");
+                    zoneInfo._juiceDomain.Reference.objectName = $"L{crashMode}00_Hub_JuiceDomainStory";
+                    zoneInfo._progressionGroup = EZoneInfoProgressionGroup.eZIPG_Hub;
+                }
+
+                // Register custom files
+                foreach (IgArchiveFile file in archive.Files.Where(f => f.Path.StartsWith("update/")))
+                {
+                    string path = file.Path.Substring(7);
+
+                    if (update.FindFile(path, FileSearchType.Path) is IgArchiveFile previousFile)
+                    {
+                        update.RemoveFile(previousFile);
+                    }
+
+                    IgArchiveFile clone = file.Clone(path);
+                    update.AddFile(clone);
+                }
+
+                string zoneInfoPath = zoneInfoFile.Path.StartsWith("update/")
+                    ? zoneInfoFile.Path.Substring(7)
+                    : zoneInfoFile.Path;
+
+                chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = zoneInfoPath });
             }
 
-            zoneInfo._zoneVehicle = null;
-
-            if (options.Contains("jetski")) zoneInfo._zoneVehicle = "CocoJetski";
-            else if (options.Contains("plane")) zoneInfo._zoneVehicle = "CrashCocoPlane";
-
-            if (options.Contains("hub"))
-            {
-                IgArchive permanentArchive = IgArchive.Open(Path.Combine(LocalStorage.ArchivePath, "permanent.pak"));
-                IgArchiveFile crashSystemDataFile = permanentArchive.FindFile("CrashBandicootSystemData.igz")!;
-                IgzFile crashSystemDataIgz = crashSystemDataFile.ToIgzFile();
-
-                var systemData = crashSystemDataIgz.FindObject<CCrashBandicootSystemData>()!;
-                systemData._crash1Hub.Reference!.namespaceName = zoneInfoIdentifier;
-                systemData._crash2Hub.Reference!.namespaceName = zoneInfoIdentifier;
-                systemData._crash3Hub.Reference!.namespaceName = zoneInfoIdentifier;
-
-                crashSystemDataFile.SetData(crashSystemDataIgz.Save());
-                update.AddFile(crashSystemDataFile);
-
-                IgArchiveFile zoneInfoSystemDataFile = permanentArchive.FindFile("zoneInfoSystemData.igz")!;
-                IgzFile zoneInfoSystemDataIgz = zoneInfoSystemDataFile.ToIgzFile();
-
-                for (int i = 1; i <= 3; i++)
-                {
-                    var zoneInfoList = zoneInfoSystemDataIgz.FindObject<CZoneInfoHandleList>($"c{i}StoryModeZoneInfos")!;
-                    zoneInfoList._data[0].Reference!.namespaceName = zoneInfoIdentifier;
-                }
-
-                zoneInfoSystemDataFile.SetData(zoneInfoSystemDataIgz.Save());
-                update.AddFile(zoneInfoSystemDataFile);
-
-                int crashMode = LevelBuilder.GetGameYearInt(zoneInfo._year) + 1;
-                zoneInfo._juiceDomain.Reference ??= new NamedReference("JuiceDomain_Story", "");
-                zoneInfo._juiceDomain.Reference.objectName = $"L{crashMode}00_Hub_JuiceDomainStory";
-                zoneInfo._progressionGroup = EZoneInfoProgressionGroup.eZIPG_Hub;
-            }
-
-            zoneInfoFile.SetData(zoneInfoIgz.Save());
-
-            foreach (IgArchiveFile file in archive.Files.Where(f => f.Path.StartsWith("update/")))
-            {
-                string path = file.Path.Substring(7);
-
-                if (update.FindFile(path, FileSearchType.Path) is IgArchiveFile previousFile)
-                {
-                    update.RemoveFile(previousFile);
-                }
-
-                IgArchiveFile clone = file.Clone(path);
-                update.AddFile(clone);
-            }
-
+            // (Modpack) Register sub-levels
             foreach (string subLevelPath in subLevelPaths)
             {
                 string name = NamespaceUtils.GetFileName(subLevelPath, false) + "_zoneinfo.igz";
@@ -819,23 +854,20 @@ namespace NST
                 }
 
                 IgArchive levelArchive = IgArchive.Open(subLevelPath);
-                IgArchiveFile? levelZoneInfo = levelArchive.FindCustomZoneInfoFile();
-                if (levelZoneInfo == null) continue;
-
-                string path = levelZoneInfo.Path.Substring(7);
-
-                if (update.FindFile(path, FileSearchType.Path) is IgArchiveFile previousFile)
-                {
-                    update.RemoveFile(previousFile);
-                }
-
-                IgArchiveFile clone = levelZoneInfo.Clone(path);
-                update.AddFile(clone);
-
-                chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = clone.Path });
+                AddZoneInfo(levelArchive);
             }
 
-            chunkInfos._required._data.Add(new ChunkFileInfoMetaField() { _type = "igx_file", _name = zoneInfoPath });
+            // Register custom level
+            AddZoneInfo(archive);
+
+            // Add character data files
+            foreach ((var file, var igz) in characterDataFiles.Values)
+            {
+                file.SetData(igz.Save());
+                update.AddFile(file);
+            }
+
+            // Add updated package file
             packageFile.SetData(packageIgz.Save());
 
             if (update.FindFile(packageFile.Path, FileSearchType.Path) is IgArchiveFile previousPackageFile)

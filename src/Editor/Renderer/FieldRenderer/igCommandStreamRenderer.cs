@@ -202,7 +202,6 @@ namespace NST
 			while (memory.Count % 4 != 0) memory.Add(0);
 
 			byte[] bytes = memory.ToArray();
-			byte[] copy = memory.ToArray();
 
 			int offset = 0;
 			int idx = 0;
@@ -220,7 +219,7 @@ namespace NST
 
 					var command = CreateCommand(ref offset, bytes, graphicsObjects);
 
-					updated |= command.Render(renderer, copy);
+					updated |= command.Render(renderer, bytes);
 				}
 				catch (Exception e)
 				{
@@ -234,7 +233,7 @@ namespace NST
 
 			if (updated)
 			{
-				commandStream._memory.Set(copy);
+				commandStream._memory.Set(bytes);
 			}
 
 			return updated;

@@ -432,17 +432,8 @@ namespace NST
             return buildName + optionsStr;
         }
 
-        public static IgArchiveFile CreateCharacterData(List<string> options, EGameYear crashMode, string zoneInfoName, string? characterName)
+        public static void UpdateCharacterData(IgzFile igz, List<string> options, string zoneInfoName)
         {
-            if (string.IsNullOrEmpty(characterName))
-            {
-                characterName = "Crash";
-            }
-
-            IgArchive crashArchive = IgArchive.Open(Path.Join(LocalStorage.ArchivePath, $"{characterName}.pak"))!;
-            IgArchiveFile file = crashArchive.FindFile($"{characterName}_CharacterData.igz")!;
-            IgzFile igz = file.ToIgzFile();
-
             foreach (var type in options)
             {
                 Console.WriteLine($"Setup Character Data for {type}");
@@ -499,10 +490,6 @@ namespace NST
                     //     break;
                 }
             }
-
-            file.SetData(igz.Save());
-
-            return file;
         }
 
         public static string? GetSpecialLevelMode(string levelName)
